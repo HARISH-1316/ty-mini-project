@@ -1,0 +1,123 @@
+// ──────────────────────────────────────────────
+// Sidebar Navigation Component
+// ──────────────────────────────────────────────
+
+import { NavLink as RouterNavLink } from 'react-router-dom';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Icon,
+  Drawer,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  DrawerHeader,
+  DrawerBody,
+} from '@chakra-ui/react';
+import useAuth from '../../hooks/useAuth';
+
+// Role-based Navigation Links
+const navItemsByRole = {
+  student: [
+    { label: 'Dashboard', path: '/student/dashboard', icon: 'home' },
+    { label: 'My Rooms', path: '/student/rooms', icon: 'rooms' },
+    { label: 'Join Room', path: '/student/join-room', icon: 'join' },
+    { label: 'Topics & Catalog', path: '/student/topics', icon: 'topics' },
+    { label: 'My Progress', path: '/student/progress', icon: 'progress' },
+  ],
+  faculty: [
+    { label: 'Dashboard', path: '/faculty/dashboard', icon: 'home' },
+    { label: 'My Rooms', path: '/faculty/rooms', icon: 'rooms' },
+    { label: 'Topic Catalog', path: '/faculty/topics', icon: 'topics' },
+  ],
+  admin: [
+    { label: 'Dashboard', path: '/admin/dashboard', icon: 'home' },
+    { label: 'All Users', path: '/admin/users', icon: 'users' },
+    { label: 'Role Management', path: '/admin/roles', icon: 'roles' },
+    { label: 'Virtual Rooms', path: '/faculty/rooms', icon: 'rooms' },
+    { label: 'Topics Catalog', path: '/faculty/topics', icon: 'topics' },
+  ],
+};
+
+const NavItem = ({ label, path, onClick }) => {
+  return (
+    <Box
+      as={RouterNavLink}
+      to={path}
+      onClick={onClick}
+      w="full"
+      px={4}
+      py={3}
+      borderRadius="xl"
+      transition="all 0.2s"
+      _hover={{
+        bg: 'slate.800',
+        color: 'purple.300',
+      }}
+      style={({ isActive }) => ({
+        backgroundColor: isActive ? '#334155' : 'transparent',
+        color: isActive ? '#c084fc' : '#94a3b8',
+        fontWeight: isActive ? '700' : '500',
+      })}
+    >
+      <HStack spacing={3}>
+        <Text fontSize="sm">{label}</Text>
+      </HStack>
+    </Box>
+  );
+};
+
+export const SidebarContent = ({ onClose }) => {
+  const { user } = useAuth();
+  const items = navItemsByRole[user?.role] || [];
+
+  return (
+    <VStack spacing={2} align="stretch" w="full">
+      <Box px={4} py={2}>
+        <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="wider">
+          {user?.role} Workspace
+        </Text>
+      </Box>
+      {items.map((item) => (
+        <NavItem key={item.path} label={item.label} path={item.path} onClick={onClose} />
+      ))}
+    </VStack>
+  );
+};
+
+const Sidebar = ({ isOpen, onClose }) => {
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <Box
+        display={{ base: 'none', md: 'block' }}
+        w="240px"
+        bg="slate.900"
+        borderRight="1px solid"
+        borderColor="slate.800"
+        p={4}
+        minH="calc(100vh - 61px)"
+      >
+        <SidebarContent />
+      </Box>
+
+      {/* Mobile Drawer */}
+      <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
+        <DrawerOverlay backdropFilter="blur(4px)" />
+        <DrawerContent bg="slate.900" color="white">
+          <DrawerCloseButton />
+          <DrawerHeader borderBottomWidth="1px" borderColor="slate.800">
+            WCE Virtual Lab
+          </DrawerHeader>
+          <DrawerBody p={4}>
+            <SidebarContent onClose={onClose} />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
+    </>
+  );
+};
+
+export default Sidebar;
