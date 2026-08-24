@@ -53,3 +53,8 @@ export const removeTopicFromRoomApi = async (roomId, topicId) => {
   const response = await api.delete(`/rooms/${roomId}/topics/${topicId}`);
   return response.data;
 };
+
+export const getRoomStudentsApi = async (roomId) => {
+  const response = await api.get(`/rooms/${roomId}/students`);
+  return response.data;
+};

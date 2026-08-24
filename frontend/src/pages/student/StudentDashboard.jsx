@@ -26,14 +26,14 @@ import {
 import { AddIcon, ArrowForwardIcon, CheckCircleIcon, TimeIcon } from '@chakra-ui/icons';
 import useAuth from '../../hooks/useAuth';
 import { getMyRoomsApi } from '../../api/roomApi';
-import { getMyProgressApi } from '../../api/topicApi';
+import { getMyOverallProgressApi } from '../../api/progressApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
   const toast = useToast();
   const [rooms, setRooms] = useState([]);
-  const [progressList, setProgressList] = useState([]);
+  const [progressData, setProgressData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,10 +41,10 @@ const StudentDashboard = () => {
       try {
         const [roomsRes, progressRes] = await Promise.all([
           getMyRoomsApi(),
-          getMyProgressApi().catch(() => ({ data: { progress: [] } })),
+          getMyOverallProgressApi().catch(() => ({ data: null })),
         ]);
         setRooms(roomsRes.data?.rooms || []);
-        setProgressList(progressRes.data?.progress || []);
+        setProgressData(progressRes.data || null);
       } catch {
         toast({
           title: 'Error loading dashboard',
@@ -65,8 +65,10 @@ const StudentDashboard = () => {
     return <LoadingSpinner label="Loading student dashboard..." />;
   }
 
-  const completedCount = progressList.filter((p) => p.status === 'Completed').length;
-  const inProgressCount = progressList.filter((p) => p.status === 'In Progress').length;
+  const completedCount = progressData?.completedTopicsCount || 0;
+  const totalTopics = progressData?.totalTopicsCount || 0;
+  const overallPercentage = progressData?.overallProgress || 0;
+  const topicsProgress = progressData?.topicsProgress || [];
 
   return (
     <VStack spacing={8} align="stretch" w="full">
@@ -117,7 +119,9 @@ const StudentDashboard = () => {
           <CardBody>
             <Stat>
               <StatLabel color="gray.400">Completed Topics</StatLabel>
-              <StatNumber color="emerald.400" fontSize="3xl">{completedCount}</StatNumber>
+              <StatNumber color="emerald.400" fontSize="3xl">
+                {completedCount} <Text as="span" fontSize="lg" color="gray.500">/ {totalTopics}</Text>
+              </StatNumber>
               <StatHelpText color="gray.500">Fully completed modules</StatHelpText>
             </Stat>
           </CardBody>
@@ -126,9 +130,9 @@ const StudentDashboard = () => {
         <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Topics In Progress</StatLabel>
-              <StatNumber color="amber.400" fontSize="3xl">{inProgressCount}</StatNumber>
-              <StatHelpText color="gray.500">Active learning items</StatHelpText>
+              <StatLabel color="gray.400">Overall Progress</StatLabel>
+              <StatNumber color="cyan.400" fontSize="3xl">{overallPercentage}%</StatNumber>
+              <StatHelpText color="gray.500">Syllabus completed</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -192,25 +196,30 @@ const StudentDashboard = () => {
       </VStack>
 
       {/* Progress Summary Section */}
-      {progressList.length > 0 && (
+      {topicsProgress.length > 0 && (
         <VStack align="stretch" spacing={4} pt={4}>
-          <Heading size="md" color="white">Recent Learning Progress</Heading>
+          <Flex justify="space-between" align="center">
+            <Heading size="md" color="white">Topic Progress</Heading>
+            <Button as={RouterLink} to="/student/progress" size="sm" variant="ghost" colorScheme="purple" rightIcon={<ArrowForwardIcon />}>
+              View Full Progress
+            </Button>
+          </Flex>
           <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
             <CardBody>
               <VStack spacing={4} align="stretch">
-                {progressList.slice(0, 4).map((p) => (
-                  <Box key={p.progress_id} p={3} bg="slate.900" borderRadius="lg">
+                {topicsProgress.slice(0, 4).map((p) => (
+                  <Box key={p.topic_id} p={3} bg="slate.900" borderRadius="lg">
                     <Flex justify="space-between" align="center" mb={2}>
                       <Text color="white" fontWeight="medium" fontSize="sm">
-                        {p.topic_title || `Topic #${p.topic_id}`}
+                        {p.title}
                       </Text>
-                      <Badge colorScheme={p.status === 'Completed' ? 'green' : 'yellow'}>
-                        {p.status}
+                      <Badge colorScheme={p.status === 'Completed' ? 'green' : p.status === 'In Progress' ? 'purple' : 'gray'}>
+                        {p.status} ({p.progressPercentage}%)
                       </Badge>
                     </Flex>
                     <Progress
-                      value={p.status === 'Completed' ? 100 : p.status === 'In Progress' ? 50 : 0}
-                      colorScheme={p.status === 'Completed' ? 'green' : 'purple'}
+                      value={p.progressPercentage}
+                      colorScheme={p.progressPercentage === 100 ? 'green' : 'purple'}
                       size="sm"
                       borderRadius="full"
                     />

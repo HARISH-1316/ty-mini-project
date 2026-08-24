@@ -5,12 +5,12 @@
 import { query } from '../config/database.js';
 
 const PrerequisiteQuizModel = {
-  create: async ({ prereq_id, title, total_marks, passing_criteria }) => {
+  create: async ({ prereq_id, title, total_marks, passing_criteria, time_limit }) => {
     const result = await query(
-      `INSERT INTO prerequisite_quiz (prereq_id, title, total_marks, passing_criteria)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO prerequisite_quiz (prereq_id, title, total_marks, passing_criteria, time_limit)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [prereq_id, title || null, total_marks || 0, passing_criteria || 0]
+      [prereq_id, title || null, total_marks || 0, passing_criteria || 0, time_limit || 15]
     );
     return result.rows[0];
   },
@@ -31,15 +31,16 @@ const PrerequisiteQuizModel = {
     return result.rows;
   },
 
-  update: async (prereqQuizId, { title, total_marks, passing_criteria }) => {
+  update: async (prereqQuizId, { title, total_marks, passing_criteria, time_limit }) => {
     const result = await query(
       `UPDATE prerequisite_quiz
        SET title = COALESCE($1, title),
            total_marks = COALESCE($2, total_marks),
-           passing_criteria = COALESCE($3, passing_criteria)
-       WHERE prereq_quiz_id = $4
+           passing_criteria = COALESCE($3, passing_criteria),
+           time_limit = COALESCE($4, time_limit)
+       WHERE prereq_quiz_id = $5
        RETURNING *`,
-      [title, total_marks, passing_criteria, prereqQuizId]
+      [title, total_marks, passing_criteria, time_limit, prereqQuizId]
     );
     return result.rows[0] || null;
   },

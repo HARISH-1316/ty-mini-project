@@ -13,13 +13,18 @@ export const createTopic = asyncHandler(async (req, res) => {
 });
 
 export const getAllTopics = asyncHandler(async (req, res) => {
-  const topics = await TopicService.getAllTopics();
+  let topics;
+  if (req.user?.role === 'student') {
+    topics = await TopicService.getTopicsForStudent(req.user.user_id);
+  } else {
+    topics = await TopicService.getAllTopics();
+  }
   return successResponse(res, 200, 'Topics retrieved successfully.', { topics });
 });
 
 export const getTopicById = asyncHandler(async (req, res) => {
   const { topicId } = req.params;
-  const topic = await TopicService.getTopicById(topicId);
+  const topic = await TopicService.getTopicById(topicId, req.user?.role);
   return successResponse(res, 200, 'Topic details retrieved.', { topic });
 });
 
@@ -42,9 +47,15 @@ export const createSubtopic = asyncHandler(async (req, res) => {
   return successResponse(res, 201, 'Subtopic created successfully.', { subtopic });
 });
 
+export const getSubtopicsByTopicId = asyncHandler(async (req, res) => {
+  const { topicId } = req.params;
+  const subtopics = await TopicService.getTopicSubtopics(topicId, req.user?.role);
+  return successResponse(res, 200, 'Subtopics retrieved successfully.', { subtopics });
+});
+
 export const getSubtopicById = asyncHandler(async (req, res) => {
   const { subtopicId } = req.params;
-  const subtopic = await TopicService.getSubtopicById(subtopicId);
+  const subtopic = await TopicService.getSubtopicById(subtopicId, req.user?.role);
   return successResponse(res, 200, 'Subtopic retrieved successfully.', { subtopic });
 });
 
@@ -61,10 +72,28 @@ export const deleteSubtopic = asyncHandler(async (req, res) => {
 });
 
 // ── Subtopic Content ──────────────────────────
+export const getSubtopicContent = asyncHandler(async (req, res) => {
+  const { subtopicId } = req.params;
+  const content = await TopicService.getSubtopicContent(subtopicId, req.user?.role);
+  return successResponse(res, 200, 'Subtopic content retrieved.', { content });
+});
+
 export const upsertSubtopicContent = asyncHandler(async (req, res) => {
   const { subtopicId } = req.params;
   const content = await TopicService.upsertContent(subtopicId, req.body);
   return successResponse(res, 200, 'Subtopic content updated successfully.', { content });
+});
+
+export const publishSubtopicContent = asyncHandler(async (req, res) => {
+  const { subtopicId } = req.params;
+  const subtopic = await TopicService.publishSubtopicContent(subtopicId);
+  return successResponse(res, 200, 'Subtopic content published successfully.', { subtopic });
+});
+
+export const unpublishSubtopicContent = asyncHandler(async (req, res) => {
+  const { subtopicId } = req.params;
+  const subtopic = await TopicService.unpublishSubtopicContent(subtopicId);
+  return successResponse(res, 200, 'Subtopic content unpublished successfully.', { subtopic });
 });
 
 // ── Topic Feedback ────────────────────────────
@@ -102,4 +131,11 @@ export const updateProgress = asyncHandler(async (req, res) => {
 export const getMyProgress = asyncHandler(async (req, res) => {
   const progress = await TopicService.getStudentProgress(req.user.user_id);
   return successResponse(res, 200, 'Student progress retrieved.', { progress });
+});
+
+// ── Prerequisites ─────────────────────────────
+export const getTopicPrerequisites = asyncHandler(async (req, res) => {
+  const { topicId } = req.params;
+  const prerequisites = await TopicService.getTopicPrerequisites(topicId);
+  return successResponse(res, 200, 'Prerequisites retrieved.', { prerequisites });
 });

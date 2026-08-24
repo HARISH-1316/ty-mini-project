@@ -30,6 +30,17 @@ const TopicModel = {
   },
 
   /**
+   * Find a topic by title.
+   */
+  findByTitle: async (title) => {
+    const result = await query(
+      'SELECT * FROM topics WHERE title = $1 LIMIT 1',
+      [title]
+    );
+    return result.rows[0] || null;
+  },
+
+  /**
    * Return all topics.
    */
   findAll: async () => {

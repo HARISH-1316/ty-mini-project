@@ -31,28 +31,58 @@ export const deleteTopicApi = async (topicId) => {
 };
 
 // Subtopics & Content
+export const getTopicSubtopicsApi = async (topicId) => {
+  const response = await api.get(`/topics/${topicId}/subtopics`);
+  return response.data;
+};
+
 export const createSubtopicApi = async (topicId, data) => {
   const response = await api.post(`/topics/${topicId}/subtopics`, data);
   return response.data;
 };
 
 export const getSubtopicByIdApi = async (subtopicId) => {
-  const response = await api.get(`/topics/subtopics/${subtopicId}`);
+  const response = await api.get(`/subtopics/${subtopicId}`);
   return response.data;
 };
 
 export const updateSubtopicApi = async (subtopicId, data) => {
-  const response = await api.put(`/topics/subtopics/${subtopicId}`, data);
+  const response = await api.put(`/subtopics/${subtopicId}`, data);
   return response.data;
 };
 
 export const deleteSubtopicApi = async (subtopicId) => {
-  const response = await api.delete(`/topics/subtopics/${subtopicId}`);
+  const response = await api.delete(`/subtopics/${subtopicId}`);
+  return response.data;
+};
+
+export const getSubtopicContentApi = async (subtopicId) => {
+  const response = await api.get(`/subtopics/${subtopicId}/content`);
+  return response.data;
+};
+
+export const createSubtopicContentApi = async (subtopicId, data) => {
+  const response = await api.post(`/subtopics/${subtopicId}/content`, data);
+  return response.data;
+};
+
+export const updateSubtopicContentApi = async (subtopicId, data) => {
+  const response = await api.put(`/subtopics/${subtopicId}/content`, data);
   return response.data;
 };
 
 export const upsertSubtopicContentApi = async (subtopicId, data) => {
-  const response = await api.put(`/topics/subtopics/${subtopicId}/content`, data);
+  const response = await api.put(`/subtopics/${subtopicId}/content`, data);
+  return response.data;
+};
+
+export const publishSubtopicContentApi = async (subtopicId) => {
+  const response = await api.patch(`/subtopics/${subtopicId}/content/publish`);
+  return response.data;
+};
+
+export const unpublishSubtopicContentApi = async (subtopicId) => {
+  const response = await api.patch(`/subtopics/${subtopicId}/content/unpublish`);
   return response.data;
 };
 
@@ -85,5 +115,11 @@ export const updateProgressApi = async (topicId, data) => {
 
 export const getMyProgressApi = async () => {
   const response = await api.get('/topics/progress/my');
+  return response.data;
+};
+
+// Prerequisites
+export const getTopicPrerequisitesApi = async (topicId) => {
+  const response = await api.get(`/topics/${topicId}/prerequisites`);
   return response.data;
 };

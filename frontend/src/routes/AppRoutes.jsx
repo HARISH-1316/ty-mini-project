@@ -17,6 +17,8 @@ import NotFound from '../pages/NotFound';
 import StudentLayout from '../layouts/StudentLayout';
 import FacultyLayout from '../layouts/FacultyLayout';
 import AdminLayout from '../layouts/AdminLayout';
+import TopicLayout from '../layouts/TopicLayout';
+import SubtopicLayout from '../layouts/SubtopicLayout';
 
 // Student Pages
 import StudentDashboard from '../pages/student/StudentDashboard';
@@ -26,16 +28,39 @@ import RoomDetails from '../pages/student/RoomDetails';
 import TopicDetails from '../pages/student/TopicDetails';
 import StudentProgress from '../pages/student/StudentProgress';
 
+// Student Topic Section Pages
+import IntroductionPage from '../pages/student/topic/IntroductionPage';
+import CoPosPage from '../pages/student/topic/CoPosPage';
+import PrerequisitesPage from '../pages/student/topic/PrerequisitesPage';
+import PrerequisiteQuizPage from '../pages/student/topic/PrerequisiteQuizPage';
+import SubtopicsListPage from '../pages/student/topic/SubtopicsListPage';
+import FinalQuizPage from '../pages/student/topic/FinalQuizPage';
+import FinalAssessmentPage from '../pages/student/topic/FinalAssessmentPage';
+import FeedbackPage from '../pages/student/topic/FeedbackPage';
+
+// Student Subtopic Section Pages
+import AimPage from '../pages/student/subtopic/AimPage';
+import TheoryPage from '../pages/student/subtopic/TheoryPage';
+import QuizPage from '../pages/student/subtopic/QuizPage';
+import CodingAssessmentPage from '../pages/student/subtopic/CodingAssessmentPage';
+
 // Faculty Pages
 import FacultyDashboard from '../pages/faculty/FacultyDashboard';
 import FacultyRooms from '../pages/faculty/FacultyRooms';
 import RoomManagement from '../pages/faculty/RoomManagement';
 import TopicManagement from '../pages/faculty/TopicManagement';
+import QuizManagement from '../pages/faculty/QuizManagement';
+import FacultyStudents from '../pages/faculty/FacultyStudents';
+import FacultyAnalytics from '../pages/faculty/FacultyAnalytics';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagement from '../pages/admin/UserManagement';
 import RoleManagement from '../pages/admin/RoleManagement';
+import AdminProgress from '../pages/admin/AdminProgress';
+
+// Shared Progress Inspector
+import StudentProgressDetail from '../pages/common/StudentProgressDetail';
 
 // Route Guards
 import ProtectedRoute from './ProtectedRoute';
@@ -55,14 +80,35 @@ const AppRoutes = () => {
 
         {/* Student Workspace */}
         <Route element={<StudentRoute />}>
+          {/* Standard student pages with sidebar layout */}
           <Route element={<StudentLayout />}>
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/rooms" element={<MyRooms />} />
             <Route path="/student/join-room" element={<JoinRoom />} />
             <Route path="/student/rooms/:roomId" element={<RoomDetails />} />
-            <Route path="/student/topics" element={<TopicManagement />} />
-            <Route path="/student/topics/:topicId" element={<TopicDetails />} />
             <Route path="/student/progress" element={<StudentProgress />} />
+          </Route>
+
+          {/* Dedicated Topic Page — Virtual Labs Layout */}
+          <Route path="/student/topics/:topicId" element={<TopicLayout />}>
+            <Route index element={<Navigate to="introduction" replace />} />
+            <Route path="introduction" element={<IntroductionPage />} />
+            <Route path="co-pos" element={<CoPosPage />} />
+            <Route path="prerequisites" element={<PrerequisitesPage />} />
+            <Route path="prerequisite-quiz" element={<PrerequisiteQuizPage />} />
+            <Route path="subtopics" element={<SubtopicsListPage />} />
+            <Route path="final-quiz" element={<FinalQuizPage />} />
+            <Route path="final-assessment" element={<FinalAssessmentPage />} />
+            <Route path="feedback" element={<FeedbackPage />} />
+          </Route>
+
+          {/* Dedicated Subtopic Page — Virtual Labs Layout */}
+          <Route path="/student/topics/:topicId/subtopics/:subtopicId" element={<SubtopicLayout />}>
+            <Route index element={<Navigate to="aim" replace />} />
+            <Route path="aim" element={<AimPage />} />
+            <Route path="theory" element={<TheoryPage />} />
+            <Route path="quiz" element={<QuizPage />} />
+            <Route path="coding-assessment" element={<CodingAssessmentPage />} />
           </Route>
         </Route>
 
@@ -73,6 +119,10 @@ const AppRoutes = () => {
             <Route path="/faculty/rooms" element={<FacultyRooms />} />
             <Route path="/faculty/rooms/:roomId" element={<RoomManagement />} />
             <Route path="/faculty/topics" element={<TopicManagement />} />
+            <Route path="/faculty/topics/:topicId/quizzes" element={<QuizManagement />} />
+            <Route path="/faculty/students" element={<FacultyStudents />} />
+            <Route path="/faculty/students/:studentId/progress" element={<StudentProgressDetail />} />
+            <Route path="/faculty/analytics" element={<FacultyAnalytics />} />
           </Route>
         </Route>
 
@@ -82,6 +132,8 @@ const AppRoutes = () => {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/roles" element={<RoleManagement />} />
+            <Route path="/admin/progress" element={<AdminProgress />} />
+            <Route path="/admin/students/:studentId/progress" element={<StudentProgressDetail />} />
           </Route>
         </Route>
       </Route>

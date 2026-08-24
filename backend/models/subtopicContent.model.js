@@ -5,12 +5,12 @@
 import { query } from '../config/database.js';
 
 const SubtopicContentModel = {
-  create: async ({ subtopic_id, aim, theory, video_explanation_url }) => {
+  create: async ({ subtopic_id, aim, theory, video_explanation_url, time_limit }) => {
     const result = await query(
-      `INSERT INTO subtopic_content (subtopic_id, aim, theory, video_explanation_url)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO subtopic_content (subtopic_id, aim, theory, video_explanation_url, time_limit)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [subtopic_id, aim || null, theory || null, video_explanation_url || null]
+      [subtopic_id, aim || null, theory || null, video_explanation_url || null, time_limit || 15]
     );
     return result.rows[0];
   },
@@ -31,15 +31,16 @@ const SubtopicContentModel = {
     return result.rows[0] || null;
   },
 
-  update: async (contentId, { aim, theory, video_explanation_url }) => {
+  update: async (contentId, { aim, theory, video_explanation_url, time_limit }) => {
     const result = await query(
       `UPDATE subtopic_content
        SET aim = COALESCE($1, aim),
            theory = COALESCE($2, theory),
-           video_explanation_url = COALESCE($3, video_explanation_url)
-       WHERE content_id = $4
+           video_explanation_url = COALESCE($3, video_explanation_url),
+           time_limit = COALESCE($4, time_limit)
+       WHERE content_id = $5
        RETURNING *`,
-      [aim, theory, video_explanation_url, contentId]
+      [aim, theory, video_explanation_url, time_limit, contentId]
     );
     return result.rows[0] || null;
   },

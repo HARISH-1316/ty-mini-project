@@ -63,3 +63,9 @@ export const removeTopicFromRoom = asyncHandler(async (req, res) => {
   await RoomService.removeTopicFromRoom(roomId, topicId, req.user.user_id);
   return successResponse(res, 200, 'Topic removed from room.');
 });
+
+export const getRoomStudents = asyncHandler(async (req, res) => {
+  const { roomId } = req.params;
+  const students = await RoomService.getRoomStudents(roomId, req.user.user_id, req.user.role);
+  return successResponse(res, 200, 'Enrolled students retrieved.', { students });
+});

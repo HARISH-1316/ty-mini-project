@@ -6,7 +6,7 @@
 // ──────────────────────────────────────────────
 
 import UserService from '../services/user.service.js';
-import { successResponse } from '../utils/response.js';
+import { successResponse, errorResponse } from '../utils/response.js';
 import asyncHandler from '../middlewares/asyncHandler.js';
 
 /**
@@ -20,10 +20,13 @@ export const getAllUsers = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/users/:userId
- * Return user details by ID.
+ * Return user details by ID (Admin or own profile).
  */
 export const getUserById = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+  if (req.user?.role !== 'admin' && parseInt(req.user?.user_id, 10) !== parseInt(userId, 10)) {
+    return errorResponse(res, 403, 'Access denied. You can only view your own user profile.');
+  }
   const user = await UserService.getUserById(userId);
   return successResponse(res, 200, 'User retrieved successfully.', { user });
 });

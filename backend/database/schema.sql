@@ -187,7 +187,8 @@ CREATE TABLE subtopic_content (
         ON DELETE CASCADE,
     aim TEXT,
     theory TEXT,
-    video_explanation_url TEXT
+    video_explanation_url TEXT,
+    time_limit INT DEFAULT 15
 );
 
 
@@ -237,7 +238,28 @@ CREATE TABLE prerequisite_quiz (
     title VARCHAR(200),
     total_marks INT,
     passing_criteria INT,
+    time_limit INT DEFAULT 15,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- 13A. PREREQUISITE QUIZ QUESTIONS
+-- =========================================================
+
+CREATE TABLE prerequisite_quiz_questions (
+    pq_question_id SERIAL PRIMARY KEY,
+    prereq_quiz_id INT NOT NULL
+        REFERENCES prerequisite_quiz(prereq_quiz_id)
+        ON DELETE CASCADE,
+    question_text TEXT,
+    option_a TEXT,
+    option_b TEXT,
+    option_c TEXT,
+    option_d TEXT,
+    correct_option CHAR(1),
+    marks INT,
+    order_index INT
 );
 
 
@@ -483,7 +505,89 @@ CREATE INDEX "IDX_session_expire" ON "session" ("expire");
 
 
 -- =========================================================
--- 28. INDEXES
+-- 28. QUIZ ATTEMPTS
+-- =========================================================
+
+DO $$ BEGIN
+    CREATE TYPE quiz_type_enum AS ENUM ('prerequisite', 'subtopic', 'final');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE quiz_attempts (
+    attempt_id SERIAL PRIMARY KEY,
+    student_id INT NOT NULL
+        REFERENCES student(student_id)
+        ON DELETE CASCADE,
+    quiz_type quiz_type_enum NOT NULL,
+    quiz_ref_id INT NOT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    submitted_at TIMESTAMP,
+    score INT DEFAULT 0,
+    total_marks INT DEFAULT 0,
+    percentage NUMERIC(5,2) DEFAULT 0,
+    correct_answers INT DEFAULT 0,
+    incorrect_answers INT DEFAULT 0,
+    unanswered INT DEFAULT 0,
+    passed BOOLEAN,
+    answers JSONB
+);
+
+
+-- =========================================================
+-- 29. SUBTOPIC PROGRESS
+-- =========================================================
+
+CREATE TABLE subtopic_progress (
+    subtopic_progress_id SERIAL PRIMARY KEY,
+    student_id INT NOT NULL
+        REFERENCES student(student_id)
+        ON DELETE CASCADE,
+    subtopic_id INT NOT NULL
+        REFERENCES subtopics(subtopic_id)
+        ON DELETE CASCADE,
+    aim_viewed BOOLEAN DEFAULT FALSE,
+    theory_viewed BOOLEAN DEFAULT FALSE,
+    video_viewed BOOLEAN DEFAULT FALSE,
+    status progress_status DEFAULT 'Not Started',
+    time_spent INT DEFAULT 0,
+    last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(student_id, subtopic_id)
+);
+
+
+-- =========================================================
+-- 30. CODING SUBMISSIONS
+-- =========================================================
+
+DO $$ BEGIN
+    CREATE TYPE assessment_type_enum AS ENUM ('topic', 'subtopic', 'lab', 'assignment');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE coding_submissions (
+    submission_id SERIAL PRIMARY KEY,
+    student_id INT NOT NULL
+        REFERENCES student(student_id)
+        ON DELETE CASCADE,
+    assessment_type assessment_type_enum NOT NULL DEFAULT 'topic',
+    assessment_ref_id INT NOT NULL,
+    question_id INT,
+    source_code TEXT,
+    language VARCHAR(50) DEFAULT 'cpp',
+    status VARCHAR(50) DEFAULT 'Completed',
+    score INT DEFAULT 0,
+    total_marks INT DEFAULT 0,
+    questions_solved INT DEFAULT 0,
+    total_questions INT DEFAULT 0,
+    percentage NUMERIC(5,2) DEFAULT 0,
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- 31. INDEXES
 -- =========================================================
 
 CREATE INDEX idx_progress_student ON progress(student_id);
@@ -502,3 +606,10 @@ CREATE INDEX idx_room_topics_room ON room_topics(room_id);
 CREATE INDEX idx_room_topics_topic ON room_topics(topic_id);
 CREATE INDEX idx_topic_feedback_student ON topic_feedback(student_id);
 CREATE INDEX idx_topic_feedback_topic ON topic_feedback(topic_id);
+CREATE INDEX idx_pq_questions_quiz ON prerequisite_quiz_questions(prereq_quiz_id);
+CREATE INDEX idx_quiz_attempts_student ON quiz_attempts(student_id);
+CREATE INDEX idx_quiz_attempts_ref ON quiz_attempts(quiz_type, quiz_ref_id);
+CREATE INDEX idx_subtopic_progress_student ON subtopic_progress(student_id);
+CREATE INDEX idx_subtopic_progress_subtopic ON subtopic_progress(subtopic_id);
+CREATE INDEX idx_coding_submissions_student ON coding_submissions(student_id);
+CREATE INDEX idx_coding_submissions_ref ON coding_submissions(assessment_type, assessment_ref_id);

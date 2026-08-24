@@ -24,13 +24,14 @@ const navItemsByRole = {
     { label: 'Dashboard', path: '/student/dashboard', icon: 'home' },
     { label: 'My Rooms', path: '/student/rooms', icon: 'rooms' },
     { label: 'Join Room', path: '/student/join-room', icon: 'join' },
-    { label: 'Topics & Catalog', path: '/student/topics', icon: 'topics' },
     { label: 'My Progress', path: '/student/progress', icon: 'progress' },
   ],
   faculty: [
     { label: 'Dashboard', path: '/faculty/dashboard', icon: 'home' },
     { label: 'My Rooms', path: '/faculty/rooms', icon: 'rooms' },
     { label: 'Topic Catalog', path: '/faculty/topics', icon: 'topics' },
+    { label: 'Students & Progress', path: '/faculty/students', icon: 'students' },
+    { label: 'Analytics', path: '/faculty/analytics', icon: 'analytics' },
   ],
   admin: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: 'home' },
@@ -38,6 +39,7 @@ const navItemsByRole = {
     { label: 'Role Management', path: '/admin/roles', icon: 'roles' },
     { label: 'Virtual Rooms', path: '/faculty/rooms', icon: 'rooms' },
     { label: 'Topics Catalog', path: '/faculty/topics', icon: 'topics' },
+    { label: 'Student Progress', path: '/admin/progress', icon: 'progress' },
   ],
 };
 

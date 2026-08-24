@@ -284,55 +284,61 @@ const TopicDetails = () => {
           </Box>
         ) : (
           <Accordion allowMultiple defaultIndex={[0]}>
-            {topic.subtopics.map((sub, index) => (
-              <AccordionItem key={sub.subtopic_id} bg="slate.800" borderColor="slate.700" mb={3} borderRadius="xl" overflow="hidden">
-                <h2>
-                  <AccordionButton _expanded={{ bg: 'slate.700', color: 'purple.300' }}>
-                    <Box as="span" flex="1" textAlign="left" fontWeight="bold">
-                      Subtopic {index + 1}: {sub.title}
-                    </Box>
-                    <AccordionIcon />
-                  </AccordionButton>
-                </h2>
-                <AccordionPanel pb={4}>
-                  <VStack align="start" spacing={4} pt={2}>
-                    {sub.content?.aim && (
-                      <Box w="full" p={4} bg="slate.900" borderRadius="lg">
-                        <Heading size="xs" color="purple.300" mb={2}>🎯 Aim</Heading>
-                        <Text color="gray.200" fontSize="sm">{sub.content.aim}</Text>
-                      </Box>
-                    )}
+            {topic.subtopics.map((sub, index) => {
+              const aim = sub.content?.aim || sub.aim;
+              const theory = sub.content?.theory || sub.theory;
+              const videoUrl = sub.content?.video_explanation_url || sub.video_explanation_url;
 
-                    {sub.content?.theory && (
-                      <Box w="full" p={4} bg="slate.900" borderRadius="lg">
-                        <Heading size="xs" color="cyan.300" mb={2}>📖 Theory & Concepts</Heading>
-                        <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap">{sub.content.theory}</Text>
+              return (
+                <AccordionItem key={sub.subtopic_id} bg="slate.800" borderColor="slate.700" mb={3} borderRadius="xl" overflow="hidden">
+                  <h2>
+                    <AccordionButton _expanded={{ bg: 'slate.700', color: 'purple.300' }}>
+                      <Box as="span" flex="1" textAlign="left" fontWeight="bold">
+                        Subtopic {sub.order_index || index + 1}: {sub.title}
                       </Box>
-                    )}
+                      <AccordionIcon />
+                    </AccordionButton>
+                  </h2>
+                  <AccordionPanel pb={4}>
+                    <VStack align="start" spacing={4} pt={2}>
+                      {aim && (
+                        <Box w="full" p={4} bg="slate.900" borderRadius="lg">
+                          <Heading size="xs" color="purple.300" mb={2}>🎯 Aim</Heading>
+                          <Text color="gray.200" fontSize="sm">{aim}</Text>
+                        </Box>
+                      )}
 
-                    {sub.content?.video_explanation_url && (
-                      <Box w="full" p={4} bg="slate.900" borderRadius="lg">
-                        <Heading size="xs" color="pink.300" mb={2}>🎥 Video Explanation</Heading>
-                        <Button
-                          as="a"
-                          href={sub.content.video_explanation_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          size="xs"
-                          colorScheme="pink"
-                        >
-                          Watch Explanation Video
-                        </Button>
-                      </Box>
-                    )}
+                      {theory && (
+                        <Box w="full" p={4} bg="slate.900" borderRadius="lg">
+                          <Heading size="xs" color="cyan.300" mb={2}>📖 Theory & Concepts</Heading>
+                          <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap">{theory}</Text>
+                        </Box>
+                      )}
 
-                    {!sub.content?.aim && !sub.content?.theory && !sub.content?.video_explanation_url && (
-                      <Text color="gray.500" fontSize="xs">Detailed content will be uploaded by faculty.</Text>
-                    )}
-                  </VStack>
-                </AccordionPanel>
-              </AccordionItem>
-            ))}
+                      {videoUrl && (
+                        <Box w="full" p={4} bg="slate.900" borderRadius="lg">
+                          <Heading size="xs" color="pink.300" mb={2}>🎥 Video Explanation</Heading>
+                          <Button
+                            as="a"
+                            href={videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            size="xs"
+                            colorScheme="pink"
+                          >
+                            Watch Explanation Video
+                          </Button>
+                        </Box>
+                      )}
+
+                      {!aim && !theory && !videoUrl && (
+                        <Text color="gray.500" fontSize="xs">Detailed content will be uploaded by faculty.</Text>
+                      )}
+                    </VStack>
+                  </AccordionPanel>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         )}
       </VStack>

@@ -19,9 +19,16 @@ import {
   Divider,
   Flex,
   IconButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, AddIcon, DeleteIcon } from '@chakra-ui/icons';
-import { getRoomByIdApi, getRoomTopicsApi, addTopicToRoomApi, removeTopicFromRoomApi } from '../../api/roomApi';
+import { getRoomByIdApi, getRoomTopicsApi, addTopicToRoomApi, removeTopicFromRoomApi, getRoomStudentsApi } from '../../api/roomApi';
 import { getAllTopicsApi } from '../../api/topicApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
@@ -33,21 +40,24 @@ const RoomManagement = () => {
   const [room, setRoom] = useState(null);
   const [assignedTopics, setAssignedTopics] = useState([]);
   const [allTopics, setAllTopics] = useState([]);
+  const [students, setStudents] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
   const fetchRoomData = async () => {
     try {
-      const [roomRes, assignedRes, catalogRes] = await Promise.all([
+      const [roomRes, assignedRes, catalogRes, studentsRes] = await Promise.all([
         getRoomByIdApi(roomId),
         getRoomTopicsApi(roomId).catch(() => ({ data: { topics: [] } })),
         getAllTopicsApi().catch(() => ({ data: { topics: [] } })),
+        getRoomStudentsApi(roomId).catch(() => ({ data: { students: [] } })),
       ]);
 
       setRoom(roomRes.data?.room || null);
       setAssignedTopics(assignedRes.data?.topics || []);
       setAllTopics(catalogRes.data?.topics || []);
+      setStudents(studentsRes.data?.students || []);
     } catch {
       toast({
         title: 'Error',
@@ -217,6 +227,57 @@ const RoomManagement = () => {
               </Box>
             ))}
           </VStack>
+        )}
+      </VStack>
+
+      {/* Enrolled Students Section */}
+      <VStack align="stretch" spacing={4}>
+        <Heading size="md" color="white">
+          Enrolled Students ({students.length})
+        </Heading>
+
+        {students.length === 0 ? (
+          <EmptyState
+            title="No Students Enrolled"
+            description="No students have joined this room yet. Share the room code with your students."
+          />
+        ) : (
+          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+            <CardBody p={0}>
+              <TableContainer>
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th color="gray.400" borderColor="slate.700">#</Th>
+                      <Th color="gray.400" borderColor="slate.700">Name</Th>
+                      <Th color="gray.400" borderColor="slate.700">Email</Th>
+                      <Th color="gray.400" borderColor="slate.700">Roll No</Th>
+                      <Th color="gray.400" borderColor="slate.700">Course</Th>
+                      <Th color="gray.400" borderColor="slate.700">Year</Th>
+                      <Th color="gray.400" borderColor="slate.700">Joined</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {students.map((s, index) => (
+                      <Tr key={s.student_id || index}>
+                        <Td color="gray.300" borderColor="slate.700" fontSize="xs">{index + 1}</Td>
+                        <Td color="white" borderColor="slate.700" fontWeight="medium" fontSize="sm">{s.name}</Td>
+                        <Td color="gray.400" borderColor="slate.700" fontSize="sm">{s.email}</Td>
+                        <Td borderColor="slate.700">
+                          <Badge colorScheme="purple" fontSize="xs">{s.roll_number}</Badge>
+                        </Td>
+                        <Td color="gray.400" borderColor="slate.700" fontSize="sm">{s.course || '—'}</Td>
+                        <Td color="gray.400" borderColor="slate.700" fontSize="sm">{s.year || '—'}</Td>
+                        <Td color="gray.500" borderColor="slate.700" fontSize="xs">
+                          {s.joined_at ? new Date(s.joined_at).toLocaleDateString() : '—'}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </CardBody>
+          </Card>
         )}
       </VStack>
     </VStack>

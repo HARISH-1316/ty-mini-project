@@ -1,0 +1,61 @@
+// ──────────────────────────────────────────────
+// Breadcrumbs — Reusable Navigation Component
+// ──────────────────────────────────────────────
+
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Text,
+  Box,
+} from '@chakra-ui/react';
+import { ChevronRightIcon } from '@chakra-ui/icons';
+
+/**
+ * @param {{ items: Array<{ label: string, path?: string }> }} props
+ * items — ordered breadcrumb entries. Last item renders as plain text (current page).
+ */
+const Breadcrumbs = ({ items = [] }) => {
+  return (
+    <Box
+      px={{ base: 4, md: 6 }}
+      py={3}
+      bg="slate.800"
+      borderBottom="1px solid"
+      borderColor="slate.700"
+    >
+      <Breadcrumb
+        spacing="8px"
+        separator={<ChevronRightIcon color="gray.500" />}
+      >
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+
+          return (
+            <BreadcrumbItem key={index} isCurrentPage={isLast}>
+              {isLast ? (
+                <Text color="purple.300" fontSize="sm" fontWeight="semibold">
+                  {item.label}
+                </Text>
+              ) : (
+                <BreadcrumbLink
+                  as={RouterLink}
+                  to={item.path || '#'}
+                  color="gray.400"
+                  fontSize="sm"
+                  _hover={{ color: 'purple.300', textDecoration: 'underline' }}
+                  transition="color 0.2s"
+                >
+                  {item.label}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+          );
+        })}
+      </Breadcrumb>
+    </Box>
+  );
+};
+
+export default Breadcrumbs;

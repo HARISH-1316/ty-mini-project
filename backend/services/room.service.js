@@ -8,6 +8,7 @@ import FacultyModel from '../models/faculty.model.js';
 import StudentModel from '../models/student.model.js';
 import StudentRoomModel from '../models/studentRoom.model.js';
 import RoomTopicModel from '../models/roomTopic.model.js';
+import { query } from '../config/database.js';
 
 /**
  * Generate a random 6-character uppercase room code.
@@ -223,6 +224,70 @@ const RoomService = {
     }
 
     return RoomTopicModel.deleteByRoomAndTopic(roomId, topicId);
+  },
+
+  /**
+   * Get students enrolled in a room (Faculty owner or Admin only).
+   */
+  getRoomStudents: async (roomId, userId, role) => {
+    const room = await RoomService.getRoomById(roomId);
+
+    // Admin can view students in any room
+    if (role !== 'admin') {
+      const faculty = await FacultyModel.findByUserId(userId);
+      if (!faculty || room.faculty_id !== faculty.faculty_id) {
+        const error = new Error('Access denied. You do not own this room.');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    return StudentRoomModel.findByRoomId(roomId);
+  },
+
+  /**
+   * Check if a student has access to a topic through any enrolled room.
+   * Returns true if the student is enrolled in at least one room
+   * that has the given topic assigned.
+   */
+  checkStudentTopicAccess: async (userId, topicId) => {
+    const student = await StudentModel.findByUserId(userId);
+    if (!student) {
+      return false;
+    }
+
+    const result = await query(
+      `SELECT 1
+       FROM student_rooms sr
+       JOIN room_topics rt ON sr.room_id = rt.room_id
+       WHERE sr.student_id = $1 AND rt.topic_id = $2
+       LIMIT 1`,
+      [student.student_id, topicId]
+    );
+
+    return result.rows.length > 0;
+  },
+
+  /**
+   * Get all distinct topics available to a student across all joined rooms.
+   */
+  getStudentTopics: async (userId) => {
+    const student = await StudentModel.findByUserId(userId);
+    if (!student) {
+      return [];
+    }
+
+    const result = await query(
+      `SELECT DISTINCT t.topic_id, t.title, t.description, t.created_at
+       FROM topics t
+       JOIN room_topics rt ON t.topic_id = rt.topic_id
+       JOIN student_rooms sr ON rt.room_id = sr.room_id
+       WHERE sr.student_id = $1
+       ORDER BY t.title ASC`,
+      [student.student_id]
+    );
+
+    return result.rows;
   },
 };
 

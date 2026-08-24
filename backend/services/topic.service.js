@@ -8,6 +8,8 @@ import SubtopicContentModel from '../models/subtopicContent.model.js';
 import TopicFeedbackModel from '../models/topicFeedback.model.js';
 import ProgressModel from '../models/progress.model.js';
 import StudentModel from '../models/student.model.js';
+import PrerequisiteModel from '../models/prerequisite.model.js';
+import RoomService from './room.service.js';
 
 const TopicService = {
   // ── Topic Operations ────────────────────────
@@ -19,18 +21,34 @@ const TopicService = {
     return TopicModel.findAll();
   },
 
-  getTopicById: async (topicId) => {
+  getTopicsForStudent: async (userId) => {
+    return RoomService.getStudentTopics(userId);
+  },
+
+  getTopicById: async (topicId, userRole = null) => {
     const topic = await TopicModel.findById(topicId);
     if (!topic) {
       const error = new Error('Topic not found.');
       error.statusCode = 404;
       throw error;
     }
-    const subtopics = await SubtopicModel.findByTopicId(topicId);
+    const onlyPublished = userRole === 'student';
+    const subtopics = await SubtopicModel.findByTopicId(topicId, { onlyPublished });
     return {
       ...topic,
       subtopics,
     };
+  },
+
+  getTopicSubtopics: async (topicId, userRole = null) => {
+    const topic = await TopicModel.findById(topicId);
+    if (!topic) {
+      const error = new Error('Topic not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+    const onlyPublished = userRole === 'student';
+    return SubtopicModel.findByTopicId(topicId, { onlyPublished });
   },
 
   updateTopic: async (topicId, { title, description }) => {
@@ -49,9 +67,9 @@ const TopicService = {
     return SubtopicModel.create({ topic_id: topicId, title, order_index, is_published });
   },
 
-  getSubtopicById: async (subtopicId) => {
+  getSubtopicById: async (subtopicId, userRole = null) => {
     const subtopic = await SubtopicModel.findById(subtopicId);
-    if (!subtopic) {
+    if (!subtopic || (userRole === 'student' && !subtopic.is_published)) {
       const error = new Error('Subtopic not found.');
       error.statusCode = 404;
       throw error;
@@ -74,13 +92,29 @@ const TopicService = {
   },
 
   // ── Subtopic Content Operations ─────────────
+  getSubtopicContent: async (subtopicId, userRole = null) => {
+    const subtopic = await TopicService.getSubtopicById(subtopicId, userRole);
+    const content = await SubtopicContentModel.findBySubtopicId(subtopicId);
+    return content || { aim: '', theory: '', video_explanation_url: null, subtopic_id: subtopic.subtopic_id };
+  },
+
   upsertContent: async (subtopicId, { aim, theory, video_explanation_url }) => {
     await TopicService.getSubtopicById(subtopicId);
     const existing = await SubtopicContentModel.findBySubtopicId(subtopicId);
     if (existing) {
-      return SubtopicContentModel.update(existing.content_id, { aim, theory, video_explanation_url });
+      return SubtopicContentModel.update(existing.content_id, { aim, theory, video_explanation_url: video_explanation_url || null });
     }
-    return SubtopicContentModel.create({ subtopic_id: subtopicId, aim, theory, video_explanation_url });
+    return SubtopicContentModel.create({ subtopic_id: subtopicId, aim, theory, video_explanation_url: video_explanation_url || null });
+  },
+
+  publishSubtopicContent: async (subtopicId) => {
+    await TopicService.getSubtopicById(subtopicId);
+    return SubtopicModel.setPublishStatus(subtopicId, true);
+  },
+
+  unpublishSubtopicContent: async (subtopicId) => {
+    await TopicService.getSubtopicById(subtopicId);
+    return SubtopicModel.setPublishStatus(subtopicId, false);
   },
 
   // ── Topic Feedback Operations ───────────────
@@ -178,6 +212,17 @@ const TopicService = {
     }
 
     return ProgressModel.findByStudentId(student.student_id);
+  },
+
+  // ── Prerequisite Operations ─────────────────
+  getTopicPrerequisites: async (topicId) => {
+    const topic = await TopicModel.findById(topicId);
+    if (!topic) {
+      const error = new Error('Topic not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+    return PrerequisiteModel.findByTopicId(topicId);
   },
 };
 

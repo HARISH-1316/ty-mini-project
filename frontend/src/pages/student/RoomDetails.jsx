@@ -158,7 +158,7 @@ const RoomDetails = () => {
               <Card
                 key={t.topic_id}
                 as={RouterLink}
-                to={`/student/topics/${t.topic_id}`}
+                to={`/student/topics/${t.topic_id}/introduction`}
                 bg="slate.800"
                 borderColor="slate.700"
                 borderWidth="1px"
