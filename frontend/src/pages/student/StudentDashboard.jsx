@@ -27,6 +27,7 @@ import { AddIcon, ArrowForwardIcon, CheckCircleIcon, TimeIcon } from '@chakra-ui
 import useAuth from '../../hooks/useAuth';
 import { getMyRoomsApi } from '../../api/roomApi';
 import { getMyOverallProgressApi } from '../../api/progressApi';
+import { getStudentAvailableLabsApi } from '../../api/labApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const StudentDashboard = () => {
@@ -34,17 +35,20 @@ const StudentDashboard = () => {
   const toast = useToast();
   const [rooms, setRooms] = useState([]);
   const [progressData, setProgressData] = useState(null);
+  const [labAssessments, setLabAssessments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [roomsRes, progressRes] = await Promise.all([
+        const [roomsRes, progressRes, labsRes] = await Promise.all([
           getMyRoomsApi(),
           getMyOverallProgressApi().catch(() => ({ data: null })),
+          getStudentAvailableLabsApi().catch(() => ({ data: { data: { labs: [] } } })),
         ]);
         setRooms(roomsRes.data?.rooms || []);
         setProgressData(progressRes.data || null);
+        setLabAssessments(labsRes.data?.data?.labs || []);
       } catch {
         toast({
           title: 'Error loading dashboard',
@@ -90,27 +94,47 @@ const StudentDashboard = () => {
               Roll No: {user?.profile?.roll_number || 'N/A'} • Course: {user?.profile?.course || 'Engineering'}
             </Text>
           </VStack>
-          <Button
-            as={RouterLink}
-            to="/student/join-room"
-            leftIcon={<AddIcon />}
-            bgGradient="linear(to-r, purple.500, pink.500)"
-            color="white"
-            _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
-          >
-            Join New Lab Room
-          </Button>
+          <HStack spacing={3} wrap="wrap">
+            <Button
+              as={RouterLink}
+              to="/student/lab-assessments"
+              colorScheme="teal"
+              variant="solid"
+            >
+              Practical Assessments
+            </Button>
+            <Button
+              as={RouterLink}
+              to="/student/join-room"
+              leftIcon={<AddIcon />}
+              bgGradient="linear(to-r, purple.500, pink.500)"
+              color="white"
+              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+            >
+              Join New Lab Room
+            </Button>
+          </HStack>
         </Flex>
       </Box>
 
       {/* Quick Stats Grid */}
-      <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={6}>
         <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
           <CardBody>
             <Stat>
               <StatLabel color="gray.400">Joined Lab Rooms</StatLabel>
               <StatNumber color="purple.300" fontSize="3xl">{rooms.length}</StatNumber>
               <StatHelpText color="gray.500">Enrolled lab courses</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+
+        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <CardBody>
+            <Stat>
+              <StatLabel color="gray.400">Lab Assessments</StatLabel>
+              <StatNumber color="teal.300" fontSize="3xl">{labAssessments.length}</StatNumber>
+              <StatHelpText color="gray.500">Available / Attempted</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -137,6 +161,96 @@ const StudentDashboard = () => {
           </CardBody>
         </Card>
       </SimpleGrid>
+
+      {/* Practical Lab Assessments Section */}
+      <VStack align="stretch" spacing={4}>
+        <Flex justify="space-between" align="center">
+          <HStack>
+            <Heading size="md" color="white">
+              Practical Lab Assessments ({labAssessments.length})
+            </Heading>
+            <Badge colorScheme="teal" px={2} py={0.5} borderRadius="md">
+              Timed Coding
+            </Badge>
+          </HStack>
+          <Button
+            as={RouterLink}
+            to="/student/lab-assessments"
+            size="sm"
+            variant="ghost"
+            colorScheme="teal"
+            rightIcon={<ArrowForwardIcon />}
+          >
+            Go to Assessments
+          </Button>
+        </Flex>
+
+        {labAssessments.length === 0 ? (
+          <Box p={6} bg="slate.800" borderRadius="xl" border="1px dashed" borderColor="slate.700">
+            <Text color="gray.400" fontSize="sm">
+              No practical assessments currently scheduled for your enrolled rooms. Check back later!
+            </Text>
+          </Box>
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+            {labAssessments.slice(0, 3).map((lab) => {
+              const hasAttempt = Boolean(lab.attempt);
+              const isSubmitted = lab.attempt?.status === 'submitted';
+              const isInProgress = lab.attempt?.status === 'in_progress';
+
+              return (
+                <Card
+                  key={lab.lab_id}
+                  bg="slate.800"
+                  borderColor={isInProgress ? 'teal.500' : isSubmitted ? 'purple.600' : 'slate.700'}
+                  borderWidth="1px"
+                  borderRadius="xl"
+                  p={4}
+                  transition="all 0.2s"
+                  _hover={{ transform: 'translateY(-2px)' }}
+                >
+                  <VStack align="stretch" spacing={3}>
+                    <Flex justify="space-between" align="start">
+                      <Heading size="sm" color="white" noOfLines={1}>
+                        {lab.title}
+                      </Heading>
+                      <Badge
+                        colorScheme={
+                          isInProgress
+                            ? 'teal'
+                            : isSubmitted
+                            ? 'purple'
+                            : 'green'
+                        }
+                        fontSize="2xs"
+                      >
+                        {isInProgress ? 'In Progress' : isSubmitted ? 'Submitted' : 'Available'}
+                      </Badge>
+                    </Flex>
+                    <Text fontSize="xs" color="gray.400">
+                      Duration: {lab.duration} mins • {lab.num_questions || 5} Questions
+                    </Text>
+                    <Button
+                      as={RouterLink}
+                      to={
+                        isSubmitted
+                          ? `/student/lab-assessments/${lab.lab_id}/result`
+                          : `/student/lab-assessments/${lab.lab_id}`
+                      }
+                      size="xs"
+                      colorScheme={isInProgress ? 'teal' : isSubmitted ? 'purple' : 'green'}
+                      variant={isSubmitted ? 'outline' : 'solid'}
+                      rightIcon={<ArrowForwardIcon />}
+                    >
+                      {isInProgress ? 'Resume' : isSubmitted ? 'View Result' : 'Start'}
+                    </Button>
+                  </VStack>
+                </Card>
+              );
+            })}
+          </SimpleGrid>
+        )}
+      </VStack>
 
       {/* Enrolled Lab Rooms Section */}
       <VStack align="stretch" spacing={4}>

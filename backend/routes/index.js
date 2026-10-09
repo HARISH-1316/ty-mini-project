@@ -15,6 +15,7 @@ import progressRoutes from './progress.routes.js';
 import facultyProgressRoutes from './facultyProgress.routes.js';
 import adminProgressRoutes from './adminProgress.routes.js';
 import editorRoutes from './editor.routes.js';
+import labAssessmentRoutes, { questionBankRouter } from './labAssessment.routes.js';
 
 const router = Router();
 
@@ -28,5 +29,7 @@ router.use('/progress', progressRoutes);
 router.use('/faculty', facultyProgressRoutes);
 router.use('/admin', adminProgressRoutes);
 router.use('/editor', editorRoutes);
+router.use('/lab-assessments', labAssessmentRoutes);
+router.use('/lab-questions', questionBankRouter);
 
 export default router;

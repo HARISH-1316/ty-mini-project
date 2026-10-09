@@ -27,6 +27,9 @@ import JoinRoom from '../pages/student/JoinRoom';
 import RoomDetails from '../pages/student/RoomDetails';
 import TopicDetails from '../pages/student/TopicDetails';
 import StudentProgress from '../pages/student/StudentProgress';
+import LabAssessmentList from '../pages/student/LabAssessmentList';
+import LabAssessmentWorkspace from '../pages/student/LabAssessmentWorkspace';
+import LabAssessmentResult from '../pages/student/LabAssessmentResult';
 
 // Student Topic Section Pages
 import IntroductionPage from '../pages/student/topic/IntroductionPage';
@@ -52,6 +55,10 @@ import TopicManagement from '../pages/faculty/TopicManagement';
 import QuizManagement from '../pages/faculty/QuizManagement';
 import FacultyStudents from '../pages/faculty/FacultyStudents';
 import FacultyAnalytics from '../pages/faculty/FacultyAnalytics';
+import LabAssessmentManagement from '../pages/faculty/LabAssessmentManagement';
+import CreateLabAssessment from '../pages/faculty/CreateLabAssessment';
+import LabAssessmentResults from '../pages/faculty/LabAssessmentResults';
+import LabQuestionBank from '../pages/faculty/LabQuestionBank';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -87,6 +94,9 @@ const AppRoutes = () => {
             <Route path="/student/join-room" element={<JoinRoom />} />
             <Route path="/student/rooms/:roomId" element={<RoomDetails />} />
             <Route path="/student/progress" element={<StudentProgress />} />
+            <Route path="/student/lab-assessments" element={<LabAssessmentList />} />
+            <Route path="/student/lab-assessments/:labId" element={<LabAssessmentWorkspace />} />
+            <Route path="/student/lab-assessments/:labId/result" element={<LabAssessmentResult />} />
           </Route>
 
           {/* Dedicated Topic Page — Virtual Labs Layout */}
@@ -123,6 +133,10 @@ const AppRoutes = () => {
             <Route path="/faculty/students" element={<FacultyStudents />} />
             <Route path="/faculty/students/:studentId/progress" element={<StudentProgressDetail />} />
             <Route path="/faculty/analytics" element={<FacultyAnalytics />} />
+            <Route path="/faculty/lab-assessments" element={<LabAssessmentManagement />} />
+            <Route path="/faculty/lab-assessments/:labId" element={<CreateLabAssessment />} />
+            <Route path="/faculty/lab-assessments/:labId/results" element={<LabAssessmentResults />} />
+            <Route path="/faculty/lab-questions" element={<LabQuestionBank />} />
           </Route>
         </Route>
 
@@ -134,6 +148,10 @@ const AppRoutes = () => {
             <Route path="/admin/roles" element={<RoleManagement />} />
             <Route path="/admin/progress" element={<AdminProgress />} />
             <Route path="/admin/students/:studentId/progress" element={<StudentProgressDetail />} />
+            <Route path="/admin/lab-assessments" element={<LabAssessmentManagement />} />
+            <Route path="/admin/lab-assessments/:labId" element={<CreateLabAssessment />} />
+            <Route path="/admin/lab-assessments/:labId/results" element={<LabAssessmentResults />} />
+            <Route path="/admin/lab-questions" element={<LabQuestionBank />} />
           </Route>
         </Route>
       </Route>

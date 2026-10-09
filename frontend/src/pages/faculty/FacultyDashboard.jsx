@@ -27,6 +27,7 @@ import { AddIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 import useAuth from '../../hooks/useAuth';
 import { getMyRoomsApi } from '../../api/roomApi';
 import { getAllTopicsApi } from '../../api/topicApi';
+import { getFacultyLabAssessmentsApi } from '../../api/labApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import CreateRoomModal from './CreateRoomModal';
 
@@ -37,16 +38,22 @@ const FacultyDashboard = () => {
 
   const [rooms, setRooms] = useState([]);
   const [topicsCount, setTopicsCount] = useState(0);
+  const [labAssessments, setLabAssessments] = useState([]);
+  const [labAssessmentsCount, setLabAssessmentsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchDashboardData = async () => {
     try {
-      const [roomsRes, topicsRes] = await Promise.all([
+      const [roomsRes, topicsRes, labsRes] = await Promise.all([
         getMyRoomsApi(),
         getAllTopicsApi().catch(() => ({ data: { topics: [] } })),
+        getFacultyLabAssessmentsApi().catch(() => ({ data: { data: { labs: [] } } })),
       ]);
+      const fetchedLabs = labsRes.data?.data?.labs || [];
       setRooms(roomsRes.data?.rooms || []);
-      setTopicsCount((topicsRes.data?.topics || []).length);
+      setTopicsCount((topicsRes.data?.topics || topicsRes.data?.data?.topics || []).length);
+      setLabAssessments(fetchedLabs);
+      setLabAssessmentsCount(fetchedLabs.length);
     } catch {
       toast({
         title: 'Error loading dashboard',
@@ -88,7 +95,7 @@ const FacultyDashboard = () => {
               Designation: {user?.profile?.designation || 'Faculty Member'} • Department: {user?.profile?.department || 'Engineering'}
             </Text>
           </VStack>
-          <HStack spacing={3}>
+          <HStack spacing={3} wrap="wrap">
             <Button
               onClick={onOpen}
               leftIcon={<AddIcon />}
@@ -98,6 +105,9 @@ const FacultyDashboard = () => {
             >
               Create New Room
             </Button>
+            <Button as={RouterLink} to="/faculty/lab-assessments" colorScheme="teal" variant="solid">
+              Lab Assessments
+            </Button>
             <Button as={RouterLink} to="/faculty/topics" variant="outline" colorScheme="purple">
               Manage Topics
             </Button>
@@ -106,13 +116,23 @@ const FacultyDashboard = () => {
       </Box>
 
       {/* Stats Grid */}
-      <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={6}>
         <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
           <CardBody>
             <Stat>
               <StatLabel color="gray.400">Rooms Created</StatLabel>
               <StatNumber color="purple.300" fontSize="3xl">{rooms.length}</StatNumber>
               <StatHelpText color="gray.500">Active virtual labs</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+
+        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <CardBody>
+            <Stat>
+              <StatLabel color="gray.400">Lab Assessments</StatLabel>
+              <StatNumber color="teal.300" fontSize="3xl">{labAssessmentsCount}</StatNumber>
+              <StatHelpText color="gray.500">Practical assessments</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -181,6 +201,70 @@ const FacultyDashboard = () => {
                 </CardBody>
               </Card>
             ))}
+          </SimpleGrid>
+        )}
+      </VStack>
+
+      {/* Lab Assessments Section */}
+      <VStack align="stretch" spacing={4}>
+        <Flex justify="space-between" align="center">
+          <Heading size="md" color="white">Lab Assessments ({labAssessments.length})</Heading>
+          <Button as={RouterLink} to="/faculty/lab-assessments" size="sm" variant="ghost" colorScheme="teal" rightIcon={<ArrowForwardIcon />}>
+            Manage Assessments
+          </Button>
+        </Flex>
+
+        {labAssessments.length === 0 ? (
+          <Box p={8} bg="slate.800" borderRadius="xl" textAlign="center" border="1px dashed" borderColor="slate.700">
+            <Text color="gray.400" mb={4}>No lab assessments configured yet.</Text>
+            <Button size="sm" colorScheme="teal" as={RouterLink} to="/faculty/lab-assessments" leftIcon={<AddIcon />}>
+              Create Lab Assessment
+            </Button>
+          </Box>
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+            {labAssessments.slice(0, 3).map((lab) => {
+              const statusColors = { draft: 'gray', published: 'blue', active: 'green', completed: 'purple', cancelled: 'red' };
+              return (
+                <Card
+                  key={lab.lab_id}
+                  bg="slate.800"
+                  borderColor="slate.700"
+                  borderWidth="1px"
+                  borderRadius="xl"
+                  transition="all 0.2s"
+                  _hover={{ transform: 'translateY(-4px)', borderColor: 'teal.400', boxShadow: 'xl' }}
+                >
+                  <CardBody>
+                    <VStack align="start" spacing={3}>
+                      <Flex justify="space-between" w="full" align="center">
+                        <Badge colorScheme={statusColors[lab.status] || 'gray'} px={2} py={0.5} borderRadius="md" textTransform="capitalize">
+                          {lab.status}
+                        </Badge>
+                        <Text color="gray.500" fontSize="xs">{lab.num_questions || 5} Questions</Text>
+                      </Flex>
+                      <Heading size="sm" color="white" noOfLines={2}>{lab.title}</Heading>
+                      {lab.description && (
+                        <Text color="gray.400" fontSize="xs" noOfLines={2}>{lab.description}</Text>
+                      )}
+                      <Flex justify="space-between" align="center" w="full" pt={2} borderTop="1px solid" borderColor="slate.700">
+                        <Text color="gray.400" fontSize="xs">⏱ {lab.duration} mins</Text>
+                        <Button
+                          as={RouterLink}
+                          to={`/faculty/lab-assessments/${lab.lab_id}`}
+                          size="xs"
+                          colorScheme="teal"
+                          variant="solid"
+                          rightIcon={<ArrowForwardIcon />}
+                        >
+                          Manage
+                        </Button>
+                      </Flex>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </SimpleGrid>
         )}
       </VStack>

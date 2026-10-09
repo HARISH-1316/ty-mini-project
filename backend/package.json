@@ -10,7 +10,8 @@
     "db:init": "node database/init.js",
     "db:seed:dsa": "node database/seedDsa.js",
     "db:seed:quiz": "node database/seedQuiz.js",
-    "db:seed:coding": "node database/seedCoding.js"
+    "db:seed:coding": "node database/seedCoding.js",
+    "db:seed:lab": "node database/seedLabQuestions.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
