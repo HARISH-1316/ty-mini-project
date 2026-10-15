@@ -263,10 +263,10 @@ const LabQuestionBank = () => {
       <Box
         p={8}
         borderRadius="2xl"
-        bgGradient="linear(to-r, slate.900, blue.900, dark.card)"
+        bg="bg.card"
         border="1px solid"
-        borderColor="blue.800"
-        boxShadow="xl"
+        borderColor="border.primary"
+        boxShadow="sm"
       >
         <Flex
           justify="space-between"
@@ -275,10 +275,10 @@ const LabQuestionBank = () => {
           gap={4}
         >
           <VStack align="start" spacing={2}>
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               Practical Question Bank 📚
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Maintain reusable practical coding questions and test cases mapped to curriculum topics.
             </Text>
           </VStack>
@@ -286,9 +286,7 @@ const LabQuestionBank = () => {
           <Button
             onClick={onCreateOpen}
             leftIcon={<AddIcon />}
-            bgGradient="linear(to-r, purple.500, pink.500)"
-            color="white"
-            _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+            colorScheme="brand"
             isDisabled={!selectedTopicId}
           >
             Add New Question

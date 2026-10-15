@@ -80,17 +80,17 @@ const StudentDashboard = () => {
       <Box
         p={8}
         borderRadius="2xl"
-        bgGradient="linear(to-r, purple.900, slate.900, dark.card)"
+        bg="bg.card"
         border="1px solid"
-        borderColor="purple.800"
-        boxShadow="xl"
+        borderColor="border.primary"
+        boxShadow="sm"
       >
         <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={2}>
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               Welcome back, {user?.name}! 👋
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Roll No: {user?.profile?.roll_number || 'N/A'} • Course: {user?.profile?.course || 'Engineering'}
             </Text>
           </VStack>
@@ -98,8 +98,7 @@ const StudentDashboard = () => {
             <Button
               as={RouterLink}
               to="/student/lab-assessments"
-              colorScheme="teal"
-              variant="solid"
+              variant="outline"
             >
               Practical Assessments
             </Button>
@@ -107,9 +106,7 @@ const StudentDashboard = () => {
               as={RouterLink}
               to="/student/join-room"
               leftIcon={<AddIcon />}
-              bgGradient="linear(to-r, purple.500, pink.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+              colorScheme="brand"
             >
               Join New Lab Room
             </Button>

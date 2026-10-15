@@ -23,18 +23,17 @@ const EmptyState = ({
       my={4}
     >
       <VStack spacing={4}>
-        <InfoOutlineIcon w={10} h={10} color="purple.400" />
-        <Heading size="md" color="white">
+        <InfoOutlineIcon w={10} h={10} color="accent.primary" />
+        <Heading size="md" color="text.primary">
           {title}
         </Heading>
-        <Text color="gray.400" maxW="md">
+        <Text color="text.secondary" maxW="md">
           {description}
         </Text>
         {actionLabel && onAction && (
           <Button
             size="sm"
-            bgGradient="linear(to-r, purple.500, pink.500)"
-            color="white"
+            colorScheme="brand"
             onClick={onAction}
             mt={2}
           >

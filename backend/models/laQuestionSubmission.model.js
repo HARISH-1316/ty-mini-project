@@ -59,6 +59,7 @@ const LaQuestionSubmissionModel = {
       `SELECT
          s.submission_id,
          s.lab_question_id,
+         s.source_code,
          s.language,
          s.status,
          s.passed_test_cases,

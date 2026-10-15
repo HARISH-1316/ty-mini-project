@@ -30,7 +30,7 @@ class ErrorBoundary extends React.Component {
       return (
         <Box
           minH="100vh"
-          bg="#0f172a"
+          bg="bg.primary"
           display="flex"
           alignItems="center"
           justifyContent="center"
@@ -48,10 +48,10 @@ class ErrorBoundary extends React.Component {
             boxShadow="2xl"
           >
             <WarningTwoIcon w={16} h={16} color="red.400" />
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               Something went wrong
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               An unexpected error occurred while rendering this page.
             </Text>
             {this.state.error?.message && (
@@ -70,7 +70,7 @@ class ErrorBoundary extends React.Component {
               </Code>
             )}
             <Button
-              colorScheme="purple"
+              colorScheme="brand"
               onClick={this.handleReset}
             >
               Back to Dashboard

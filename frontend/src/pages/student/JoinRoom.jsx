@@ -119,9 +119,7 @@ const JoinRoom = () => {
                 type="submit"
                 w="full"
                 size="lg"
-                bgGradient="linear(to-r, purple.500, pink.500)"
-                color="white"
-                _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                colorScheme="brand"
                 isLoading={isLoading}
                 loadingText="Joining Room..."
               >

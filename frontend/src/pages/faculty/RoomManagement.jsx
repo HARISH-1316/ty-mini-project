@@ -169,16 +169,16 @@ const RoomManagement = () => {
                 onChange={(e) => setSelectedTopicId(e.target.value)}
                 bg="slate.900"
                 borderColor="slate.700"
-                color="white"
+                color="text.primary"
               >
                 {availableTopics.map((t) => (
-                  <option key={t.topic_id} value={t.topic_id} style={{ background: '#1e293b' }}>
+                  <option key={t.topic_id} value={t.topic_id}>
                     {t.title}
                   </option>
                 ))}
               </Select>
               <Button
-                colorScheme="purple"
+                colorScheme="brand"
                 leftIcon={<AddIcon />}
                 onClick={handleAddTopic}
                 isLoading={isAdding}

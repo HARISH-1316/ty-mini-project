@@ -293,7 +293,7 @@ const LabAssessmentWorkspace = () => {
   const currentQuestion = questions[selectedIndex] || null;
   const currentQId = currentQuestion?.lab_question_id;
 
-  // Sync custom input with current question's sample input
+  // Sync custom input and previous submitted language with current question
   useEffect(() => {
     if (currentQuestion?.sample_input) {
       setCustomInput(currentQuestion.sample_input);
@@ -302,7 +302,10 @@ const LabAssessmentWorkspace = () => {
     }
     setRunResult(null);
     setEvalResult(null);
-  }, [selectedIndex, currentQuestion]);
+    if (currentQId && submissionMap[currentQId]?.language) {
+      setLanguage(submissionMap[currentQId].language);
+    }
+  }, [selectedIndex, currentQuestion, currentQId, submissionMap]);
 
   // Current editor code
   const currentCode =
@@ -800,9 +803,7 @@ const LabAssessmentWorkspace = () => {
                   </Button>
                   <Button
                     size="xs"
-                    bgGradient="linear(to-r, green.500, teal.500)"
-                    color="white"
-                    _hover={{ bgGradient: 'linear(to-r, green.600, teal.600)' }}
+                    colorScheme="brand"
                     onClick={handleSubmitQuestion}
                     isLoading={isSubmitting}
                     loadingText="Evaluating..."

@@ -166,27 +166,24 @@ const LabAssessmentManagement = () => {
   return (
     <VStack spacing={8} align="stretch" w="full">
       {/* Header */}
-      <Box p={8} borderRadius="2xl" bgGradient="linear(to-r, purple.900, blue.900, dark.card)" border="1px solid" borderColor="purple.700" boxShadow="xl">
+      <Box p={8} borderRadius="2xl" bg="bg.card" border="1px solid" borderColor="border.primary" boxShadow="sm">
         <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={1}>
-            <Heading size="lg" color="white">🧪 Lab Assessments</Heading>
-            <Text color="gray.300" fontSize="sm">Create and manage practical coding assessments for students</Text>
+            <Heading size="lg" color="text.primary">🧪 Lab Assessments</Heading>
+            <Text color="text.secondary" fontSize="sm">Create and manage practical coding assessments for students</Text>
           </VStack>
           <HStack spacing={3}>
             <Button
               as={RouterLink}
               to="/faculty/lab-questions"
               variant="outline"
-              colorScheme="cyan"
               size="sm"
             >
               Question Bank
             </Button>
             <Button
               leftIcon={<AddIcon />}
-              bgGradient="linear(to-r, purple.500, pink.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+              colorScheme="brand"
               onClick={onOpen}
             >
               New Assessment

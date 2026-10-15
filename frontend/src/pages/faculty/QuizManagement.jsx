@@ -361,9 +361,7 @@ const QuizManagement = () => {
 
                     <Button
                       leftIcon={<AddIcon />}
-                      colorScheme="purple"
-                      bgGradient="linear(to-r, purple.500, pink.500)"
-                      _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                      colorScheme="brand"
                       onClick={() => handleOpenAddModal('prereq')}
                     >
                       Add Question
@@ -400,11 +398,11 @@ const QuizManagement = () => {
                           onChange={(e) => setSelectedSubtopicId(e.target.value)}
                           bg="slate.900"
                           borderColor="slate.700"
-                          color="white"
+                          color="text.primary"
                           maxW="md"
                         >
                           {subtopics.map((st) => (
-                            <option key={st.subtopic_id} value={st.subtopic_id} style={{ background: '#1e293b' }}>
+                            <option key={st.subtopic_id} value={st.subtopic_id}>
                               {st.title}
                             </option>
                           ))}
@@ -413,9 +411,7 @@ const QuizManagement = () => {
 
                       <Button
                         leftIcon={<AddIcon />}
-                        colorScheme="purple"
-                        bgGradient="linear(to-r, purple.500, pink.500)"
-                        _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                        colorScheme="brand"
                         onClick={() => handleOpenAddModal('subtopic')}
                         isDisabled={!selectedSubtopicId || !subtopicQuizData?.content}
                       >
@@ -477,9 +473,7 @@ const QuizManagement = () => {
 
                     <Button
                       leftIcon={<AddIcon />}
-                      colorScheme="purple"
-                      bgGradient="linear(to-r, purple.500, pink.500)"
-                      _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                      colorScheme="brand"
                       onClick={() => handleOpenAddModal('final')}
                     >
                       Add Question
@@ -573,13 +567,13 @@ const QuizManagement = () => {
                     onChange={(e) => setQuestionForm({ ...questionForm, correct_option: e.target.value })}
                     bg="slate.900"
                     borderColor="slate.700"
-                    color="purple.300"
+                    color="accent.primary"
                     fontWeight="bold"
                   >
-                    <option value="A" style={{ background: '#1e293b' }}>Option A</option>
-                    <option value="B" style={{ background: '#1e293b' }}>Option B</option>
-                    <option value="C" style={{ background: '#1e293b' }}>Option C</option>
-                    <option value="D" style={{ background: '#1e293b' }}>Option D</option>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
                   </Select>
                 </FormControl>
 
@@ -615,8 +609,7 @@ const QuizManagement = () => {
             </Button>
             <Button
               type="submit"
-              colorScheme="purple"
-              bgGradient="linear(to-r, purple.500, pink.500)"
+              colorScheme="brand"
               isLoading={isSavingQuestion}
             >
               Save Question

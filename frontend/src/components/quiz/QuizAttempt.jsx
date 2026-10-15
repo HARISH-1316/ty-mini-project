@@ -246,9 +246,7 @@ const QuizAttempt = ({
         </HStack>
 
         <Button
-          colorScheme="purple"
-          bgGradient="linear(to-r, purple.500, pink.500)"
-          _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+          colorScheme="brand"
           px={8}
           onClick={onOpen}
           isLoading={isSubmitting}
@@ -345,8 +343,7 @@ const QuizAttempt = ({
               Continue Quiz
             </Button>
             <Button
-              colorScheme="purple"
-              bgGradient="linear(to-r, purple.500, pink.500)"
+              colorScheme="brand"
               onClick={() => {
                 onClose();
                 onSubmit(answers);

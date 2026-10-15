@@ -186,13 +186,13 @@ const StudentProgress = () => {
       </VStack>
 
       {/* Main Overall Progress Banner */}
-      <Card bg="linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)" borderColor="purple.500" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody p={{ base: 6, md: 8 }}>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} alignItems="center">
             <VStack align={{ base: 'center', md: 'start' }} spacing={2} gridColumn={{ md: 'span 2' }}>
               <HStack spacing={3}>
-                <Icon as={StarIcon} color="purple.400" w={5} h={5} />
-                <Heading size="md" color="white">Overall Completion</Heading>
+                <Icon as={StarIcon} color="accent.primary" w={5} h={5} />
+                <Heading size="md" color="text.primary">Overall Completion</Heading>
               </HStack>
               <Text color="gray.300" fontSize="sm">
                 Calculated dynamically from topic prerequisite quizzes, subtopic learning & quizzes, topic final quiz, and coding assessments.

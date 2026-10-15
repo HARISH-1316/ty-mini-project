@@ -151,12 +151,12 @@ const LabAssessmentResult = () => {
 
       {/* Hero Result Banner */}
       <Card
-        bgGradient="linear(to-r, slate.900, purple.950, slate.900)"
-        borderColor="purple.800"
+        bg="bg.card"
+        borderColor="border.primary"
         borderWidth="1px"
         p={8}
         borderRadius="2xl"
-        boxShadow="2xl"
+        boxShadow="sm"
       >
         <Flex
           justify="space-between"
@@ -165,10 +165,10 @@ const LabAssessmentResult = () => {
           gap={6}
         >
           <VStack align="start" spacing={2}>
-            <Badge colorScheme="purple" px={3} py={1} borderRadius="md" textTransform="uppercase">
+            <Badge colorScheme="brand" px={3} py={1} borderRadius="md" textTransform="uppercase">
               Assessment Report
             </Badge>
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               {lab?.title || 'Practical Lab Assessment'}
             </Heading>
             <Text color="gray.300" fontSize="sm">

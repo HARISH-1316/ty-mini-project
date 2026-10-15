@@ -115,8 +115,7 @@ const Signup = () => {
           <Heading
             as="h1"
             size="xl"
-            bgGradient="linear(to-r, purple.400, pink.400, cyan.400)"
-            bgClip="text"
+            color="accent.primary"
             fontWeight="extrabold"
             letterSpacing="tight"
           >
@@ -364,9 +363,7 @@ const Signup = () => {
               w="full"
               size="lg"
               mt={2}
-              bgGradient="linear(to-r, purple.500, pink.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)', transform: 'translateY(-1px)' }}
+              colorScheme="brand"
               isLoading={isLoading}
               loadingText="Registering..."
             >
@@ -376,9 +373,9 @@ const Signup = () => {
         </form>
 
         {/* Footer */}
-        <Text mt={6} textAlign="center" color="gray.400" fontSize="sm">
+        <Text mt={6} textAlign="center" color="text.secondary" fontSize="sm">
           Already registered?{' '}
-          <Text as={RouterLink} to="/login" color="purple.300" _hover={{ color: 'purple.200', textDecoration: 'underline' }}>
+          <Text as={RouterLink} to="/login" color="accent.primary" _hover={{ textDecoration: 'underline' }}>
             Sign in
           </Text>
         </Text>

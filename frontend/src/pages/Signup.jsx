@@ -117,8 +117,7 @@ const Signup = () => {
           <Heading
             as="h1"
             size="xl"
-            bgGradient="linear(to-r, purple.400, pink.400)"
-            bgClip="text"
+            color="accent.primary"
             fontWeight="extrabold"
           >
             WCE Virtual Lab
@@ -364,10 +363,7 @@ const Signup = () => {
               type="submit"
               w="full"
               size="lg"
-              bgGradient="linear(to-r, purple.500, pink.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)', transform: 'translateY(-1px)', boxShadow: 'lg' }}
-              _active={{ transform: 'translateY(0)' }}
+              colorScheme="brand"
               isLoading={isLoading}
               loadingText="Creating account..."
               transition="all 0.2s"

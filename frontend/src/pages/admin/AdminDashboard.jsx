@@ -72,22 +72,22 @@ const AdminDashboard = () => {
       <Box
         p={8}
         borderRadius="2xl"
-        bgGradient="linear(to-r, purple.900, slate.900, dark.card)"
+        bg="bg.card"
         border="1px solid"
-        borderColor="purple.700"
-        boxShadow="xl"
+        borderColor="border.primary"
+        boxShadow="sm"
       >
         <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={2}>
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               System Administration — Welcome, {user?.name}! 🛡️
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               WCE Virtual Lab Platform Overview & User Control Panel
             </Text>
           </VStack>
           <HStack spacing={3}>
-            <Button as={RouterLink} to="/admin/users" colorScheme="purple">
+            <Button as={RouterLink} to="/admin/users" colorScheme="brand">
               User List
             </Button>
             <Button as={RouterLink} to="/admin/roles" colorScheme="purple" variant="outline">

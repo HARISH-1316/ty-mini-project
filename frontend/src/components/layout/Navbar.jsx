@@ -27,19 +27,21 @@ import {
   ModalBody,
   VStack,
   useDisclosure,
+  useColorMode,
 } from '@chakra-ui/react';
-import { HamburgerIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, ChevronDownIcon, SunIcon, MoonIcon } from '@chakra-ui/icons';
 import useAuth from '../../hooks/useAuth';
 
 const roleBadgeColor = {
-  student: 'green',
-  faculty: 'blue',
-  admin: 'purple',
+  student: 'orange',
+  faculty: 'brand',
+  admin: 'red',
 };
 
 const Navbar = ({ onOpenSidebar }) => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { colorMode, toggleColorMode } = useColorMode();
   const { user, logout } = useAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -92,7 +94,7 @@ const Navbar = ({ onOpenSidebar }) => {
         position="sticky"
         top={0}
         zIndex={100}
-        boxShadow="0 4px 20px rgba(0, 0, 0, 0.4)"
+        boxShadow="sm"
       >
         {/* Left: Mobile Drawer Button + Brand Logo */}
         <HStack spacing={4}>
@@ -101,15 +103,14 @@ const Navbar = ({ onOpenSidebar }) => {
             aria-label="Open navigation menu"
             icon={<HamburgerIcon />}
             variant="ghost"
-            color="gray.300"
+            color="text.secondary"
             onClick={onOpenSidebar}
           />
           <Heading
             as={RouterLink}
             to={getDashboardPath()}
             size="md"
-            bgGradient="linear(to-r, purple.400, pink.400, cyan.400)"
-            bgClip="text"
+            color="accent.primary"
             fontWeight="extrabold"
             letterSpacing="tight"
             _hover={{ textDecoration: 'none' }}
@@ -118,8 +119,18 @@ const Navbar = ({ onOpenSidebar }) => {
           </Heading>
         </HStack>
 
-        {/* Right: User Menu */}
-        <HStack spacing={4}>
+        {/* Right: Color Mode Toggle + User Menu */}
+        <HStack spacing={3}>
+          <IconButton
+            aria-label="Toggle color mode"
+            icon={colorMode === 'dark' ? <SunIcon color="accent.primary" /> : <MoonIcon color="accent.primary" />}
+            onClick={toggleColorMode}
+            variant="ghost"
+            size="sm"
+            borderRadius="full"
+            _hover={{ bg: 'accent.soft' }}
+          />
+
           <Menu placement="bottom-end">
             <MenuButton
               as={Button}
@@ -127,18 +138,18 @@ const Navbar = ({ onOpenSidebar }) => {
               px={2}
               py={1}
               borderRadius="full"
-              _hover={{ bg: 'slate.800' }}
-              rightIcon={<ChevronDownIcon color="gray.400" />}
+              _hover={{ bg: 'accent.soft' }}
+              rightIcon={<ChevronDownIcon color="text.secondary" />}
             >
               <HStack spacing={3}>
                 <Avatar
                   size="sm"
                   name={user?.name}
-                  bg="purple.500"
+                  bg="brand.500"
                   color="white"
                 />
                 <VStack spacing={0} align="start" display={{ base: 'none', lg: 'flex' }}>
-                  <Text color="white" fontSize="xs" fontWeight="bold" lineHeight="short">
+                  <Text color="text.primary" fontSize="xs" fontWeight="bold" lineHeight="short">
                     {user?.name}
                   </Text>
                   <Badge
@@ -155,15 +166,15 @@ const Navbar = ({ onOpenSidebar }) => {
               </HStack>
             </MenuButton>
 
-            <MenuList bg="slate.800" borderColor="slate.700" color="white" shadow="xl">
-              <MenuItem bg="slate.800" _hover={{ bg: 'slate.700' }} onClick={onOpen}>
+            <MenuList bg="slate.800" borderColor="slate.700" color="text.primary" shadow="xl">
+              <MenuItem bg="slate.800" _hover={{ bg: 'accent.soft' }} onClick={onOpen}>
                 Profile Info
               </MenuItem>
               <MenuDivider borderColor="slate.700" />
               <MenuItem
                 bg="slate.800"
-                color="red.300"
-                _hover={{ bg: 'red.900', color: 'red.100' }}
+                color="red.400"
+                _hover={{ bg: 'accent.soft', color: 'red.500' }}
                 onClick={handleLogout}
                 isDisabled={isLoggingOut}
               >
@@ -177,13 +188,13 @@ const Navbar = ({ onOpenSidebar }) => {
       {/* User Profile Modal */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white">
+        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="text.primary">
           <ModalHeader>User Profile</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             <VStack spacing={4} align="stretch">
               <Flex justify="center" py={2}>
-                <Avatar size="xl" name={user?.name} bg="purple.500" />
+                <Avatar size="xl" name={user?.name} bg="brand.500" />
               </Flex>
               <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
                 <Text color="gray.400" fontSize="sm">Full Name</Text>

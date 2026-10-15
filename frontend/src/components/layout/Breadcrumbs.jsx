@@ -23,7 +23,7 @@ const Breadcrumbs = ({ items = [] }) => {
       py={3}
       bg="slate.800"
       borderBottom="1px solid"
-      borderColor="slate.700"
+      borderColor="border.primary"
     >
       <Breadcrumb
         spacing="8px"
@@ -35,7 +35,7 @@ const Breadcrumbs = ({ items = [] }) => {
           return (
             <BreadcrumbItem key={index} isCurrentPage={isLast}>
               {isLast ? (
-                <Text color="purple.300" fontSize="sm" fontWeight="semibold">
+                <Text color="accent.primary" fontSize="sm" fontWeight="semibold">
                   {item.label}
                 </Text>
               ) : (
@@ -44,7 +44,7 @@ const Breadcrumbs = ({ items = [] }) => {
                   to={item.path || '#'}
                   color="gray.400"
                   fontSize="sm"
-                  _hover={{ color: 'purple.300', textDecoration: 'underline' }}
+                  _hover={{ color: 'accent.primary', textDecoration: 'underline' }}
                   transition="color 0.2s"
                 >
                   {item.label}

@@ -77,9 +77,7 @@ const MyRooms = () => {
           as={RouterLink}
           to="/student/join-room"
           leftIcon={<AddIcon />}
-          bgGradient="linear(to-r, purple.500, pink.500)"
-          color="white"
-          _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+          colorScheme="brand"
         >
           Join Room with Code
         </Button>

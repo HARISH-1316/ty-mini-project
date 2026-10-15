@@ -38,14 +38,14 @@ const SidebarNavItem = ({ label, path, onClick }) => (
     fontWeight="500"
     transition="all 0.2s"
     _hover={{
-      bg: 'slate.700',
-      color: 'cyan.300',
+      bg: 'accent.soft',
+      color: 'accent.primary',
     }}
     style={({ isActive }) => ({
-      backgroundColor: isActive ? '#1e3a5f' : 'transparent',
-      color: isActive ? '#22d3ee' : '#94a3b8',
+      backgroundColor: isActive ? 'var(--chakra-colors-accent-soft)' : 'transparent',
+      color: isActive ? 'var(--chakra-colors-accent-primary)' : 'inherit',
       fontWeight: isActive ? '700' : '500',
-      borderLeft: isActive ? '3px solid #22d3ee' : '3px solid transparent',
+      borderLeft: isActive ? '3px solid var(--chakra-colors-accent-primary)' : '3px solid transparent',
     })}
   >
     {label}
@@ -63,9 +63,9 @@ export const SubtopicSidebarContent = ({ topicId, subtopicId, subtopicTitle, onC
           as={RouterLink}
           to={`/student/topics/${topicId}/subtopics`}
           spacing={2}
-          color="gray.400"
+          color="text.secondary"
           fontSize="xs"
-          _hover={{ color: 'purple.300' }}
+          _hover={{ color: 'accent.primary' }}
           transition="color 0.2s"
           onClick={onClose}
         >
@@ -79,7 +79,7 @@ export const SubtopicSidebarContent = ({ topicId, subtopicId, subtopicTitle, onC
         <Text
           fontSize="xs"
           fontWeight="bold"
-          color="gray.500"
+          color="text.secondary"
           textTransform="uppercase"
           letterSpacing="wider"
           mb={1}
@@ -89,14 +89,14 @@ export const SubtopicSidebarContent = ({ topicId, subtopicId, subtopicTitle, onC
         <Text
           fontSize="sm"
           fontWeight="bold"
-          color="purple.300"
+          color="accent.primary"
           noOfLines={2}
         >
           {subtopicTitle || 'Loading...'}
         </Text>
       </Box>
 
-      <Divider borderColor="slate.700" />
+      <Divider borderColor="border.primary" />
 
       {/* Navigation Items */}
       <VStack spacing={0.5} align="stretch" px={2} py={2}>
@@ -123,7 +123,7 @@ const SubtopicSidebar = ({ isOpen, onClose, topicId, subtopicId, subtopicTitle }
         minW="250px"
         bg="slate.900"
         borderRight="1px solid"
-        borderColor="slate.700"
+        borderColor="border.primary"
         py={4}
         minH="calc(100vh - 110px)"
         overflowY="auto"
@@ -138,9 +138,9 @@ const SubtopicSidebar = ({ isOpen, onClose, topicId, subtopicId, subtopicTitle }
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay backdropFilter="blur(4px)" />
-        <DrawerContent bg="slate.900" color="white">
+        <DrawerContent bg="slate.900" color="text.primary">
           <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px" borderColor="slate.700" fontSize="sm">
+          <DrawerHeader borderBottomWidth="1px" borderColor="border.primary" fontSize="sm">
             Subtopic Navigation
           </DrawerHeader>
           <DrawerBody p={2}>

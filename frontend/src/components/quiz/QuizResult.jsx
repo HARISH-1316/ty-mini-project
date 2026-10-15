@@ -63,13 +63,9 @@ const QuizResult = ({
         {/* Top Banner */}
         <Box
           p={6}
-          bgGradient={
-            isPass
-              ? 'linear(to-r, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.95))'
-              : 'linear(to-r, rgba(127, 29, 29, 0.9), rgba(15, 23, 42, 0.95))'
-          }
+          bg={isPass ? 'accent.soft' : 'red.900'}
           borderBottom="1px solid"
-          borderColor={isPass ? 'emerald.600' : 'red.700'}
+          borderColor="border.primary"
         >
           <Flex justify="space-between" align="center" direction={{ base: 'column', sm: 'row' }} gap={4}>
             <VStack align={{ base: 'center', sm: 'start' }} spacing={1}>
@@ -214,9 +210,7 @@ const QuizResult = ({
               {onBack && (
                 <Button
                   leftIcon={<ArrowBackIcon />}
-                  colorScheme="purple"
-                  bgGradient="linear(to-r, purple.500, pink.500)"
-                  _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                  colorScheme="brand"
                   onClick={onBack}
                 >
                   {backButtonLabel}

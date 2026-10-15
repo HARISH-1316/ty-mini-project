@@ -60,12 +60,12 @@ const NavItem = ({ label, path, onClick }) => {
       borderRadius="xl"
       transition="all 0.2s"
       _hover={{
-        bg: 'slate.800',
-        color: 'purple.300',
+        bg: 'accent.soft',
+        color: 'accent.primary',
       }}
       style={({ isActive }) => ({
-        backgroundColor: isActive ? '#334155' : 'transparent',
-        color: isActive ? '#c084fc' : '#94a3b8',
+        backgroundColor: isActive ? 'var(--chakra-colors-accent-soft)' : 'transparent',
+        color: isActive ? 'var(--chakra-colors-accent-primary)' : 'inherit',
         fontWeight: isActive ? '700' : '500',
       })}
     >
@@ -83,7 +83,7 @@ export const SidebarContent = ({ onClose }) => {
   return (
     <VStack spacing={2} align="stretch" w="full">
       <Box px={4} py={2}>
-        <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="wider">
+        <Text fontSize="xs" fontWeight="bold" color="text.secondary" textTransform="uppercase" letterSpacing="wider">
           {user?.role} Workspace
         </Text>
       </Box>
@@ -113,7 +113,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay backdropFilter="blur(4px)" />
-        <DrawerContent bg="slate.900" color="white">
+        <DrawerContent bg="slate.900" color="text.primary">
           <DrawerCloseButton />
           <DrawerHeader borderBottomWidth="1px" borderColor="slate.800">
             WCE Virtual Lab

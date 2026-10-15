@@ -1,8 +1,45 @@
 // ──────────────────────────────────────────────
-// Custom Chakra UI Theme — Dark Cyber-Academic Aesthetic
+// Custom Chakra UI Theme — WCE Virtual Lab
+// Light Mode: White + GeeksforGeeks Green
+//   Primary: #2F8D46, Primary Hover: #26753A, Primary Soft: #E8F5E9
+//   Background/Surface: #FFFFFF, Surface Secondary: #F5F7F5
+//   Text: #202124 / #606860, Border: #DDE5DD, Focus: #2F8D46
+// Dark Mode: Blackish-Grey + Lime Green
+//   Primary: #A3E635, Primary Hover: #BEF264, Primary Soft: #303B22
+//   Background: #171918, Surface: #202321, Surface Secondary: #292D2A
+//   Text: #F5F7F5 / #B8C0B9, Border: #3B423C, Focus: #A3E635
+// Solid colors only — Absolutely NO gradients
 // ──────────────────────────────────────────────
 
 import { extendTheme } from '@chakra-ui/react';
+
+// GeeksforGeeks Conventional Green (Light)
+const gfgGreen = {
+  50: '#E8F5E9',
+  100: '#C8E6C9',
+  200: '#A5D6A7',
+  300: '#81C784',
+  400: '#4CAF50',
+  500: '#2F8D46', // Primary light
+  600: '#26753A', // Primary hover light
+  700: '#1E5E2E',
+  800: '#174723',
+  900: '#0F2F17',
+};
+
+// Bright Lime Green (Dark)
+const limeGreen = {
+  50: '#F7FEE7',
+  100: '#ECFCCB',
+  200: '#D9F99D',
+  300: '#BEF264',
+  400: '#BEF264', // Lime hover dark
+  500: '#A3E635', // Lime primary dark
+  600: '#84CC16',
+  700: '#65A30D',
+  800: '#4D7C0F',
+  900: '#303B22', // Lime soft dark
+};
 
 const theme = extendTheme({
   config: {
@@ -10,56 +47,121 @@ const theme = extendTheme({
     useSystemColorMode: false,
   },
   colors: {
-    brand: {
-      50: '#f0e6ff',
-      100: '#d1b3ff',
-      200: '#b280ff',
-      300: '#934dff',
-      400: '#741aff',
-      500: '#5a00e6',
-      600: '#4600b3',
-      700: '#320080',
-      800: '#1e004d',
-      900: '#0a001a',
-    },
-    accent: {
-      cyan: '#00f2fe',
-      purple: '#9d4edd',
-      pink: '#ff4d6d',
-      emerald: '#10b981',
-      amber: '#f59e0b',
-    },
-    slate: {
-      50: '#f8fafc',
-      100: '#f1f5f9',
-      200: '#e2e8f0',
-      300: '#cbd5e1',
-      400: '#94a3b8',
-      500: '#64748b',
-      600: '#475569',
-      700: '#334155',
-      800: '#1e293b',
-      900: '#0f172a',
-      950: '#020617',
-    },
+    brand: gfgGreen,
+    lime: limeGreen,
     emerald: {
-      50: '#ecfdf5',
-      100: '#d1fae5',
-      200: '#a7f3d0',
-      300: '#6ee7b7',
-      400: '#34d399',
-      500: '#10b981',
-      600: '#059669',
-      700: '#047857',
-      800: '#065f46',
-      900: '#064e3b',
+      50: '#E8F5E9',
+      100: '#C8E6C9',
+      200: '#A5D6A7',
+      300: '#81C784',
+      400: '#4CAF50',
+      500: '#2F8D46',
+      600: '#26753A',
+      700: '#1E5E2E',
+      800: '#174723',
+      900: '#0F2F17',
     },
-    dark: {
-      bg: '#0f172a',
-      card: '#1e293b',
-      border: '#334155',
-      hover: '#475569',
-      input: '#1e293b',
+    // Literal white accessible constant
+    pureWhite: '#FFFFFF',
+  },
+  semanticTokens: {
+    colors: {
+      // ── Core Palette Tokens ──
+      'bg.primary': { default: '#FFFFFF', _dark: '#171918' },
+      'bg.secondary': { default: '#F5F7F5', _dark: '#292D2A' },
+      'bg.card': { default: '#FFFFFF', _dark: '#202321' },
+      'bg.surface': { default: '#FFFFFF', _dark: '#202321' },
+      'bg.surfaceSecondary': { default: '#F5F7F5', _dark: '#292D2A' },
+
+      'accent.primary': { default: '#2F8D46', _dark: '#A3E635' },
+      'accent.hover': { default: '#26753A', _dark: '#BEF264' },
+      'accent.soft': { default: '#E8F5E9', _dark: '#303B22' },
+      'accent.contrastText': { default: '#FFFFFF', _dark: '#171918' },
+
+      'text.primary': { default: '#202124', _dark: '#F5F7F5' },
+      'text.secondary': { default: '#606860', _dark: '#B8C0B9' },
+
+      'border.primary': { default: '#DDE5DD', _dark: '#3B423C' },
+      'border.subtle': { default: '#E8EFE8', _dark: '#2F3530' },
+
+      'input.bg': { default: '#FFFFFF', _dark: '#202321' },
+      'input.border': { default: '#DDE5DD', _dark: '#3B423C' },
+      'focus.ring': { default: '#2F8D46', _dark: '#A3E635' },
+      'disabled.bg': { default: '#F1EFED', _dark: '#292D2A' },
+      'disabled.text': { default: '#859086', _dark: '#606860' },
+
+      // Adaptive text color for components using color="white"
+      white: { default: '#202124', _dark: '#F5F7F5' },
+
+      // Legacy token compatibility mapped to new palette
+      'dark.bg': { default: '#FFFFFF', _dark: '#171918' },
+      'dark.card': { default: '#FFFFFF', _dark: '#202321' },
+      'dark.border': { default: '#DDE5DD', _dark: '#3B423C' },
+      'dark.hover': { default: '#F5F7F5', _dark: '#292D2A' },
+      'dark.input': { default: '#FFFFFF', _dark: '#202321' },
+
+      // Slate scale mapped to Blackish-Grey (dark) and White / Neutral (light)
+      'slate.950': { default: '#FFFFFF', _dark: '#141615' },
+      'slate.900': { default: '#F5F7F5', _dark: '#171918' },
+      'slate.850': { default: '#FFFFFF', _dark: '#1C1F1D' },
+      'slate.800': { default: '#FFFFFF', _dark: '#202321' },
+      'slate.700': { default: '#E8F5E9', _dark: '#292D2A' },
+      'slate.600': { default: '#DDE5DD', _dark: '#3B423C' },
+      'slate.500': { default: '#606860', _dark: '#859086' },
+      'slate.400': { default: '#606860', _dark: '#B8C0B9' },
+      'slate.300': { default: '#3A3E3A', _dark: '#D0D6D1' },
+      'slate.200': { default: '#DDE5DD', _dark: '#3B423C' },
+      'slate.100': { default: '#F5F7F5', _dark: '#292D2A' },
+      'slate.50': { default: '#FFFFFF', _dark: '#171918' },
+
+      // Grays mapped to prompt palette
+      'gray.900': { default: '#202124', _dark: '#F5F7F5' },
+      'gray.800': { default: '#3B423C', _dark: '#D0D6D1' },
+      'gray.700': { default: '#4A504A', _dark: '#B8C0B9' },
+      'gray.600': { default: '#606860', _dark: '#9FA7A0' },
+      'gray.500': { default: '#606860', _dark: '#859086' },
+      'gray.400': { default: '#606860', _dark: '#B8C0B9' },
+      'gray.300': { default: '#859086', _dark: '#D0D6D1' },
+      'gray.200': { default: '#DDE5DD', _dark: '#3B423C' },
+      'gray.100': { default: '#F5F7F5', _dark: '#292D2A' },
+      'gray.50': { default: '#F5F7F5', _dark: '#202321' },
+
+      // Brand / Purple / Cyan / Orange aliases mapped to theme
+      'brand.50': { default: '#E8F5E9', _dark: '#303B22' },
+      'brand.100': { default: '#E8F5E9', _dark: '#303B22' },
+      'brand.200': { default: '#C8E6C9', _dark: '#3F4D2C' },
+      'brand.300': { default: '#A5D6A7', _dark: '#BEF264' },
+      'brand.400': { default: '#4CAF50', _dark: '#BEF264' },
+      'brand.500': { default: '#2F8D46', _dark: '#A3E635' },
+      'brand.600': { default: '#26753A', _dark: '#84CC16' },
+      'brand.700': { default: '#1E5E2E', _dark: '#65A30D' },
+      'brand.800': { default: '#174723', _dark: '#4D7C0F' },
+      'brand.900': { default: '#0F2F17', _dark: '#303B22' },
+
+      'purple.50': { default: '#E8F5E9', _dark: '#303B22' },
+      'purple.100': { default: '#E8F5E9', _dark: '#303B22' },
+      'purple.200': { default: '#C8E6C9', _dark: '#3F4D2C' },
+      'purple.300': { default: '#2F8D46', _dark: '#BEF264' },
+      'purple.400': { default: '#2F8D46', _dark: '#A3E635' },
+      'purple.500': { default: '#2F8D46', _dark: '#A3E635' },
+      'purple.600': { default: '#26753A', _dark: '#84CC16' },
+      'purple.700': { default: '#1E5E2E', _dark: '#65A30D' },
+      'purple.800': { default: '#174723', _dark: '#4D7C0F' },
+      'purple.900': { default: '#0F2F17', _dark: '#303B22' },
+
+      'cyan.300': { default: '#2F8D46', _dark: '#BEF264' },
+      'cyan.400': { default: '#2F8D46', _dark: '#A3E635' },
+      'cyan.500': { default: '#2F8D46', _dark: '#A3E635' },
+
+      'green.500': { default: '#2F8D46', _dark: '#A3E635' },
+      'green.600': { default: '#26753A', _dark: '#84CC16' },
+
+      // Chakra system tokens
+      'chakra-body-bg': { default: '#FFFFFF', _dark: '#171918' },
+      'chakra-body-text': { default: '#202124', _dark: '#F5F7F5' },
+      'chakra-border-color': { default: '#DDE5DD', _dark: '#3B423C' },
+      'chakra-subtle-bg': { default: '#F5F7F5', _dark: '#292D2A' },
+      'chakra-placeholder-color': { default: '#859086', _dark: '#859086' },
     },
   },
   fonts: {
@@ -67,28 +169,256 @@ const theme = extendTheme({
     body: `'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`,
   },
   styles: {
-    global: {
+    global: (props) => ({
       body: {
-        bg: '#0f172a',
-        color: '#f8fafc',
+        bg: props.colorMode === 'dark' ? '#171918' : '#FFFFFF',
+        color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
         minH: '100vh',
+        transition: 'background-color 0.2s ease, color 0.2s ease',
       },
-    },
+      '*::placeholder': {
+        color: props.colorMode === 'dark' ? '#859086' : '#859086',
+      },
+      '*, *::before, *::after': {
+        borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+      },
+    }),
   },
   components: {
     Button: {
+      baseStyle: {
+        borderRadius: 'lg',
+        fontWeight: '600',
+      },
+      variants: {
+        solid: (props) => {
+          const isBrand =
+            !props.colorScheme ||
+            props.colorScheme === 'brand' ||
+            props.colorScheme === 'purple' ||
+            props.colorScheme === 'cyan' ||
+            props.colorScheme === 'green';
+
+          if (isBrand) {
+            return {
+              bg: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+              color: props.colorMode === 'dark' ? '#171918' : '#FFFFFF',
+              fontWeight: '700',
+              _hover: {
+                bg: props.colorMode === 'dark' ? '#BEF264' : '#26753A',
+                _disabled: {
+                  bg: props.colorMode === 'dark' ? '#292D2A' : '#F1EFED',
+                  color: props.colorMode === 'dark' ? '#606860' : '#859086',
+                },
+              },
+              _active: {
+                bg: props.colorMode === 'dark' ? '#84CC16' : '#1E5E2E',
+              },
+            };
+          }
+          return {};
+        },
+        outline: (props) => {
+          const isBrand =
+            props.colorScheme === 'brand' ||
+            props.colorScheme === 'purple' ||
+            props.colorScheme === 'cyan' ||
+            props.colorScheme === 'green';
+
+          if (isBrand) {
+            return {
+              borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+              color: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+              bg: 'transparent',
+              _hover: {
+                bg: props.colorMode === 'dark' ? '#303B22' : '#E8F5E9',
+              },
+            };
+          }
+          return {
+            borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+            color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+            _hover: {
+              bg: props.colorMode === 'dark' ? '#292D2A' : '#F5F7F5',
+            },
+          };
+        },
+        ghost: (props) => ({
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+          _hover: {
+            bg: props.colorMode === 'dark' ? '#292D2A' : '#F5F7F5',
+            color: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+          },
+        }),
+      },
       defaultProps: {
-        colorScheme: 'purple',
+        colorScheme: 'brand',
       },
     },
     Card: {
-      baseStyle: {
+      baseStyle: (props) => ({
         container: {
-          bg: 'dark.card',
-          borderColor: 'dark.border',
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
           borderWidth: '1px',
           borderRadius: 'xl',
-          boxShadow: 'lg',
+          boxShadow: 'sm',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+        },
+      }),
+    },
+    Input: {
+      variants: {
+        outline: (props) => ({
+          field: {
+            bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+            borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+            color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+            borderRadius: 'lg',
+            _hover: {
+              borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+            },
+            _focus: {
+              borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+              boxShadow: `0 0 0 1px ${props.colorMode === 'dark' ? '#A3E635' : '#2F8D46'}`,
+            },
+            _disabled: {
+              bg: props.colorMode === 'dark' ? '#292D2A' : '#F1EFED',
+              opacity: 0.7,
+            },
+          },
+        }),
+      },
+      defaultProps: {
+        variant: 'outline',
+      },
+    },
+    Textarea: {
+      variants: {
+        outline: (props) => ({
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+          borderRadius: 'lg',
+          _hover: {
+            borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+          },
+          _focus: {
+            borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+            boxShadow: `0 0 0 1px ${props.colorMode === 'dark' ? '#A3E635' : '#2F8D46'}`,
+          },
+          _disabled: {
+            bg: props.colorMode === 'dark' ? '#292D2A' : '#F1EFED',
+            opacity: 0.7,
+          },
+        }),
+      },
+      defaultProps: {
+        variant: 'outline',
+      },
+    },
+    Select: {
+      variants: {
+        outline: (props) => ({
+          field: {
+            bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+            borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+            color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+            borderRadius: 'lg',
+            _hover: {
+              borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+            },
+            _focus: {
+              borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+              boxShadow: `0 0 0 1px ${props.colorMode === 'dark' ? '#A3E635' : '#2F8D46'}`,
+            },
+          },
+        }),
+      },
+    },
+    Modal: {
+      baseStyle: (props) => ({
+        dialog: {
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+          borderWidth: '1px',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+          borderRadius: 'xl',
+        },
+        header: {
+          borderBottomWidth: '1px',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+        },
+        footer: {
+          borderTopWidth: '1px',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+        },
+      }),
+    },
+    Menu: {
+      baseStyle: (props) => ({
+        list: {
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+          borderWidth: '1px',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+          boxShadow: props.colorMode === 'dark' ? 'dark-lg' : 'lg',
+          borderRadius: 'xl',
+        },
+        item: {
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+          _hover: {
+            bg: props.colorMode === 'dark' ? '#292D2A' : '#F5F7F5',
+            color: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+          },
+        },
+        divider: {
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+        },
+      }),
+    },
+    Table: {
+      baseStyle: (props) => ({
+        th: {
+          color: props.colorMode === 'dark' ? '#B8C0B9' : '#606860',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+        },
+        td: {
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+        },
+      }),
+    },
+    Tabs: {
+      variants: {
+        line: (props) => ({
+          tab: {
+            color: props.colorMode === 'dark' ? '#B8C0B9' : '#606860',
+            _selected: {
+              color: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+              borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+            },
+          },
+        }),
+      },
+    },
+    Divider: {
+      baseStyle: (props) => ({
+        borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+      }),
+    },
+    Badge: {
+      variants: {
+        subtle: (props) => {
+          if (props.colorScheme === 'brand' || props.colorScheme === 'purple' || props.colorScheme === 'green') {
+            return {
+              bg: props.colorMode === 'dark' ? '#303B22' : '#E8F5E9',
+              color: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
+            };
+          }
+          return {};
         },
       },
     },

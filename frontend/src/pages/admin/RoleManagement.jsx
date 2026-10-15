@@ -185,13 +185,13 @@ const RoleManagement = () => {
                           onChange={(e) => handleSelectRole(u, e.target.value)}
                           bg="slate.900"
                           borderColor="slate.600"
-                          color="purple.300"
+                          color="accent.primary"
                           fontWeight="bold"
                           isDisabled={isSelf}
                         >
-                          <option value="student" style={{ background: '#1e293b' }}>Student</option>
-                          <option value="faculty" style={{ background: '#1e293b' }}>Faculty</option>
-                          <option value="admin" style={{ background: '#1e293b' }}>Admin</option>
+                          <option value="student">Student</option>
+                          <option value="faculty">Faculty</option>
+                          <option value="admin">Admin</option>
                         </Select>
                       </Td>
                     </Tr>

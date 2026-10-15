@@ -97,7 +97,7 @@ const Login = () => {
         maxW="md"
         bg="dark.card"
         borderRadius="2xl"
-        boxShadow="0 0 40px rgba(128, 90, 213, 0.15)"
+        boxShadow="sm"
         border="1px solid"
         borderColor="dark.border"
         p={8}
@@ -107,8 +107,7 @@ const Login = () => {
           <Heading
             as="h1"
             size="xl"
-            bgGradient="linear(to-r, purple.400, pink.400, cyan.400)"
-            bgClip="text"
+            color="accent.primary"
             fontWeight="extrabold"
             letterSpacing="tight"
           >
@@ -199,10 +198,7 @@ const Login = () => {
               type="submit"
               w="full"
               size="lg"
-              bgGradient="linear(to-r, purple.500, pink.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)', transform: 'translateY(-1px)', boxShadow: 'lg' }}
-              _active={{ transform: 'translateY(0)' }}
+              colorScheme="brand"
               isLoading={isLoading}
               loadingText="Signing in..."
               transition="all 0.2s"
@@ -213,9 +209,9 @@ const Login = () => {
         </form>
 
         {/* Footer */}
-        <Text mt={6} textAlign="center" color="gray.400" fontSize="sm">
+        <Text mt={6} textAlign="center" color="text.secondary" fontSize="sm">
           Don&apos;t have a student account?{' '}
-          <Text as={RouterLink} to="/signup" color="purple.300" _hover={{ color: 'purple.200', textDecoration: 'underline' }}>
+          <Text as={RouterLink} to="/signup" color="accent.primary" _hover={{ textDecoration: 'underline' }}>
             Register here
           </Text>
         </Text>

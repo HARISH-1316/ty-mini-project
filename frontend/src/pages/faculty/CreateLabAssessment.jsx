@@ -464,13 +464,13 @@ const CreateLabAssessment = () => {
               <Select
                 bg="dark.bg"
                 borderColor="slate.600"
-                color="white"
+                color="text.primary"
                 value={selectedTopicId}
                 onChange={e => setSelectedTopicId(e.target.value)}
                 placeholder="Choose a topic..."
               >
                 {availableTopics.map(t => (
-                  <option key={t.topic_id} value={t.topic_id} style={{ background: '#1e293b', color: 'white' }}>
+                  <option key={t.topic_id} value={t.topic_id}>
                     {t.title} — ({t.question_count ?? 0} questions in pool)
                   </option>
                 ))}

@@ -225,9 +225,7 @@ const FinalQuizPage = () => {
             ) : (
               <Button
                 size="lg"
-                colorScheme="purple"
-                bgGradient="linear(to-r, purple.500, pink.500)"
-                _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                colorScheme="brand"
                 rightIcon={<ArrowForwardIcon />}
                 onClick={handleStartAttempt}
                 isLoading={isStarting}

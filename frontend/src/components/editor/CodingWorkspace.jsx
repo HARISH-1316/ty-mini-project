@@ -494,9 +494,7 @@ const CodingWorkspace = ({
 
                     <Button
                       size="sm"
-                      colorScheme="purple"
-                      bgGradient="linear(to-r, purple.500, pink.500)"
-                      _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+                      colorScheme="brand"
                       onClick={handleSubmitCode}
                       isLoading={isSubmitting}
                       loadingText="Testing..."

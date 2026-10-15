@@ -93,6 +93,11 @@ const LabAssessmentModel = {
              WHERE sr.student_id = $1 AND rt.topic_id = lat.topic_id
            )
            OR EXISTS (
+             SELECT 1 FROM student_rooms sr
+             JOIN rooms r ON sr.room_id = r.room_id
+             WHERE sr.student_id = $1 AND r.faculty_id = la.faculty_id
+           )
+           OR EXISTS (
              SELECT 1 FROM la_attempts att
              WHERE att.student_id = $1 AND att.lab_id = la.lab_id
            )

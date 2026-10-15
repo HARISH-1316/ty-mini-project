@@ -81,17 +81,17 @@ const FacultyDashboard = () => {
       <Box
         p={8}
         borderRadius="2xl"
-        bgGradient="linear(to-r, blue.900, slate.900, dark.card)"
+        bg="bg.card"
         border="1px solid"
-        borderColor="blue.800"
-        boxShadow="xl"
+        borderColor="border.primary"
+        boxShadow="sm"
       >
         <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={2}>
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               Faculty Workspace — Welcome, {user?.name}! 👋
             </Heading>
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Designation: {user?.profile?.designation || 'Faculty Member'} • Department: {user?.profile?.department || 'Engineering'}
             </Text>
           </VStack>
@@ -99,16 +99,14 @@ const FacultyDashboard = () => {
             <Button
               onClick={onOpen}
               leftIcon={<AddIcon />}
-              bgGradient="linear(to-r, purple.500, pink.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, purple.600, pink.600)' }}
+              colorScheme="brand"
             >
               Create New Room
             </Button>
-            <Button as={RouterLink} to="/faculty/lab-assessments" colorScheme="teal" variant="solid">
+            <Button as={RouterLink} to="/faculty/lab-assessments" variant="outline">
               Lab Assessments
             </Button>
-            <Button as={RouterLink} to="/faculty/topics" variant="outline" colorScheme="purple">
+            <Button as={RouterLink} to="/faculty/topics" variant="outline">
               Manage Topics
             </Button>
           </HStack>

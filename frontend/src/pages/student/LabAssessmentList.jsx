@@ -157,10 +157,10 @@ const LabAssessmentList = () => {
       <Box
         p={{ base: 6, md: 8 }}
         borderRadius="2xl"
-        bgGradient="linear(to-r, blue.900, purple.900, dark.card)"
+        bg="bg.card"
         border="1px solid"
-        borderColor="purple.800"
-        boxShadow="xl"
+        borderColor="border.primary"
+        boxShadow="sm"
       >
         <VStack align="start" spacing={2}>
           <Heading size="lg" color="white">
@@ -343,9 +343,7 @@ const LabAssessmentList = () => {
               Cancel
             </Button>
             <Button
-              bgGradient="linear(to-r, green.500, teal.500)"
-              color="white"
-              _hover={{ bgGradient: 'linear(to-r, green.600, teal.600)' }}
+              colorScheme="brand"
               onClick={handleConfirmStart}
               leftIcon={<ArrowForwardIcon />}
             >
@@ -508,9 +506,7 @@ const AssessmentCard = ({ lab, onStart }) => {
             ) : (
               <Button
                 w="full"
-                bgGradient="linear(to-r, green.500, teal.500)"
-                color="white"
-                _hover={{ bgGradient: 'linear(to-r, green.600, teal.600)' }}
+                colorScheme="brand"
                 onClick={() => onStart(lab)}
                 rightIcon={<ArrowForwardIcon />}
               >
