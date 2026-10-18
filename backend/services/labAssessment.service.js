@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { getClient } from '../config/database.js';
+import { query, getClient } from '../config/database.js';
 import { getLanguageConfig } from '../config/languages.js';
 import DockerService from './docker.service.js';
 import { compareOutputs } from '../utils/outputComparator.js';
@@ -55,12 +55,20 @@ const shuffleArray = (arr) => {
 
 const ensureFaculty = async (userId, role) => {
   let faculty = await FacultyModel.findByUserId(userId);
-  if (!faculty && role === 'admin') {
-    faculty = await FacultyModel.create({
-      user_id: userId,
-      designation: 'Administrator',
-      department: 'Administration',
-    });
+  if (!faculty) {
+    if (role === 'admin') {
+      faculty = await FacultyModel.create({
+        user_id: userId,
+        designation: 'Administrator',
+        department: 'Administration',
+      });
+    } else if (role === 'faculty') {
+      faculty = await FacultyModel.create({
+        user_id: userId,
+        designation: 'Faculty Member',
+        department: 'Computer Science & Engineering',
+      });
+    }
   }
   return faculty;
 };
@@ -74,6 +82,16 @@ const ensureStudent = async (userId) => {
     });
   }
   return student;
+};
+
+// ── Difficulty → Marks Mapping (enforced server-side) ────────
+// Students must never see these values during assessments.
+// Backend always overrides any marks submitted by the frontend.
+const DIFFICULTY_MARKS = { easy: 5, medium: 10, hard: 15 };
+
+const getMarksForDifficulty = (difficulty) => {
+  const d = (difficulty || 'medium').toLowerCase();
+  return DIFFICULTY_MARKS[d] ?? 10;
 };
 
 // ── Faculty Operations ────────────────────────────────────────
@@ -298,10 +316,108 @@ const LabAssessmentService = {
 
   createQuestion: async (userId, data, role = 'faculty') => {
     const faculty = await ensureFaculty(userId, role);
-    return LabCodingQuestionModel.create({
-      ...data,
-      created_by_faculty_id: faculty ? faculty.faculty_id : null,
-    });
+    if (!faculty && role !== 'admin') {
+      const e = new Error('Faculty profile not found or unauthorized.');
+      e.statusCode = 403;
+      throw e;
+    }
+
+    // 1. Verify Topic exists
+    const topicRes = await query('SELECT topic_id, title FROM topics WHERE topic_id = $1', [data.topic_id]);
+    if (topicRes.rows.length === 0) {
+      const e = new Error('The selected curriculum topic does not exist.');
+      e.statusCode = 400;
+      throw e;
+    }
+
+    // 2. Verify Subtopic if provided
+    if (data.subtopic_id) {
+      const subtopicRes = await query(
+        'SELECT subtopic_id, topic_id FROM subtopics WHERE subtopic_id = $1',
+        [data.subtopic_id]
+      );
+      if (subtopicRes.rows.length === 0) {
+        const e = new Error('The selected subtopic does not exist.');
+        e.statusCode = 400;
+        throw e;
+      }
+      if (subtopicRes.rows[0].topic_id !== parseInt(data.topic_id, 10)) {
+        const e = new Error('The selected subtopic does not belong to the selected topic.');
+        e.statusCode = 400;
+        throw e;
+      }
+    }
+
+    // 3. Enforce difficulty-based marks server-side (Easy: 5, Medium: 10, Hard: 15)
+    const difficulty = (data.difficulty || 'medium').toLowerCase();
+    const marks = getMarksForDifficulty(difficulty);
+
+    // 4. Validate test cases
+    let rawTestCases = Array.isArray(data.test_cases || data.testCases)
+      ? [...(data.test_cases || data.testCases)]
+      : [];
+
+    // If no test cases array provided, but sample_output is present, use sample as initial public test case
+    if (rawTestCases.length === 0 && data.sample_output && data.sample_output.trim() !== '') {
+      rawTestCases.push({
+        input: data.sample_input || '',
+        expected_output: data.sample_output.trim(),
+        is_hidden: false,
+        order_index: 1,
+      });
+    }
+
+    for (let i = 0; i < rawTestCases.length; i++) {
+      const tc = rawTestCases[i];
+      if (!tc || typeof tc.expected_output !== 'string' || tc.expected_output.trim() === '') {
+        const e = new Error(`Test Case #${i + 1} is missing expected output.`);
+        e.statusCode = 400;
+        throw e;
+      }
+    }
+
+    // 5. Transaction: Save question and all its test cases atomically
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      const question = await LabCodingQuestionModel.create(
+        {
+          ...data,
+          difficulty,
+          marks,
+          created_by_faculty_id: faculty ? faculty.faculty_id : null,
+          supported_languages: data.supported_languages || ['c', 'cpp', 'java', 'python'],
+        },
+        client
+      );
+
+      const savedTestCases = [];
+      for (let i = 0; i < rawTestCases.length; i++) {
+        const tc = rawTestCases[i];
+        const savedTc = await LabTestCaseModel.create(
+          {
+            lab_question_id: question.lab_question_id,
+            input: tc.input || '',
+            expected_output: tc.expected_output,
+            is_hidden: tc.is_hidden !== undefined ? !!tc.is_hidden : false,
+            order_index: tc.order_index ?? (i + 1),
+          },
+          client
+        );
+        savedTestCases.push(savedTc);
+      }
+
+      await client.query('COMMIT');
+      question.testCases = savedTestCases;
+      question.topic_title = topicRes.rows[0].title;
+      return question;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   },
 
   listQuestions: async (topicId = null) => {
@@ -324,7 +440,84 @@ const LabAssessmentService = {
         const e = new Error('Access denied. You can only edit your own questions.'); e.statusCode = 403; throw e;
       }
     }
-    return LabCodingQuestionModel.update(questionId, data);
+
+    // Validate topic if changed
+    if (data.topic_id) {
+      const topicRes = await query('SELECT topic_id FROM topics WHERE topic_id = $1', [data.topic_id]);
+      if (topicRes.rows.length === 0) {
+        const e = new Error('Selected curriculum topic does not exist.'); e.statusCode = 400; throw e;
+      }
+    }
+
+    // Validate subtopic if changed
+    const targetTopicId = data.topic_id || q.topic_id;
+    if (data.subtopic_id) {
+      const subtopicRes = await query(
+        'SELECT subtopic_id, topic_id FROM subtopics WHERE subtopic_id = $1',
+        [data.subtopic_id]
+      );
+      if (subtopicRes.rows.length === 0) {
+        const e = new Error('Selected subtopic does not exist.'); e.statusCode = 400; throw e;
+      }
+      if (subtopicRes.rows[0].topic_id !== parseInt(targetTopicId, 10)) {
+        const e = new Error('Selected subtopic does not belong to the selected topic.'); e.statusCode = 400; throw e;
+      }
+    }
+
+    const updateData = { ...data };
+    if (updateData.difficulty) {
+      updateData.difficulty = updateData.difficulty.toLowerCase();
+      updateData.marks = getMarksForDifficulty(updateData.difficulty);
+    }
+
+    const rawTestCases = data.test_cases || data.testCases;
+    if (rawTestCases !== undefined) {
+      if (!Array.isArray(rawTestCases) || rawTestCases.length === 0) {
+        const e = new Error('A question must retain at least one valid test case.'); e.statusCode = 400; throw e;
+      }
+      for (let i = 0; i < rawTestCases.length; i++) {
+        const tc = rawTestCases[i];
+        if (!tc || typeof tc.expected_output !== 'string' || tc.expected_output.trim() === '') {
+          const e = new Error(`Test Case #${i + 1} is missing expected output.`); e.statusCode = 400; throw e;
+        }
+      }
+
+      const client = await getClient();
+      try {
+        await client.query('BEGIN');
+        const updated = await LabCodingQuestionModel.update(questionId, updateData, client);
+
+        await LabTestCaseModel.deleteByQuestionId(questionId, client);
+        const savedTestCases = [];
+        for (let i = 0; i < rawTestCases.length; i++) {
+          const tc = rawTestCases[i];
+          const savedTc = await LabTestCaseModel.create(
+            {
+              lab_question_id: questionId,
+              input: tc.input || '',
+              expected_output: tc.expected_output,
+              is_hidden: tc.is_hidden !== undefined ? !!tc.is_hidden : false,
+              order_index: tc.order_index ?? (i + 1),
+            },
+            client
+          );
+          savedTestCases.push(savedTc);
+        }
+
+        await client.query('COMMIT');
+        updated.testCases = savedTestCases;
+        return updated;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+
+    const updated = await LabCodingQuestionModel.update(questionId, updateData);
+    updated.testCases = await LabTestCaseModel.findByQuestionId(questionId);
+    return updated;
   },
 
   deleteQuestion: async (userId, questionId, role = 'faculty') => {
@@ -333,10 +526,26 @@ const LabAssessmentService = {
     if (role !== 'admin') {
       const faculty = await FacultyModel.findByUserId(userId);
       if (!faculty || (q.created_by_faculty_id && q.created_by_faculty_id !== faculty.faculty_id)) {
-        const e = new Error('Access denied.'); e.statusCode = 403; throw e;
+        const e = new Error('Access denied. You can only delete your own questions.'); e.statusCode = 403; throw e;
       }
     }
-    return LabCodingQuestionModel.deleteById(questionId);
+
+    // Check if referenced by existing assessments or student submissions
+    const isRef = await LabCodingQuestionModel.isReferenced(questionId);
+    if (isRef) {
+      await LabCodingQuestionModel.archive(questionId);
+      return {
+        action: 'archived',
+        message: 'Question is referenced by active lab assessments or student submissions. It has been safely archived to protect historical academic records.',
+      };
+    }
+
+    await LabTestCaseModel.deleteByQuestionId(questionId);
+    await LabCodingQuestionModel.deleteById(questionId);
+    return {
+      action: 'deleted',
+      message: 'Question and test cases deleted permanently.',
+    };
   },
 
   // ── Student Operations ─────────────────────────────────────

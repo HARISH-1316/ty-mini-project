@@ -39,8 +39,8 @@ export const updateLabQuestion = asyncHandler(async (req, res) => {
 
 export const deleteLabQuestion = asyncHandler(async (req, res) => {
   const { questionId } = req.params;
-  await LabAssessmentService.deleteQuestion(req.user.user_id, parseInt(questionId, 10), req.user.role);
-  return successResponse(res, 200, 'Lab question deleted.');
+  const result = await LabAssessmentService.deleteQuestion(req.user.user_id, parseInt(questionId, 10), req.user.role);
+  return successResponse(res, 200, result.message, result);
 });
 
 // ── Test Case Management ────────────────────────

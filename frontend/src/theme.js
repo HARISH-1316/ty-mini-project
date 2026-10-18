@@ -79,7 +79,7 @@ const theme = extendTheme({
       'accent.contrastText': { default: '#FFFFFF', _dark: '#171918' },
 
       'text.primary': { default: '#202124', _dark: '#F5F7F5' },
-      'text.secondary': { default: '#606860', _dark: '#B8C0B9' },
+      'text.secondary': { default: '#505750', _dark: '#B8C0B9' },
 
       'border.primary': { default: '#DDE5DD', _dark: '#3B423C' },
       'border.subtle': { default: '#E8EFE8', _dark: '#2F3530' },

@@ -46,13 +46,27 @@ export const addTopicValidation = Joi.object({
   }),
 });
 
+// ── Test Case Management ────────────────────────
+export const labTestCaseValidation = Joi.object({
+  lab_testcase_id: Joi.number().integer().optional(),
+  input: Joi.string().optional().allow(''),
+  expected_output: Joi.string().required().messages({
+    'any.required': 'Expected output is required for each test case',
+    'string.empty': 'Expected output cannot be empty',
+  }),
+  is_hidden: Joi.boolean().default(false),
+  order_index: Joi.number().integer().optional().allow(null),
+});
+
 // ── Faculty: Create Lab Question ───────────────
 export const createLabQuestionValidation = Joi.object({
   topic_id: Joi.number().integer().positive().required().messages({
-    'any.required': 'Topic ID is required',
+    'any.required': 'Topic selection is required',
   }),
+  subtopic_id: Joi.number().integer().positive().optional().allow(null),
   title: Joi.string().min(3).max(300).required().messages({
     'any.required': 'Question title is required',
+    'string.min': 'Question title must be at least 3 characters',
   }),
   problem_statement: Joi.string().min(10).required().messages({
     'any.required': 'Problem statement is required',
@@ -65,12 +79,15 @@ export const createLabQuestionValidation = Joi.object({
   sample_output: Joi.string().optional().allow(''),
   explanation: Joi.string().optional().allow(''),
   difficulty: Joi.string().valid('easy', 'medium', 'hard').default('medium'),
-  marks: Joi.number().integer().min(1).max(100).default(10),
-  order_index: Joi.number().integer().optional(),
+  marks: Joi.number().integer().min(1).max(100).optional(),
+  order_index: Joi.number().integer().optional().allow(null),
+  test_cases: Joi.array().items(labTestCaseValidation).optional(),
+  testCases: Joi.array().items(labTestCaseValidation).optional(),
 });
 
 export const updateLabQuestionValidation = Joi.object({
   topic_id: Joi.number().integer().positive().optional(),
+  subtopic_id: Joi.number().integer().positive().optional().allow(null),
   title: Joi.string().min(3).max(300).optional(),
   problem_statement: Joi.string().min(10).optional(),
   input_format: Joi.string().optional().allow(''),
@@ -81,17 +98,11 @@ export const updateLabQuestionValidation = Joi.object({
   explanation: Joi.string().optional().allow(''),
   difficulty: Joi.string().valid('easy', 'medium', 'hard').optional(),
   marks: Joi.number().integer().min(1).max(100).optional(),
-  order_index: Joi.number().integer().optional(),
-});
-
-// ── Test Case Management ────────────────────────
-export const labTestCaseValidation = Joi.object({
-  input: Joi.string().optional().allow(''),
-  expected_output: Joi.string().required().messages({
-    'any.required': 'Expected output is required',
-  }),
-  is_hidden: Joi.boolean().default(false),
-  order_index: Joi.number().integer().optional(),
+  order_index: Joi.number().integer().optional().allow(null),
+  supported_languages: Joi.array().items(Joi.string().valid('c', 'cpp', 'java', 'python')).optional(),
+  is_archived: Joi.boolean().optional(),
+  test_cases: Joi.array().items(labTestCaseValidation).min(1).optional(),
+  testCases: Joi.array().items(labTestCaseValidation).min(1).optional(),
 });
 
 // ── Student: Run Code ──────────────────────────

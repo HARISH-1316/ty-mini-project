@@ -18,6 +18,7 @@ import {
   useToast,
   Flex,
   Divider,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 import { getRoomByIdApi, getRoomTopicsApi, leaveRoomApi } from '../../api/roomApi';
@@ -34,6 +35,16 @@ const RoomDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+
+  // Theme tokens
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const headingColor = useColorModeValue('#202124', '#F5F7F5');
+  const bodyColor = useColorModeValue('#202124', '#F5F7F5');
+  const secondaryColor = useColorModeValue('#505750', '#B8C0B9');
+  const dividerColor = useColorModeValue('#DDE5DD', '#3B423C');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
+  const topicCardHoverBorder = useColorModeValue('#2F8D46', '#A3E635');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,24 +116,24 @@ const RoomDetails = () => {
     <VStack spacing={8} align="stretch" w="full">
       {/* Back Button */}
       <HStack>
-        <Button as={RouterLink} to="/student/rooms" size="sm" variant="ghost" colorScheme="purple" leftIcon={<ArrowBackIcon />}>
+        <Button as={RouterLink} to="/student/rooms" size="sm" variant="ghost" colorScheme="brand" leftIcon={<ArrowBackIcon />}>
           Back to Rooms
         </Button>
       </HStack>
 
       {/* Room Header Card */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" p={4}>
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" p={4}>
         <CardBody>
           <VStack align="start" spacing={4}>
             <Flex justify="space-between" w="full" align="start" direction={{ base: 'column', sm: 'row' }} gap={2}>
               <VStack align="start" spacing={1}>
                 <HStack spacing={3}>
-                  <Heading size="lg" color="white">{room.room_name}</Heading>
-                  <Badge colorScheme="purple" fontSize="sm" px={2} py={1} borderRadius="md">
+                  <Heading size="lg" color={headingColor}>{room.room_name}</Heading>
+                  <Badge colorScheme="brand" fontSize="sm" px={2} py={1} borderRadius="md">
                     CODE: {room.room_code}
                   </Badge>
                 </HStack>
-                <Text color="gray.400" fontSize="sm">
+                <Text color={secondaryColor} fontSize="sm">
                   Instructor: {room.faculty_name || 'Faculty Member'}
                 </Text>
               </VStack>
@@ -132,9 +143,9 @@ const RoomDetails = () => {
               </Button>
             </Flex>
 
-            <Divider borderColor="slate.700" />
+            <Divider borderColor={dividerColor} />
 
-            <Text color="gray.300" fontSize="sm">
+            <Text color={bodyColor} fontSize="sm">
               {room.description || 'No description provided for this virtual lab.'}
             </Text>
           </VStack>
@@ -143,8 +154,8 @@ const RoomDetails = () => {
 
       {/* Assigned Topics List */}
       <VStack align="stretch" spacing={4}>
-        <Heading size="md" color="white">
-          Lab Topics & Course Material ({topics.length})
+        <Heading size="md" color={headingColor}>
+          Lab Topics &amp; Course Material ({topics.length})
         </Heading>
 
         {topics.length === 0 ? (
@@ -159,23 +170,28 @@ const RoomDetails = () => {
                 key={t.topic_id}
                 as={RouterLink}
                 to={`/student/topics/${t.topic_id}/introduction`}
-                bg="slate.800"
-                borderColor="slate.700"
+                bg={cardBg}
+                borderColor={cardBorder}
                 borderWidth="1px"
                 borderRadius="xl"
                 transition="all 0.2s"
-                _hover={{ transform: 'translateY(-4px)', borderColor: 'purple.400', boxShadow: 'xl' }}
+                _hover={{
+                  transform: 'translateY(-3px)',
+                  borderColor: topicCardHoverBorder,
+                  boxShadow: 'md',
+                  textDecoration: 'none',
+                }}
               >
                 <CardBody>
                   <VStack align="start" spacing={3}>
                     <Flex justify="space-between" w="full" align="center">
-                      <Badge colorScheme="cyan">Topic #{index + 1}</Badge>
-                      <ArrowForwardIcon color="purple.300" />
+                      <Badge colorScheme="brand">Topic #{index + 1}</Badge>
+                      <ArrowForwardIcon color={accentColor} />
                     </Flex>
-                    <Heading size="sm" color="white">
+                    <Heading size="sm" color={headingColor}>
                       {t.title}
                     </Heading>
-                    <Text color="gray.400" fontSize="xs" noOfLines={2}>
+                    <Text color={secondaryColor} fontSize="xs" noOfLines={2}>
                       {t.description || 'Click to view subtopics, learning content, and topic feedback.'}
                     </Text>
                   </VStack>

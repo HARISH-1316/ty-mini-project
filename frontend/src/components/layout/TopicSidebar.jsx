@@ -14,6 +14,7 @@ import {
   DrawerHeader,
   DrawerBody,
   Divider,
+  useColorModeValue,
 } from '@chakra-ui/react';
 
 const getTopicNavItems = (topicId) => [
@@ -27,36 +28,55 @@ const getTopicNavItems = (topicId) => [
   { label: 'Feedback', path: `/student/topics/${topicId}/feedback` },
 ];
 
-const SidebarNavItem = ({ label, path, onClick }) => (
-  <Box
-    as={RouterNavLink}
-    to={path}
-    end={path.endsWith('/subtopics')}
-    onClick={onClick}
-    w="full"
-    px={4}
-    py={2.5}
-    borderRadius="lg"
-    fontSize="sm"
-    fontWeight="500"
-    transition="all 0.2s"
-    _hover={{
-      bg: 'accent.soft',
-      color: 'accent.primary',
-    }}
-    style={({ isActive }) => ({
-      backgroundColor: isActive ? 'var(--chakra-colors-accent-soft)' : 'transparent',
-      color: isActive ? 'var(--chakra-colors-accent-primary)' : 'inherit',
-      fontWeight: isActive ? '700' : '500',
-      borderLeft: isActive ? '3px solid var(--chakra-colors-accent-primary)' : '3px solid transparent',
-    })}
-  >
-    {label}
-  </Box>
-);
+const SidebarNavItem = ({ label, path, onClick }) => {
+  // Use inline style for active/inactive states to leverage CSS variables from Chakra
+  // These must be defined at render time, not inside the style callback
+  const activeBg = useColorModeValue('#E8F5E9', '#292D2A');
+  const activeColor = useColorModeValue('#1E5E2E', '#A3E635');
+  const activeBorderColor = useColorModeValue('#2F8D46', '#A3E635');
+  const inactiveColor = useColorModeValue('#202124', '#F5F7F5');
+  const hoverBg = useColorModeValue('#F0F7F0', '#292D2A');
+  const hoverColor = useColorModeValue('#2F8D46', '#A3E635');
+
+  return (
+    <Box
+      as={RouterNavLink}
+      to={path}
+      end={path.endsWith('/subtopics')}
+      onClick={onClick}
+      w="full"
+      px={4}
+      py={2.5}
+      borderRadius="lg"
+      fontSize="sm"
+      fontWeight="500"
+      transition="all 0.15s ease"
+      color={inactiveColor}
+      _hover={{
+        bg: hoverBg,
+        color: hoverColor,
+        textDecoration: 'none',
+      }}
+      style={({ isActive }) => ({
+        backgroundColor: isActive ? activeBg : 'transparent',
+        color: isActive ? activeColor : inactiveColor,
+        fontWeight: isActive ? '700' : '500',
+        borderLeft: isActive
+          ? `3px solid ${activeBorderColor}`
+          : '3px solid transparent',
+        paddingLeft: '13px', // compensate for border
+      })}
+    >
+      {label}
+    </Box>
+  );
+};
 
 export const TopicSidebarContent = ({ topicId, topicTitle, onClose }) => {
   const items = getTopicNavItems(topicId);
+  const labelColor = useColorModeValue('#505750', '#B8C0B9');
+  const titleColor = useColorModeValue('#2F8D46', '#A3E635');
+  const dividerColor = useColorModeValue('#DDE5DD', '#3B423C');
 
   return (
     <VStack spacing={1} align="stretch" w="full">
@@ -65,7 +85,7 @@ export const TopicSidebarContent = ({ topicId, topicTitle, onClose }) => {
         <Text
           fontSize="xs"
           fontWeight="bold"
-          color="text.secondary"
+          color={labelColor}
           textTransform="uppercase"
           letterSpacing="wider"
           mb={1}
@@ -75,14 +95,14 @@ export const TopicSidebarContent = ({ topicId, topicTitle, onClose }) => {
         <Text
           fontSize="sm"
           fontWeight="bold"
-          color="accent.primary"
+          color={titleColor}
           noOfLines={2}
         >
           {topicTitle || 'Loading...'}
         </Text>
       </Box>
 
-      <Divider borderColor="border.primary" />
+      <Divider borderColor={dividerColor} />
 
       {/* Navigation Items */}
       <VStack spacing={0.5} align="stretch" px={2} py={2}>
@@ -100,6 +120,10 @@ export const TopicSidebarContent = ({ topicId, topicTitle, onClose }) => {
 };
 
 const TopicSidebar = ({ isOpen, onClose, topicId, topicTitle }) => {
+  const sidebarBg = useColorModeValue('#F5F7F5', '#171918');
+  const borderColor = useColorModeValue('#DDE5DD', '#3B423C');
+  const drawerHeaderColor = useColorModeValue('#202124', '#F5F7F5');
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -107,9 +131,9 @@ const TopicSidebar = ({ isOpen, onClose, topicId, topicTitle }) => {
         display={{ base: 'none', md: 'block' }}
         w="250px"
         minW="250px"
-        bg="slate.900"
+        bg={sidebarBg}
         borderRight="1px solid"
-        borderColor="border.primary"
+        borderColor={borderColor}
         py={4}
         minH="calc(100vh - 110px)"
         overflowY="auto"
@@ -120,9 +144,9 @@ const TopicSidebar = ({ isOpen, onClose, topicId, topicTitle }) => {
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay backdropFilter="blur(4px)" />
-        <DrawerContent bg="slate.900" color="text.primary">
+        <DrawerContent bg={sidebarBg} color={drawerHeaderColor}>
           <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px" borderColor="border.primary" fontSize="sm">
+          <DrawerHeader borderBottomWidth="1px" borderColor={borderColor} fontSize="sm">
             Topic Navigation
           </DrawerHeader>
           <DrawerBody p={2}>

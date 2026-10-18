@@ -25,6 +25,9 @@ const LaAllocationModel = {
   /**
    * Retrieve the persisted allocation for a student+lab.
    * Returns question rows ordered by question_order.
+   * IMPORTANT: difficulty and marks are intentionally excluded from this
+   * student-facing query. Students must not see per-question difficulty
+   * labels or individual marks before or during an assessment.
    * Hidden test case data is NOT included here (fetched separately).
    */
   findByStudentAndLab: async (studentId, labId) => {
@@ -42,8 +45,7 @@ const LaAllocationModel = {
          lcq.sample_input,
          lcq.sample_output,
          lcq.explanation,
-         lcq.difficulty,
-         lcq.marks,
+         -- difficulty and marks intentionally omitted: must not be visible to students
          t.topic_id,
          t.title AS topic_title
        FROM la_student_allocations a

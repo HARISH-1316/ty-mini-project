@@ -12,7 +12,7 @@ import {
   Table, Thead, Tbody, Tr, Th, Td, Select, Tag, TagLabel, TagCloseButton,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton,
   ModalBody, ModalFooter, useDisclosure, Progress, Alert, AlertIcon,
-  AlertDescription, Icon, Code,
+  AlertDescription, Icon, Code, useColorModeValue,
 } from '@chakra-ui/react';
 import {
   ArrowBackIcon, CheckCircleIcon, WarningIcon, AddIcon, DeleteIcon, ArrowForwardIcon,
@@ -51,6 +51,16 @@ const CreateLabAssessment = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [editForm, setEditForm] = useState({});
+
+  // Theme tokens
+  const headingColor = useColorModeValue('#202124', '#F5F7F5');
+  const bodyColor = useColorModeValue('#202124', '#F5F7F5');
+  const secondaryColor = useColorModeValue('#505750', '#B8C0B9');
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F5F7F5', '#292D2A');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
+  const dividerColor = useColorModeValue('#DDE5DD', '#3B423C');
 
   const loadData = useCallback(async () => {
     try {
@@ -138,13 +148,15 @@ const CreateLabAssessment = () => {
   const isDraft = lab?.status === 'draft';
   const addedTopicIds = new Set(lab?.topics?.map(t => t.topic_id) || []);
   const availableTopics = allTopics.filter(t => !addedTopicIds.has(t.topic_id));
-
   const questionSufficiency = lab ? (totalEligible >= lab.num_questions) : false;
 
   if (isLoading) {
     return (
       <Flex justify="center" align="center" minH="300px">
-        <VStack><Spinner size="xl" color="purple.400" thickness="4px" /><Text color="gray.400">Loading...</Text></VStack>
+        <VStack>
+          <Spinner size="xl" color={accentColor} thickness="4px" />
+          <Text color={secondaryColor}>Loading...</Text>
+        </VStack>
       </Flex>
     );
   }
@@ -160,7 +172,7 @@ const CreateLabAssessment = () => {
           to="/faculty/lab-assessments"
           leftIcon={<ArrowBackIcon />}
           variant="ghost"
-          colorScheme="gray"
+          colorScheme="brand"
           size="sm"
           mb={4}
         >
@@ -169,19 +181,19 @@ const CreateLabAssessment = () => {
         <Flex justify="space-between" align="start" gap={4} direction={{ base: 'column', md: 'row' }}>
           <VStack align="start" spacing={1}>
             <HStack>
-              <Heading size="lg" color="white">{lab.title}</Heading>
+              <Heading size="lg" color={headingColor}>{lab.title}</Heading>
               <Badge colorScheme={STATUS_COLORS[lab.status]} px={2} py={1} borderRadius="md" textTransform="capitalize">
                 {lab.status}
               </Badge>
             </HStack>
-            <Text color="gray.400" fontSize="sm">Created by {lab.faculty_name}</Text>
+            <Text color={secondaryColor} fontSize="sm">Created by {lab.faculty_name}</Text>
           </VStack>
           <HStack spacing={3}>
             <Button
               as={RouterLink}
               to="/faculty/lab-questions"
               variant="outline"
-              colorScheme="purple"
+              colorScheme="brand"
               size="sm"
             >
               Question Bank
@@ -190,7 +202,7 @@ const CreateLabAssessment = () => {
               as={RouterLink}
               to={`/faculty/lab-assessments/${labId}/results`}
               variant="outline"
-              colorScheme="cyan"
+              colorScheme="brand"
               size="sm"
               rightIcon={<ArrowForwardIcon />}
             >
@@ -198,7 +210,7 @@ const CreateLabAssessment = () => {
             </Button>
             {isDraft && (
               <Button
-                colorScheme="green"
+                colorScheme="brand"
                 onClick={onPublishOpen}
                 isDisabled={!questionSufficiency || !lab.start_time || !lab.end_time}
                 leftIcon={<CheckCircleIcon />}
@@ -215,12 +227,10 @@ const CreateLabAssessment = () => {
         <Alert
           status={questionSufficiency && lab.topics?.length > 0 ? 'success' : 'warning'}
           borderRadius="xl"
-          bg={questionSufficiency && lab.topics?.length > 0 ? 'green.900' : 'orange.900'}
           borderWidth="1px"
-          borderColor={questionSufficiency && lab.topics?.length > 0 ? 'green.700' : 'orange.700'}
         >
           <AlertIcon />
-          <AlertDescription color="white" fontSize="sm">
+          <AlertDescription color={bodyColor} fontSize="sm">
             {lab.topics?.length === 0
               ? 'Add at least one topic to enable publishing.'
               : !questionSufficiency
@@ -235,98 +245,84 @@ const CreateLabAssessment = () => {
         {/* Left: Edit form */}
         {isDraft && (
           <VStack spacing={5} align="stretch">
-            <Heading size="md" color="white">Assessment Settings</Heading>
+            <Heading size="md" color={headingColor}>Assessment Settings</Heading>
 
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px">
               <CardBody>
                 <VStack spacing={4}>
                   <FormControl>
-                    <FormLabel color="gray.300" fontSize="sm">Title</FormLabel>
+                    <FormLabel color={secondaryColor} fontSize="sm">Title</FormLabel>
                     <Input
-                      bg="dark.bg"
-                      borderColor="slate.600"
-                      color="white"
                       value={editForm.title}
                       onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      _placeholder={{ color: 'gray.500' }}
+                      placeholder="Assessment title..."
                     />
                   </FormControl>
 
                   <FormControl>
-                    <FormLabel color="gray.300" fontSize="sm">Description</FormLabel>
+                    <FormLabel color={secondaryColor} fontSize="sm">Description</FormLabel>
                     <Textarea
-                      bg="dark.bg"
-                      borderColor="slate.600"
-                      color="white"
                       rows={3}
                       value={editForm.description}
                       onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                      _placeholder={{ color: 'gray.500' }}
+                      placeholder="Optional description..."
                     />
                   </FormControl>
 
                   <SimpleGrid columns={2} spacing={4} w="full">
                     <FormControl>
-                      <FormLabel color="gray.300" fontSize="sm">Start Time</FormLabel>
+                      <FormLabel color={secondaryColor} fontSize="sm">Start Time</FormLabel>
                       <Input
                         type="datetime-local"
-                        bg="dark.bg"
-                        borderColor="slate.600"
-                        color="white"
                         value={editForm.start_time}
                         onChange={e => setEditForm(f => ({ ...f, start_time: e.target.value }))}
-                        sx={{ colorScheme: 'dark' }}
                       />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.300" fontSize="sm">End Time</FormLabel>
+                      <FormLabel color={secondaryColor} fontSize="sm">End Time</FormLabel>
                       <Input
                         type="datetime-local"
-                        bg="dark.bg"
-                        borderColor="slate.600"
-                        color="white"
                         value={editForm.end_time}
                         onChange={e => setEditForm(f => ({ ...f, end_time: e.target.value }))}
-                        sx={{ colorScheme: 'dark' }}
                       />
                     </FormControl>
                   </SimpleGrid>
 
                   <SimpleGrid columns={3} spacing={4} w="full">
                     <FormControl>
-                      <FormLabel color="gray.300" fontSize="sm">Duration (min)</FormLabel>
+                      <FormLabel color={secondaryColor} fontSize="sm">Duration (min)</FormLabel>
                       <NumberInput min={5} max={480} value={editForm.duration} onChange={(_, v) => setEditForm(f => ({ ...f, duration: v || 120 }))}>
-                        <NumberInputField bg="dark.bg" borderColor="slate.600" color="white" />
+                        <NumberInputField />
                         <NumberInputStepper>
-                          <NumberIncrementStepper borderColor="slate.600" color="gray.400" />
-                          <NumberDecrementStepper borderColor="slate.600" color="gray.400" />
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
                         </NumberInputStepper>
                       </NumberInput>
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.300" fontSize="sm">Num Questions</FormLabel>
+                      <FormLabel color={secondaryColor} fontSize="sm">Num Questions</FormLabel>
                       <NumberInput min={1} max={50} value={editForm.num_questions} onChange={(_, v) => setEditForm(f => ({ ...f, num_questions: v || 5 }))}>
-                        <NumberInputField bg="dark.bg" borderColor="slate.600" color="white" />
+                        <NumberInputField />
                         <NumberInputStepper>
-                          <NumberIncrementStepper borderColor="slate.600" color="gray.400" />
-                          <NumberDecrementStepper borderColor="slate.600" color="gray.400" />
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
                         </NumberInputStepper>
                       </NumberInput>
                     </FormControl>
                     <FormControl>
-                      <FormLabel color="gray.300" fontSize="sm">Marks / Q</FormLabel>
+                      <FormLabel color={secondaryColor} fontSize="sm">Marks / Q</FormLabel>
                       <NumberInput min={1} max={100} value={editForm.marks_per_question} onChange={(_, v) => setEditForm(f => ({ ...f, marks_per_question: v || 10 }))}>
-                        <NumberInputField bg="dark.bg" borderColor="slate.600" color="white" />
+                        <NumberInputField />
                         <NumberInputStepper>
-                          <NumberIncrementStepper borderColor="slate.600" color="gray.400" />
-                          <NumberDecrementStepper borderColor="slate.600" color="gray.400" />
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
                         </NumberInputStepper>
                       </NumberInput>
                     </FormControl>
                   </SimpleGrid>
 
                   <Button
-                    colorScheme="purple"
+                    colorScheme="brand"
                     w="full"
                     onClick={handleSave}
                     isLoading={isSaving}
@@ -343,29 +339,29 @@ const CreateLabAssessment = () => {
         {/* Assessment Overview (non-draft) */}
         {!isDraft && (
           <VStack spacing={4} align="stretch">
-            <Heading size="md" color="white">Assessment Details</Heading>
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+            <Heading size="md" color={headingColor}>Assessment Details</Heading>
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px">
               <CardBody>
                 <VStack spacing={3} align="start">
                   <HStack justify="space-between" w="full">
-                    <Text color="gray.400" fontSize="sm">Start</Text>
-                    <Text color="white" fontSize="sm">{formatDT(lab.start_time)}</Text>
+                    <Text color={secondaryColor} fontSize="sm">Start</Text>
+                    <Text color={bodyColor} fontSize="sm">{formatDT(lab.start_time)}</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color="gray.400" fontSize="sm">End</Text>
-                    <Text color="white" fontSize="sm">{formatDT(lab.end_time)}</Text>
+                    <Text color={secondaryColor} fontSize="sm">End</Text>
+                    <Text color={bodyColor} fontSize="sm">{formatDT(lab.end_time)}</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color="gray.400" fontSize="sm">Duration</Text>
-                    <Text color="white" fontSize="sm">{lab.duration} minutes</Text>
+                    <Text color={secondaryColor} fontSize="sm">Duration</Text>
+                    <Text color={bodyColor} fontSize="sm">{lab.duration} minutes</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color="gray.400" fontSize="sm">Questions / Student</Text>
-                    <Text color="white" fontSize="sm">{lab.num_questions}</Text>
+                    <Text color={secondaryColor} fontSize="sm">Questions / Student</Text>
+                    <Text color={bodyColor} fontSize="sm">{lab.num_questions}</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color="gray.400" fontSize="sm">Total Marks</Text>
-                    <Text color="purple.300" fontSize="sm" fontWeight="bold">
+                    <Text color={secondaryColor} fontSize="sm">Total Marks</Text>
+                    <Text color={accentColor} fontSize="sm" fontWeight="bold">
                       {lab.num_questions * lab.marks_per_question}
                     </Text>
                   </HStack>
@@ -378,32 +374,32 @@ const CreateLabAssessment = () => {
         {/* Right: Topics & Question Pool */}
         <VStack spacing={5} align="stretch">
           <HStack justify="space-between">
-            <Heading size="md" color="white">Selected Topics</Heading>
+            <Heading size="md" color={headingColor}>Selected Topics</Heading>
             {isDraft && (
-              <Button size="sm" leftIcon={<AddIcon />} colorScheme="purple" variant="outline" onClick={onAddTopicOpen}>
+              <Button size="sm" leftIcon={<AddIcon />} colorScheme="brand" variant="outline" onClick={onAddTopicOpen}>
                 Add Topic
               </Button>
             )}
           </HStack>
 
           {lab.topics?.length === 0 ? (
-            <Box p={6} bg="slate.800" borderRadius="xl" textAlign="center" border="1px dashed" borderColor="slate.600">
-              <Text color="gray.400" fontSize="sm">No topics selected yet. Add topics to build the question pool.</Text>
+            <Box p={6} bg={surfaceBg} borderRadius="xl" textAlign="center" border="1px dashed" borderColor={dividerColor}>
+              <Text color={secondaryColor} fontSize="sm">No topics selected yet. Add topics to build the question pool.</Text>
             </Box>
           ) : (
             <VStack spacing={3} align="stretch">
               {poolStats.map((stat) => (
-                <Card key={stat.topic_id} bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+                <Card key={stat.topic_id} bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl">
                   <CardBody py={3}>
                     <Flex align="center" justify="space-between">
                       <VStack align="start" spacing={1} flex={1}>
-                        <Text color="white" fontWeight="medium" fontSize="sm">{stat.topic_title}</Text>
+                        <Text color={bodyColor} fontWeight="600" fontSize="sm">{stat.topic_title}</Text>
                         <HStack spacing={2}>
                           <Badge colorScheme={stat.question_count >= (lab.num_questions || 5) ? 'green' : 'orange'} fontSize="xs">
                             {stat.question_count} question{stat.question_count !== 1 ? 's' : ''}
                           </Badge>
                           {stat.question_count === 0 && (
-                            <Text color="orange.300" fontSize="xs">⚠ No questions</Text>
+                            <Text color="orange.500" fontSize="xs">⚠ No questions</Text>
                           )}
                         </HStack>
                       </VStack>
@@ -422,10 +418,10 @@ const CreateLabAssessment = () => {
                 </Card>
               ))}
 
-              <Box p={3} bg="dark.bg" borderRadius="lg" borderWidth="1px" borderColor="slate.700">
+              <Box p={3} bg={surfaceBg} borderRadius="lg" borderWidth="1px" borderColor={dividerColor}>
                 <Flex justify="space-between" mb={2}>
-                  <Text color="gray.400" fontSize="sm">Total Pool</Text>
-                  <Text color={questionSufficiency ? 'green.400' : 'orange.400'} fontSize="sm" fontWeight="bold">
+                  <Text color={secondaryColor} fontSize="sm">Total Pool</Text>
+                  <Text color={questionSufficiency ? accentColor : 'orange.500'} fontSize="sm" fontWeight="bold">
                     {totalEligible} / {lab.num_questions} required
                   </Text>
                 </Flex>
@@ -441,7 +437,7 @@ const CreateLabAssessment = () => {
                 as={RouterLink}
                 to="/faculty/lab-questions"
                 variant="outline"
-                colorScheme="cyan"
+                colorScheme="brand"
                 size="sm"
                 rightIcon={<ArrowForwardIcon />}
               >
@@ -455,16 +451,13 @@ const CreateLabAssessment = () => {
       {/* Add Topic Modal */}
       <Modal isOpen={isAddTopicOpen} onClose={onAddTopicClose}>
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px">
-          <ModalHeader color="white">Add Topic to Assessment</ModalHeader>
-          <ModalCloseButton color="gray.400" />
+        <ModalContent>
+          <ModalHeader color={headingColor}>Add Topic to Assessment</ModalHeader>
+          <ModalCloseButton />
           <ModalBody>
             <FormControl>
-              <FormLabel color="gray.300" fontSize="sm">Select Topic</FormLabel>
+              <FormLabel color={secondaryColor} fontSize="sm">Select Topic</FormLabel>
               <Select
-                bg="dark.bg"
-                borderColor="slate.600"
-                color="text.primary"
                 value={selectedTopicId}
                 onChange={e => setSelectedTopicId(e.target.value)}
                 placeholder="Choose a topic..."
@@ -477,12 +470,12 @@ const CreateLabAssessment = () => {
               </Select>
             </FormControl>
             {availableTopics.length === 0 && (
-              <Text color="gray.400" fontSize="sm" mt={3}>All topics have been added.</Text>
+              <Text color={secondaryColor} fontSize="sm" mt={3}>All topics have been added.</Text>
             )}
           </ModalBody>
           <ModalFooter gap={3}>
             <Button variant="ghost" colorScheme="gray" onClick={onAddTopicClose}>Cancel</Button>
-            <Button colorScheme="purple" onClick={handleAddTopic} isDisabled={!selectedTopicId}>Add Topic</Button>
+            <Button colorScheme="brand" onClick={handleAddTopic} isDisabled={!selectedTopicId}>Add Topic</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -490,32 +483,32 @@ const CreateLabAssessment = () => {
       {/* Publish Confirmation Modal */}
       <Modal isOpen={isPublishOpen} onClose={onPublishClose}>
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px">
-          <ModalHeader color="white">Publish Assessment</ModalHeader>
-          <ModalCloseButton color="gray.400" />
+        <ModalContent>
+          <ModalHeader color={headingColor}>Publish Assessment</ModalHeader>
+          <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="start">
-              <Text color="gray.300">
-                Publishing will make <strong style={{ color: 'white' }}>{lab.title}</strong> available to eligible students at the configured start time.
+              <Text color={bodyColor}>
+                Publishing will make <strong>{lab.title}</strong> available to eligible students at the configured start time.
               </Text>
-              <Box p={4} bg="dark.bg" borderRadius="lg" w="full">
+              <Box p={4} bg={surfaceBg} borderRadius="lg" w="full" border="1px solid" borderColor={dividerColor}>
                 <VStack align="start" spacing={2}>
-                  <Text color="gray.400" fontSize="sm">📅 Start: {formatDT(lab.start_time)}</Text>
-                  <Text color="gray.400" fontSize="sm">🏁 End: {formatDT(lab.end_time)}</Text>
-                  <Text color="gray.400" fontSize="sm">⏱ Duration: {lab.duration} minutes</Text>
-                  <Text color="gray.400" fontSize="sm">❓ Questions/student: {lab.num_questions}</Text>
-                  <Text color="gray.400" fontSize="sm">📊 Pool: {totalEligible} eligible questions</Text>
+                  <Text color={secondaryColor} fontSize="sm">📅 Start: {formatDT(lab.start_time)}</Text>
+                  <Text color={secondaryColor} fontSize="sm">🏁 End: {formatDT(lab.end_time)}</Text>
+                  <Text color={secondaryColor} fontSize="sm">⏱ Duration: {lab.duration} minutes</Text>
+                  <Text color={secondaryColor} fontSize="sm">❓ Questions/student: {lab.num_questions}</Text>
+                  <Text color={secondaryColor} fontSize="sm">📊 Pool: {totalEligible} eligible questions</Text>
                 </VStack>
               </Box>
-              <Text color="orange.300" fontSize="sm">
+              <Text color="orange.500" fontSize="sm">
                 ⚠ Once published, settings cannot be edited. Ensure everything is correct.
               </Text>
             </VStack>
           </ModalBody>
           <ModalFooter gap={3}>
             <Button variant="ghost" colorScheme="gray" onClick={onPublishClose}>Go Back</Button>
-            <Button colorScheme="green" onClick={handlePublish} isLoading={isPublishing} loadingText="Publishing...">
-              Confirm & Publish
+            <Button colorScheme="brand" onClick={handlePublish} isLoading={isPublishing} loadingText="Publishing...">
+              Confirm &amp; Publish
             </Button>
           </ModalFooter>
         </ModalContent>

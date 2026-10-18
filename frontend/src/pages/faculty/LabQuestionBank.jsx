@@ -105,7 +105,7 @@ const LabQuestionBank = () => {
     const fetchTopics = async () => {
       try {
         const res = await getAllTopicsApi();
-        const tList = res.data?.data?.topics || res.data?.topics || [];
+        const tList = res.data?.topics || res.topics || res.data?.data?.topics || [];
         setTopics(tList);
         if (tList.length > 0) {
           setSelectedTopicId(tList[0].topic_id.toString());
@@ -132,7 +132,7 @@ const LabQuestionBank = () => {
     try {
       setIsLoading(true);
       const res = await listLabQuestionsApi(parseInt(selectedTopicId, 10));
-      setQuestions(res.data?.data?.questions || []);
+      setQuestions(res.data?.data?.questions || res.data?.questions || []);
     } catch (err) {
       toast({
         title: 'Error loading questions',
@@ -203,8 +203,13 @@ const LabQuestionBank = () => {
   const handleDeleteQuestion = async (qId) => {
     if (!window.confirm('Are you sure you want to delete this question?')) return;
     try {
-      await deleteLabQuestionApi(qId);
-      toast({ title: 'Question deleted', status: 'info', duration: 2000 });
+      const res = await deleteLabQuestionApi(qId);
+      toast({
+        title: 'Question Updated',
+        description: res.data?.message || 'Question removed from question bank.',
+        status: 'info',
+        duration: 3000,
+      });
       loadQuestions();
     } catch (err) {
       toast({
@@ -529,13 +534,15 @@ const LabQuestionBank = () => {
                     bg="dark.bg"
                     borderColor="slate.600"
                     value={newQuestion.difficulty}
-                    onChange={(e) =>
-                      setNewQuestion((q) => ({ ...q, difficulty: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const diff = e.target.value;
+                      const m = diff === 'easy' ? 5 : diff === 'hard' ? 15 : 10;
+                      setNewQuestion((q) => ({ ...q, difficulty: diff, marks: m }));
+                    }}
                   >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
+                    <option value="easy">Easy (5 marks)</option>
+                    <option value="medium">Medium (10 marks)</option>
+                    <option value="hard">Hard (15 marks)</option>
                   </Select>
                 </FormControl>
 
@@ -549,12 +556,9 @@ const LabQuestionBank = () => {
                     bg="dark.bg"
                     borderColor="slate.600"
                     value={newQuestion.marks}
-                    onChange={(e) =>
-                      setNewQuestion((q) => ({
-                        ...q,
-                        marks: parseInt(e.target.value, 10) || 10,
-                      }))
-                    }
+                    isReadOnly
+                    fontWeight="bold"
+                    color="purple.300"
                   />
                 </FormControl>
               </SimpleGrid>
