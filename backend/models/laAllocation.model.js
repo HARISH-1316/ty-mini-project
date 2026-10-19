@@ -63,16 +63,16 @@ const LaAllocationModel = {
    * Uses INSERT ... ON CONFLICT DO NOTHING to handle concurrent requests safely.
    * questions: Array<{ lab_question_id, question_order }>
    */
-  bulkCreate: async (client, studentId, labId, questions) => {
+  bulkCreate: async (client, studentId, labId, questions, isManual = false) => {
     const inserted = [];
     for (const q of questions) {
       const result = await client.query(
         `INSERT INTO la_student_allocations
-           (lab_id, student_id, lab_question_id, question_order)
-         VALUES ($1, $2, $3, $4)
+           (lab_id, student_id, lab_question_id, question_order, is_manual)
+         VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (lab_id, student_id, lab_question_id) DO NOTHING
          RETURNING *`,
-        [labId, studentId, q.lab_question_id, q.question_order]
+        [labId, studentId, q.lab_question_id, q.question_order, !!isManual]
       );
       if (result.rows[0]) inserted.push(result.rows[0]);
     }
@@ -80,15 +80,48 @@ const LaAllocationModel = {
   },
 
   /**
+   * Find student allocations by lab (for faculty overview / hybrid mode check).
+   */
+  findAllocationsByLab: async (labId) => {
+    const result = await query(
+      `SELECT a.*, s.roll_number, u.name AS student_name, lcq.title AS question_title
+       FROM la_student_allocations a
+       JOIN student s ON a.student_id = s.student_id
+       JOIN users u ON s.user_id = u.user_id
+       JOIN lab_coding_questions lcq ON a.lab_question_id = lcq.lab_question_id
+       WHERE a.lab_id = $1
+       ORDER BY s.roll_number, a.question_order`,
+      [labId]
+    );
+    return result.rows;
+  },
+
+  /**
+   * Find manual allocations for a student in a lab.
+   */
+  findManualForStudent: async (studentId, labId) => {
+    const result = await query(
+      `SELECT * FROM la_student_allocations
+       WHERE lab_id = $1 AND student_id = $2 AND is_manual = TRUE
+       ORDER BY question_order`,
+      [labId, studentId]
+    );
+    return result.rows;
+  },
+
+  /**
    * Get eligible questions from the pool for a given lab (across all selected topics).
-   * Used to randomly sample from during allocation.
+   * ONLY published, non-archived questions are returned.
    */
   getEligiblePool: async (labId) => {
     const result = await query(
-      `SELECT DISTINCT lcq.lab_question_id, lcq.marks
+      `SELECT DISTINCT lcq.lab_question_id, lcq.marks, lcq.difficulty, lcq.title
        FROM la_assessment_topics lat
        JOIN lab_coding_questions lcq ON lcq.topic_id = lat.topic_id
        WHERE lat.lab_id = $1
+         AND lcq.is_archived = FALSE
+         AND lcq.is_published = TRUE
+         AND lcq.status = 'published'
        ORDER BY lcq.lab_question_id`,
       [labId]
     );

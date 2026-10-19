@@ -27,6 +27,7 @@ import {
   Textarea,
   useDisclosure,
   useToast,
+  useColorModeValue,
   Flex,
   IconButton,
   Badge,
@@ -60,6 +61,17 @@ import EmptyState from '../../components/common/EmptyState';
 
 const TopicManagement = () => {
   const toast = useToast();
+
+  // Color tokens aligned with normal light green theme
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
+  const selectedBg = useColorModeValue('#E8F5E9', '#303B22');
+  const selectedBorder = useColorModeValue('#2F8D46', '#A3E635');
+
   const { isOpen: isTopicOpen, onOpen: onTopicOpen, onClose: onTopicClose } = useDisclosure();
   const { isOpen: isSubtopicOpen, onOpen: onSubtopicOpen, onClose: onSubtopicClose } = useDisclosure();
 
@@ -351,8 +363,8 @@ const TopicManagement = () => {
       {/* Top Header */}
       <Flex justify="space-between" align="center" direction={{ base: 'column', md: 'row' }} gap={4}>
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color="white">Faculty Content Management</Heading>
-          <Text color="gray.400" fontSize="sm">
+          <Heading size="lg" color={textColor} fontWeight="800">Faculty Content Management</Heading>
+          <Text color={mutedText} fontSize="sm">
             Select a topic, navigate subtopics, update educational aim & theory content, and control student publication status.
           </Text>
         </VStack>
@@ -363,12 +375,12 @@ const TopicManagement = () => {
               as={RouterLink}
               to={`/faculty/topics/${selectedTopic.topic_id}/quizzes`}
               variant="outline"
-              colorScheme="purple"
+              colorScheme="green"
             >
               Manage Quizzes ({selectedTopic.title})
             </Button>
           )}
-          <Button onClick={onTopicOpen} leftIcon={<AddIcon />} colorScheme="purple">
+          <Button onClick={onTopicOpen} leftIcon={<AddIcon />} colorScheme="green">
             New Main Topic
           </Button>
         </HStack>
@@ -386,23 +398,23 @@ const TopicManagement = () => {
         <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={6} w="full">
           {/* Column 1: Topics Selector Card */}
           <Box gridColumn={{ base: 'span 1', lg: 'span 3' }}>
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={4}>
                 <VStack align="stretch" spacing={3}>
                   <Flex justify="space-between" align="center">
-                    <Text fontWeight="bold" color="purple.300" textTransform="uppercase" fontSize="xs" letterSpacing="wider">
+                    <Text fontWeight="bold" color={accentColor} textTransform="uppercase" fontSize="xs" letterSpacing="wider">
                       1. Topics ({topics.length})
                     </Text>
                     <IconButton
                       aria-label="Add topic"
                       icon={<AddIcon />}
                       size="xs"
-                      colorScheme="purple"
+                      colorScheme="green"
                       variant="ghost"
                       onClick={onTopicOpen}
                     />
                   </Flex>
-                  <Divider borderColor="slate.700" />
+                  <Divider borderColor={cardBorder} />
 
                   <VStack align="stretch" spacing={2} maxH="500px" overflowY="auto">
                     {topics.map((t) => {
@@ -413,23 +425,23 @@ const TopicManagement = () => {
                           p={3}
                           borderRadius="md"
                           cursor="pointer"
-                          bg={isSelected ? 'purple.900' : 'slate.900'}
-                          borderColor={isSelected ? 'purple.500' : 'slate.700'}
+                          bg={isSelected ? selectedBg : cardBg}
+                          borderColor={isSelected ? selectedBorder : cardBorder}
                           borderWidth="1px"
-                          _hover={{ bg: isSelected ? 'purple.800' : 'slate.700' }}
+                          _hover={{ bg: isSelected ? selectedBg : surfaceBg }}
                           transition="all 0.2s"
                           onClick={() => handleSelectTopic(t)}
                         >
                           <Flex justify="space-between" align="center">
                             <VStack align="start" spacing={0} pr={2}>
-                              <Text color={isSelected ? 'white' : 'gray.200'} fontWeight="semibold" fontSize="sm">
+                              <Text color={isSelected ? '#174723' : textColor} fontWeight="semibold" fontSize="sm">
                                 {t.title}
                               </Text>
-                              <Text color="gray.400" fontSize="xs" noOfLines={1}>
+                              <Text color={isSelected ? '#26753A' : mutedText} fontSize="xs" noOfLines={1}>
                                 {t.description || 'No description'}
                               </Text>
                             </VStack>
-                            <ChevronRightIcon color={isSelected ? 'purple.300' : 'gray.500'} />
+                            <ChevronRightIcon color={isSelected ? accentColor : mutedText} />
                           </Flex>
                         </Box>
                       );
@@ -442,16 +454,16 @@ const TopicManagement = () => {
 
           {/* Column 2: Subtopics Selector Card */}
           <Box gridColumn={{ base: 'span 1', lg: 'span 4' }}>
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={4}>
                 <VStack align="stretch" spacing={3}>
                   <Flex justify="space-between" align="center">
                     <VStack align="start" spacing={0}>
-                      <Text fontWeight="bold" color="purple.300" textTransform="uppercase" fontSize="xs" letterSpacing="wider">
+                      <Text fontWeight="bold" color={accentColor} textTransform="uppercase" fontSize="xs" letterSpacing="wider">
                         2. Subtopics ({subtopics.length})
                       </Text>
                       {selectedTopic && (
-                        <Text color="gray.400" fontSize="xs" fontWeight="medium" noOfLines={1}>
+                        <Text color={mutedText} fontSize="xs" fontWeight="medium" noOfLines={1}>
                           Topic: {selectedTopic.title}
                         </Text>
                       )}
@@ -460,7 +472,7 @@ const TopicManagement = () => {
                     {selectedTopic && (
                       <Button
                         size="xs"
-                        colorScheme="purple"
+                        colorScheme="green"
                         leftIcon={<AddIcon />}
                         onClick={() => {
                           setSubtopicOrder(subtopics.length + 1);
@@ -471,12 +483,12 @@ const TopicManagement = () => {
                       </Button>
                     )}
                   </Flex>
-                  <Divider borderColor="slate.700" />
+                  <Divider borderColor={cardBorder} />
 
                   {isLoadingSubtopics ? (
                     <LoadingSpinner label="Loading subtopics..." />
                   ) : subtopics.length === 0 ? (
-                    <Text color="gray.400" fontSize="sm" py={4} textAlign="center">
+                    <Text color={mutedText} fontSize="sm" py={4} textAlign="center">
                       No subtopics created for this topic yet. Click "Add Subtopic" above.
                     </Text>
                   ) : (
@@ -489,19 +501,19 @@ const TopicManagement = () => {
                             p={3}
                             borderRadius="md"
                             cursor="pointer"
-                            bg={isSelected ? 'slate.700' : 'slate.900'}
-                            borderColor={isSelected ? 'purple.400' : 'slate.700'}
+                            bg={isSelected ? selectedBg : cardBg}
+                            borderColor={isSelected ? selectedBorder : cardBorder}
                             borderWidth="1px"
-                            _hover={{ bg: isSelected ? 'slate.650' : 'slate.750' }}
+                            _hover={{ bg: isSelected ? selectedBg : surfaceBg }}
                             transition="all 0.2s"
                             onClick={() => handleSelectSubtopic(sub)}
                           >
                             <Flex justify="space-between" align="center">
                               <HStack spacing={2}>
-                                <Text color="purple.300" fontWeight="bold" fontSize="xs" minW="20px">
+                                <Text color={accentColor} fontWeight="bold" fontSize="xs" minW="20px">
                                   #{sub.order_index || '-'}
                                 </Text>
-                                <Text color={isSelected ? 'white' : 'gray.200'} fontWeight="medium" fontSize="sm">
+                                <Text color={isSelected ? '#174723' : textColor} fontWeight="medium" fontSize="sm">
                                   {sub.title}
                                 </Text>
                               </HStack>
@@ -522,12 +534,12 @@ const TopicManagement = () => {
 
           {/* Column 3: Content Editor Panel */}
           <Box gridColumn={{ base: 'span 1', lg: 'span 5' }}>
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={5}>
                 {!selectedSubtopic ? (
                   <VStack py={12} spacing={3} align="center">
-                    <Icon as={EditIcon} w={8} h={8} color="gray.500" />
-                    <Text color="gray.400" fontSize="sm" textAlign="center">
+                    <Icon as={EditIcon} w={8} h={8} color={accentColor} />
+                    <Text color={mutedText} fontSize="sm" textAlign="center">
                       Select a topic and subtopic from the left panels to edit educational aim, theory, and video explanation URL.
                     </Text>
                   </VStack>
@@ -540,15 +552,15 @@ const TopicManagement = () => {
                       <Flex justify="space-between" align="start">
                         <VStack align="start" spacing={1}>
                           <HStack spacing={2}>
-                            <Badge colorScheme="purple" variant="subtle" fontSize="xs">
+                            <Badge colorScheme="green" variant="subtle" fontSize="xs">
                               {selectedTopic?.title}
                             </Badge>
-                            <Text color="gray.500" fontSize="xs">/</Text>
-                            <Text color="purple.200" fontWeight="bold" fontSize="sm">
+                            <Text color={mutedText} fontSize="xs">/</Text>
+                            <Text color={accentColor} fontWeight="bold" fontSize="sm">
                               {selectedSubtopic.title}
                             </Text>
                           </HStack>
-                          <Text color="gray.400" fontSize="xs">
+                          <Text color={mutedText} fontSize="xs">
                             Order Index: {selectedSubtopic.order_index}
                           </Text>
                         </VStack>
@@ -566,7 +578,7 @@ const TopicManagement = () => {
 
                           <Button
                             size="xs"
-                            colorScheme={selectedSubtopic.is_published ? 'amber' : 'teal'}
+                            colorScheme={selectedSubtopic.is_published ? 'orange' : 'green'}
                             variant="outline"
                             isLoading={isTogglingPublish}
                             onClick={handleTogglePublish}
@@ -576,64 +588,64 @@ const TopicManagement = () => {
                         </HStack>
                       </Flex>
 
-                      <Divider borderColor="slate.700" />
+                      <Divider borderColor={cardBorder} />
 
                       {/* Aim Field */}
                       <FormControl isRequired>
-                        <FormLabel color="gray.200" fontSize="sm" fontWeight="bold">
+                        <FormLabel color={textColor} fontSize="sm" fontWeight="bold">
                           Aim / Learning Objective
                         </FormLabel>
                         <Textarea
                           placeholder="State the academic aim and key learning objectives of this subtopic..."
                           value={contentForm.aim}
                           onChange={(e) => setContentForm({ ...contentForm, aim: e.target.value })}
-                          bg="slate.900"
-                          borderColor="slate.700"
-                          color="white"
+                          bg={surfaceBg}
+                          borderColor={cardBorder}
+                          color={textColor}
                           fontSize="sm"
                           rows={3}
-                          _focus={{ borderColor: 'purple.400' }}
+                          _focus={{ borderColor: accentColor }}
                         />
                       </FormControl>
 
                       {/* Theory Area */}
                       <FormControl isRequired>
-                        <FormLabel color="gray.200" fontSize="sm" fontWeight="bold">
+                        <FormLabel color={textColor} fontSize="sm" fontWeight="bold">
                           Theory & Comprehensive Content (Markdown supported)
                         </FormLabel>
                         <Textarea
                           placeholder="Write detailed educational material including definition, core concepts, working principles, algorithm pseudocode/code examples, time & space complexities..."
                           value={contentForm.theory}
                           onChange={(e) => setContentForm({ ...contentForm, theory: e.target.value })}
-                          bg="slate.900"
-                          borderColor="slate.700"
-                          color="white"
+                          bg={surfaceBg}
+                          borderColor={cardBorder}
+                          color={textColor}
                           fontSize="sm"
                           rows={14}
                           fontFamily="mono"
-                          _focus={{ borderColor: 'purple.400' }}
+                          _focus={{ borderColor: accentColor }}
                         />
                       </FormControl>
 
                       {/* Video URL Input */}
                       <FormControl>
-                        <FormLabel color="gray.200" fontSize="sm" fontWeight="bold">
+                        <FormLabel color={textColor} fontSize="sm" fontWeight="bold">
                           Video Explanation URL (Optional)
                         </FormLabel>
                         <Input
                           placeholder="https://www.youtube.com/watch?v=..."
                           value={contentForm.video_explanation_url}
                           onChange={(e) => setContentForm({ ...contentForm, video_explanation_url: e.target.value })}
-                          bg="slate.900"
-                          borderColor="slate.700"
-                          color="white"
+                          bg={surfaceBg}
+                          borderColor={cardBorder}
+                          color={textColor}
                           fontSize="sm"
-                          _focus={{ borderColor: 'purple.400' }}
+                          _focus={{ borderColor: accentColor }}
                         />
                         {contentForm.video_explanation_url && (
                           <HStack pt={1} spacing={1}>
-                            <ExternalLinkIcon color="purple.400" w={3} h={3} />
-                            <Link href={contentForm.video_explanation_url} isExternal color="purple.300" fontSize="xs">
+                            <ExternalLinkIcon color={accentColor} w={3} h={3} />
+                            <Link href={contentForm.video_explanation_url} isExternal color={accentColor} fontSize="xs">
                               Open Video Link
                             </Link>
                           </HStack>
@@ -654,7 +666,7 @@ const TopicManagement = () => {
 
                         <Button
                           type="submit"
-                          colorScheme="purple"
+                          colorScheme="green"
                           size="md"
                           isLoading={isSavingContent}
                           px={6}
@@ -674,41 +686,41 @@ const TopicManagement = () => {
       {/* Create Topic Modal */}
       <Modal isOpen={isTopicOpen} onClose={onTopicClose} isCentered size="lg">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white">
-          <ModalHeader>Create Main Topic</ModalHeader>
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} borderRadius="2xl">
+          <ModalHeader color={textColor}>Create Main Topic</ModalHeader>
           <ModalCloseButton />
           <form onSubmit={handleCreateTopic}>
             <ModalBody pb={6}>
               <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel color="gray.300">Topic Title</FormLabel>
+                  <FormLabel color={textColor}>Topic Title</FormLabel>
                   <Input
                     placeholder="e.g. Data Structures and Algorithms"
                     value={newTopic.title}
                     onChange={(e) => setNewTopic({ ...newTopic, title: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
-                    color="white"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color="gray.300">Description</FormLabel>
+                  <FormLabel color={textColor}>Description</FormLabel>
                   <Textarea
                     placeholder="Brief summary of overall module..."
                     value={newTopic.description}
                     onChange={(e) => setNewTopic({ ...newTopic, description: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
-                    color="white"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                     rows={3}
                   />
                 </FormControl>
               </VStack>
             </ModalBody>
             <ModalFooter gap={3}>
-              <Button variant="ghost" colorScheme="gray" onClick={onTopicClose}>Cancel</Button>
-              <Button type="submit" colorScheme="purple" isLoading={isCreatingTopic}>Create Topic</Button>
+              <Button variant="ghost" onClick={onTopicClose}>Cancel</Button>
+              <Button type="submit" colorScheme="green" isLoading={isCreatingTopic}>Create Topic</Button>
             </ModalFooter>
           </form>
         </ModalContent>
@@ -717,40 +729,40 @@ const TopicManagement = () => {
       {/* Create Subtopic Modal */}
       <Modal isOpen={isSubtopicOpen} onClose={onSubtopicClose} isCentered size="md">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white">
-          <ModalHeader>Add Subtopic under "{selectedTopic?.title}"</ModalHeader>
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} borderRadius="2xl">
+          <ModalHeader color={textColor}>Add Subtopic under "{selectedTopic?.title}"</ModalHeader>
           <ModalCloseButton />
           <form onSubmit={handleCreateSubtopic}>
             <ModalBody pb={6}>
               <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel color="gray.300">Subtopic Title</FormLabel>
+                  <FormLabel color={textColor}>Subtopic Title</FormLabel>
                   <Input
                     placeholder="e.g. Dynamic Programming"
                     value={subtopicTitle}
                     onChange={(e) => setSubtopicTitle(e.target.value)}
-                    bg="slate.900"
-                    borderColor="slate.700"
-                    color="white"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel color="gray.300">Order Index</FormLabel>
+                  <FormLabel color={textColor}>Order Index</FormLabel>
                   <Input
                     type="number"
                     value={subtopicOrder}
                     onChange={(e) => setSubtopicOrder(parseInt(e.target.value) || 1)}
-                    bg="slate.900"
-                    borderColor="slate.700"
-                    color="white"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
               </VStack>
             </ModalBody>
             <ModalFooter gap={3}>
-              <Button variant="ghost" colorScheme="gray" onClick={onSubtopicClose}>Cancel</Button>
-              <Button type="submit" colorScheme="purple" isLoading={isCreatingSubtopic}>Add Subtopic</Button>
+              <Button variant="ghost" onClick={onSubtopicClose}>Cancel</Button>
+              <Button type="submit" colorScheme="green" isLoading={isCreatingSubtopic}>Add Subtopic</Button>
             </ModalFooter>
           </form>
         </ModalContent>

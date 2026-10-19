@@ -1,21 +1,83 @@
 // ──────────────────────────────────────────────
-// Faculty: Lab Assessment Detail / Edit / Publish Page
+// Faculty: Lab Assessment Detail / Edit / Question Selection Page
+// ──────────────────────────────────────────────
+// Supports 17 DSA topics and 3 Allocation Modes:
+// Mode A: Faculty Selects Specific Questions (identical questions for all)
+// Mode B: Automatic Random Allocation (random from topic pool)
+// Mode C: Hybrid Allocation (manual selection for specific students + random for rest)
 // ──────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  Box, VStack, HStack, Heading, Text, Button, Badge, Card, CardBody,
-  SimpleGrid, Flex, Spinner, useToast, FormControl, FormLabel, Input,
-  Textarea, NumberInput, NumberInputField, NumberInputStepper,
-  NumberIncrementStepper, NumberDecrementStepper, Divider,
-  Table, Thead, Tbody, Tr, Th, Td, Select, Tag, TagLabel, TagCloseButton,
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton,
-  ModalBody, ModalFooter, useDisclosure, Progress, Alert, AlertIcon,
-  AlertDescription, Icon, Code, useColorModeValue,
+  Box,
+  VStack,
+  HStack,
+  Heading,
+  Text,
+  Button,
+  Badge,
+  Card,
+  CardBody,
+  SimpleGrid,
+  Flex,
+  Spinner,
+  useToast,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  Input,
+  Textarea,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  Divider,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Select,
+  Tag,
+  TagLabel,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Progress,
+  Alert,
+  AlertIcon,
+  AlertDescription,
+  AlertTitle,
+  Code,
+  Tooltip,
+  Checkbox,
+  InputGroup,
+  InputLeftElement,
+  IconButton,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import {
-  ArrowBackIcon, CheckCircleIcon, WarningIcon, AddIcon, DeleteIcon, ArrowForwardIcon,
+  ArrowBackIcon,
+  CheckCircleIcon,
+  AddIcon,
+  DeleteIcon,
+  ArrowForwardIcon,
+  SearchIcon,
+  ViewIcon,
+  InfoIcon,
 } from '@chakra-ui/icons';
 import {
   getLabAssessmentDetailApi,
@@ -23,8 +85,8 @@ import {
   publishLabAssessmentApi,
   addTopicToAssessmentApi,
   removeTopicFromAssessmentApi,
-  getQuestionPoolApi,
   getTopicsSummaryApi,
+  listLabQuestionsApi,
 } from '../../api/labApi';
 import {
   toLocalDatetimeInputString,
@@ -32,44 +94,95 @@ import {
   formatDisplayDateTime,
 } from '../../utils/dateUtils';
 
-const STATUS_COLORS = { draft: 'gray', published: 'blue', active: 'green', completed: 'purple', cancelled: 'red' };
+const STATUS_COLORS = {
+  draft: 'gray',
+  published: 'blue',
+  active: 'green',
+  completed: 'purple',
+  cancelled: 'red',
+};
+
+const DIFFICULTY_MARKS = {
+  easy: 5,
+  medium: 10,
+  hard: 15,
+};
+
+const DIFFICULTY_COLORS = {
+  easy: 'green',
+  medium: 'blue',
+  hard: 'purple',
+};
+
 const formatDT = (dt) => formatDisplayDateTime(dt);
 
 const CreateLabAssessment = () => {
   const { labId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+
+  // Color tokens aligned with normal light green theme
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
+
+  // Modals
   const { isOpen: isPublishOpen, onOpen: onPublishOpen, onClose: onPublishClose } = useDisclosure();
   const { isOpen: isAddTopicOpen, onOpen: onAddTopicOpen, onClose: onAddTopicClose } = useDisclosure();
+  const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
+  const { isOpen: isManualModalOpen, onOpen: onManualModalOpen, onClose: onManualModalClose } = useDisclosure();
 
+  // Assessment & pool data
   const [lab, setLab] = useState(null);
   const [allTopics, setAllTopics] = useState([]);
   const [poolStats, setPoolStats] = useState([]);
   const [totalEligible, setTotalEligible] = useState(0);
+  const [availableQuestions, setAvailableQuestions] = useState([]);
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
+  const [previewQuestion, setPreviewQuestion] = useState(null);
+
+  // Hybrid Mode state
+  const [manualAllocations, setManualAllocations] = useState([]);
+  const [targetStudentId, setTargetStudentId] = useState('');
+  const [targetStudentName, setTargetStudentName] = useState('');
+  const [studentSpecificQIds, setStudentSpecificQIds] = useState([]);
+
+  // Filters for question browser
+  const [qSearch, setQSearch] = useState('');
+  const [qTopicFilter, setQTopicFilter] = useState('all');
+  const [qDiffFilter, setQDiffFilter] = useState('all');
+
+  // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState('');
-  const [editForm, setEditForm] = useState({});
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    start_time: '',
+    end_time: '',
+    duration: 120,
+    num_questions: 5,
+    marks_per_question: 10,
+    allocation_mode: 'random',
+  });
 
-  // Theme tokens
-  const headingColor = useColorModeValue('#202124', '#F5F7F5');
-  const bodyColor = useColorModeValue('#202124', '#F5F7F5');
-  const secondaryColor = useColorModeValue('#505750', '#B8C0B9');
-  const cardBg = useColorModeValue('#FFFFFF', '#202321');
-  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
-  const surfaceBg = useColorModeValue('#F5F7F5', '#292D2A');
-  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
-  const dividerColor = useColorModeValue('#DDE5DD', '#3B423C');
-
+  // ── Load Assessment Data ───────────────────────
   const loadData = useCallback(async () => {
     try {
       const [labRes, topicsRes] = await Promise.all([
         getLabAssessmentDetailApi(labId),
         getTopicsSummaryApi().catch(() => ({ data: { data: { topics: [] } } })),
       ]);
+
       const labData = labRes.data?.data?.lab;
       setLab(labData);
+
+      const mode = labData?.allocation_mode || 'random';
       setEditForm({
         title: labData?.title || '',
         description: labData?.description || '',
@@ -78,41 +191,115 @@ const CreateLabAssessment = () => {
         duration: labData?.duration || 120,
         num_questions: labData?.num_questions || 5,
         marks_per_question: labData?.marks_per_question || 10,
+        allocation_mode: mode,
       });
+
       setAllTopics(topicsRes.data?.data?.topics || []);
       setPoolStats(labData?.questionPoolStats || []);
       setTotalEligible(labData?.totalEligibleQuestions || 0);
+
+      // Selected questions for Mode A
+      const preSelected = (labData?.selectedQuestions || []).map((q) => q.lab_question_id);
+      setSelectedQuestionIds(preSelected);
+
+      // Existing manual allocations for Mode C
+      if (labData?.allocations) {
+        const manualMap = {};
+        labData.allocations
+          .filter((a) => a.is_manual)
+          .forEach((a) => {
+            if (!manualMap[a.student_id]) {
+              manualMap[a.student_id] = {
+                student_id: a.student_id,
+                student_name: a.student_name,
+                roll_number: a.roll_number,
+                question_ids: [],
+              };
+            }
+            manualMap[a.student_id].question_ids.push(a.lab_question_id);
+          });
+        setManualAllocations(Object.values(manualMap));
+      }
+
+      // Load published questions for the assessment's selected topics
+      const topicIds = (labData?.topics || []).map((t) => t.topic_id);
+      if (topicIds.length > 0) {
+        const questionsPromises = topicIds.map((tId) =>
+          listLabQuestionsApi({ topicId: tId, status: 'published' }).catch(() => ({ data: { data: { questions: [] } } }))
+        );
+        const results = await Promise.all(questionsPromises);
+        const combined = [];
+        const seen = new Set();
+        results.forEach((r) => {
+          const list = r.data?.data?.questions || r.data?.questions || [];
+          list.forEach((q) => {
+            if (!seen.has(q.lab_question_id)) {
+              seen.add(q.lab_question_id);
+              combined.push(q);
+            }
+          });
+        });
+        setAvailableQuestions(combined);
+      } else {
+        setAvailableQuestions([]);
+      }
     } catch (err) {
-      toast({ title: err.response?.data?.message || 'Failed to load assessment', status: 'error', duration: 4000, isClosable: true });
+      toast({
+        title: err.response?.data?.message || 'Failed to load assessment',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
     } finally {
       setIsLoading(false);
     }
   }, [labId, toast]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const handleSave = async () => {
+  // ── Save Assessment Settings & Allocations ────
+  const handleSave = async (overrideSelectedQIds = null) => {
     try {
       setIsSaving(true);
-      await updateLabAssessmentApi(labId, {
+      const qIds = overrideSelectedQIds !== null ? overrideSelectedQIds : selectedQuestionIds;
+      const payload = {
         ...editForm,
         start_time: toUtcIsoString(editForm.start_time),
         end_time: toUtcIsoString(editForm.end_time),
+        allocation_mode: editForm.allocation_mode,
+        selected_question_ids: editForm.allocation_mode === 'specific' ? qIds : [],
+        manual_allocations: editForm.allocation_mode === 'hybrid' ? manualAllocations : [],
+      };
+
+      await updateLabAssessmentApi(labId, payload);
+      toast({
+        title: 'Assessment settings saved',
+        description: 'Question selections and allocation rules updated in database.',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
       });
-      toast({ title: 'Assessment saved', status: 'success', duration: 2000, isClosable: true });
       loadData();
     } catch (err) {
-      toast({ title: err.response?.data?.message || 'Failed to save', status: 'error', duration: 4000, isClosable: true });
+      toast({
+        title: err.response?.data?.message || 'Failed to save',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
+  // ── Topic Management ──────────────────────────
   const handleAddTopic = async () => {
     if (!selectedTopicId) return;
     try {
       await addTopicToAssessmentApi(labId, parseInt(selectedTopicId, 10));
-      toast({ title: 'Topic added', status: 'success', duration: 2000, isClosable: true });
+      toast({ title: 'Topic added to assessment', status: 'success', duration: 2000, isClosable: true });
       setSelectedTopicId('');
       onAddTopicClose();
       loadData();
@@ -131,31 +318,124 @@ const CreateLabAssessment = () => {
     }
   };
 
+  // ── Mode A: Question Selection ────────────────
+  const handleToggleSelectQuestion = (qId) => {
+    setSelectedQuestionIds((prev) => {
+      const next = prev.includes(qId) ? prev.filter((id) => id !== qId) : [...prev, qId];
+      return next;
+    });
+  };
+
+  // ── Mode C: Manual Student Assignment ─────────
+  const handleOpenManualAssignment = () => {
+    setTargetStudentId('');
+    setTargetStudentName('');
+    setStudentSpecificQIds([]);
+    onManualModalOpen();
+  };
+
+  const handleSaveStudentAssignment = () => {
+    const sId = parseInt(targetStudentId, 10);
+    if (!sId || isNaN(sId)) {
+      toast({ title: 'Please enter a valid numeric Student ID', status: 'warning', duration: 2500 });
+      return;
+    }
+    if (studentSpecificQIds.length !== (editForm.num_questions || 5)) {
+      toast({
+        title: `Must select exactly ${editForm.num_questions || 5} questions`,
+        description: `Currently selected: ${studentSpecificQIds.length}`,
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    const updated = [
+      ...manualAllocations.filter((m) => m.student_id !== sId),
+      {
+        student_id: sId,
+        student_name: targetStudentName || `Student #${sId}`,
+        question_ids: studentSpecificQIds,
+      },
+    ];
+    setManualAllocations(updated);
+    onManualModalClose();
+    toast({ title: `Assigned ${studentSpecificQIds.length} questions to Student #${sId}`, status: 'success', duration: 2500 });
+  };
+
+  const handleRemoveManualAssignment = (sId) => {
+    setManualAllocations((prev) => prev.filter((m) => m.student_id !== sId));
+  };
+
+  // ── Publish Action ───────────────────────────
   const handlePublish = async () => {
     try {
       setIsPublishing(true);
       await publishLabAssessmentApi(labId);
-      toast({ title: 'Assessment published!', description: 'Students can now access it.', status: 'success', duration: 3000, isClosable: true });
+      toast({
+        title: 'Assessment published!',
+        description: 'Students can now participate during the scheduled time window.',
+        status: 'success',
+        duration: 3500,
+        isClosable: true,
+      });
       onPublishClose();
       loadData();
     } catch (err) {
-      toast({ title: err.response?.data?.message || 'Failed to publish', status: 'error', duration: 5000, isClosable: true });
+      toast({
+        title: err.response?.data?.message || 'Failed to publish assessment',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsPublishing(false);
     }
   };
 
+  // Question filtering
+  const filteredAvailableQuestions = availableQuestions.filter((q) => {
+    if (qSearch.trim() && !q.title.toLowerCase().includes(qSearch.toLowerCase())) {
+      return false;
+    }
+    if (qTopicFilter !== 'all' && q.topic_id?.toString() !== qTopicFilter) {
+      return false;
+    }
+    if (qDiffFilter !== 'all' && q.difficulty !== qDiffFilter) {
+      return false;
+    }
+    return true;
+  });
+
   const isDraft = lab?.status === 'draft';
-  const addedTopicIds = new Set(lab?.topics?.map(t => t.topic_id) || []);
-  const availableTopics = allTopics.filter(t => !addedTopicIds.has(t.topic_id));
-  const questionSufficiency = lab ? (totalEligible >= lab.num_questions) : false;
+  const addedTopicIds = new Set(lab?.topics?.map((t) => t.topic_id) || []);
+  const availableTopicsToAdd = allTopics.filter((t) => !addedTopicIds.has(t.topic_id));
+
+  // Mode-specific sufficiency checks
+  const numReq = editForm.num_questions || 5;
+  const isModeA = editForm.allocation_mode === 'specific';
+  const isModeB = editForm.allocation_mode === 'random';
+  const isModeC = editForm.allocation_mode === 'hybrid';
+
+  const isQuestionSufficient = isModeA
+    ? selectedQuestionIds.length >= numReq
+    : totalEligible >= numReq;
+
+  // Selected questions objects and total marks calculation
+  const selectedQuestionObjects = availableQuestions.filter((q) =>
+    selectedQuestionIds.includes(q.lab_question_id)
+  );
+  const totalSelectedMarks = selectedQuestionObjects.reduce(
+    (acc, q) => acc + (q.marks || DIFFICULTY_MARKS[q.difficulty] || 10),
+    0
+  );
 
   if (isLoading) {
     return (
-      <Flex justify="center" align="center" minH="300px">
-        <VStack>
+      <Flex justify="center" align="center" minH="400px">
+        <VStack spacing={3}>
           <Spinner size="xl" color={accentColor} thickness="4px" />
-          <Text color={secondaryColor}>Loading...</Text>
+          <Text color={mutedText}>Loading assessment details...</Text>
         </VStack>
       </Flex>
     );
@@ -164,36 +444,48 @@ const CreateLabAssessment = () => {
   if (!lab) return null;
 
   return (
-    <VStack spacing={8} align="stretch" w="full">
-      {/* Header */}
+    <VStack spacing={8} align="stretch" w="full" maxW="1440px" mx="auto" pb={16}>
+      {/* ── Top Header ────────────────────────────────────── */}
       <Box>
         <Button
           as={RouterLink}
           to="/faculty/lab-assessments"
           leftIcon={<ArrowBackIcon />}
           variant="ghost"
-          colorScheme="brand"
           size="sm"
           mb={4}
         >
           Back to Assessments
         </Button>
-        <Flex justify="space-between" align="start" gap={4} direction={{ base: 'column', md: 'row' }}>
+
+        <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={1}>
-            <HStack>
-              <Heading size="lg" color={headingColor}>{lab.title}</Heading>
-              <Badge colorScheme={STATUS_COLORS[lab.status]} px={2} py={1} borderRadius="md" textTransform="capitalize">
+            <HStack spacing={3}>
+              <Heading size="lg" color={textColor} fontWeight="800">
+                {lab.title}
+              </Heading>
+              <Badge colorScheme={STATUS_COLORS[lab.status]} px={2.5} py={1} borderRadius="md" textTransform="capitalize">
                 {lab.status}
               </Badge>
+              <Badge
+                colorScheme={isModeA ? 'cyan' : isModeC ? 'teal' : 'purple'}
+                px={2.5}
+                py={1}
+                borderRadius="md"
+              >
+                {isModeA ? 'Mode A: Specific Questions' : isModeC ? 'Mode C: Hybrid Allocation' : 'Mode B: Random Allocation'}
+              </Badge>
             </HStack>
-            <Text color={secondaryColor} fontSize="sm">Created by {lab.faculty_name}</Text>
+            <Text color={mutedText} fontSize="sm">
+              Created by {lab.faculty_name} • Duration: {lab.duration} mins • {numReq} Questions / Student
+            </Text>
           </VStack>
+
           <HStack spacing={3}>
             <Button
               as={RouterLink}
               to="/faculty/lab-questions"
               variant="outline"
-              colorScheme="brand"
               size="sm"
             >
               Question Bank
@@ -202,96 +494,121 @@ const CreateLabAssessment = () => {
               as={RouterLink}
               to={`/faculty/lab-assessments/${labId}/results`}
               variant="outline"
-              colorScheme="brand"
               size="sm"
               rightIcon={<ArrowForwardIcon />}
             >
-              View Results
+              Results
             </Button>
             {isDraft && (
               <Button
                 colorScheme="brand"
                 onClick={onPublishOpen}
-                isDisabled={!questionSufficiency || !lab.start_time || !lab.end_time}
+                isDisabled={!isQuestionSufficient || !lab.start_time || !lab.end_time || lab.topics?.length === 0}
                 leftIcon={<CheckCircleIcon />}
               >
-                Publish
+                Publish Assessment
               </Button>
             )}
           </HStack>
         </Flex>
       </Box>
 
-      {/* Publish readiness alert */}
+      {/* ── Readiness / Allocation Mode Alert ────────────── */}
       {isDraft && (
         <Alert
-          status={questionSufficiency && lab.topics?.length > 0 ? 'success' : 'warning'}
-          borderRadius="xl"
+          status={isQuestionSufficient && lab.topics?.length > 0 ? 'success' : 'warning'}
+          borderRadius="2xl"
           borderWidth="1px"
         >
           <AlertIcon />
-          <AlertDescription color={bodyColor} fontSize="sm">
-            {lab.topics?.length === 0
-              ? 'Add at least one topic to enable publishing.'
-              : !questionSufficiency
-                ? `Need ${lab.num_questions} questions, only ${totalEligible} available. Add more questions to the selected topics.`
-                : `Ready to publish! ${totalEligible} questions available (need ${lab.num_questions}). Students will receive ${lab.num_questions} randomly selected questions.`
-            }
-          </AlertDescription>
+          <Box flex={1}>
+            <AlertTitle fontSize="sm">
+              {lab.topics?.length === 0
+                ? 'Topics Required'
+                : isModeA
+                ? `Mode A — Selected ${selectedQuestionIds.length} of ${numReq} required questions (${totalSelectedMarks} Total Marks)`
+                : isModeC
+                ? `Mode C — Hybrid Pool: ${totalEligible} questions available (${manualAllocations.length} students assigned manually)`
+                : `Mode B — Ready for random allocation: ${totalEligible} eligible questions in pool (need at least ${numReq})`}
+            </AlertTitle>
+            <AlertDescription fontSize="xs" color={mutedText}>
+              {lab.topics?.length === 0
+                ? 'Add at least one curriculum topic to enable assessment question selection.'
+                : isModeA && selectedQuestionIds.length < numReq
+                ? `Select at least ${numReq - selectedQuestionIds.length} more question(s) from the question pool below before publishing.`
+                : isModeA
+                ? 'All students taking this assessment will receive the exact questions you have selected below.'
+                : isModeC
+                ? 'Students with manual assignments receive their exact chosen questions; all other students receive randomized questions from the pool.'
+                : 'Each student will automatically receive a randomized set of questions when starting the assessment.'}
+            </AlertDescription>
+          </Box>
         </Alert>
       )}
 
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
-        {/* Left: Edit form */}
-        {isDraft && (
-          <VStack spacing={5} align="stretch">
-            <Heading size="md" color={headingColor}>Assessment Settings</Heading>
+      {/* ── Main Layout Grid ──────────────────────────────── */}
+      <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+        {/* Left Column (1 col): Settings & Topics */}
+        <VStack spacing={6} align="stretch">
+          {/* Assessment Configuration Card */}
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl" boxShadow="sm">
+            <CardBody p={5}>
+              <Heading size="sm" color={textColor} mb={4}>
+                Assessment Configuration
+              </Heading>
 
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px">
-              <CardBody>
+              {isDraft ? (
                 <VStack spacing={4}>
                   <FormControl>
-                    <FormLabel color={secondaryColor} fontSize="sm">Title</FormLabel>
+                    <FormLabel fontSize="xs" fontWeight="600">Title</FormLabel>
                     <Input
+                      size="sm"
                       value={editForm.title}
-                      onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      placeholder="Assessment title..."
+                      onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
                     />
                   </FormControl>
 
                   <FormControl>
-                    <FormLabel color={secondaryColor} fontSize="sm">Description</FormLabel>
+                    <FormLabel fontSize="xs" fontWeight="600">Description</FormLabel>
                     <Textarea
-                      rows={3}
+                      size="sm"
+                      rows={2}
                       value={editForm.description}
-                      onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                      placeholder="Optional description..."
+                      onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                     />
                   </FormControl>
 
-                  <SimpleGrid columns={2} spacing={4} w="full">
+                  <SimpleGrid columns={2} spacing={3} w="full">
                     <FormControl>
-                      <FormLabel color={secondaryColor} fontSize="sm">Start Time</FormLabel>
+                      <FormLabel fontSize="xs" fontWeight="600">Start Time</FormLabel>
                       <Input
+                        size="sm"
                         type="datetime-local"
                         value={editForm.start_time}
-                        onChange={e => setEditForm(f => ({ ...f, start_time: e.target.value }))}
+                        onChange={(e) => setEditForm((f) => ({ ...f, start_time: e.target.value }))}
                       />
                     </FormControl>
                     <FormControl>
-                      <FormLabel color={secondaryColor} fontSize="sm">End Time</FormLabel>
+                      <FormLabel fontSize="xs" fontWeight="600">End Time</FormLabel>
                       <Input
+                        size="sm"
                         type="datetime-local"
                         value={editForm.end_time}
-                        onChange={e => setEditForm(f => ({ ...f, end_time: e.target.value }))}
+                        onChange={(e) => setEditForm((f) => ({ ...f, end_time: e.target.value }))}
                       />
                     </FormControl>
                   </SimpleGrid>
 
-                  <SimpleGrid columns={3} spacing={4} w="full">
+                  <SimpleGrid columns={2} spacing={3} w="full">
                     <FormControl>
-                      <FormLabel color={secondaryColor} fontSize="sm">Duration (min)</FormLabel>
-                      <NumberInput min={5} max={480} value={editForm.duration} onChange={(_, v) => setEditForm(f => ({ ...f, duration: v || 120 }))}>
+                      <FormLabel fontSize="xs" fontWeight="600">Duration (mins)</FormLabel>
+                      <NumberInput
+                        size="sm"
+                        min={5}
+                        max={480}
+                        value={editForm.duration}
+                        onChange={(_, v) => setEditForm((f) => ({ ...f, duration: v || 120 }))}
+                      >
                         <NumberInputField />
                         <NumberInputStepper>
                           <NumberIncrementStepper />
@@ -299,19 +616,16 @@ const CreateLabAssessment = () => {
                         </NumberInputStepper>
                       </NumberInput>
                     </FormControl>
+
                     <FormControl>
-                      <FormLabel color={secondaryColor} fontSize="sm">Num Questions</FormLabel>
-                      <NumberInput min={1} max={50} value={editForm.num_questions} onChange={(_, v) => setEditForm(f => ({ ...f, num_questions: v || 5 }))}>
-                        <NumberInputField />
-                        <NumberInputStepper>
-                          <NumberIncrementStepper />
-                          <NumberDecrementStepper />
-                        </NumberInputStepper>
-                      </NumberInput>
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel color={secondaryColor} fontSize="sm">Marks / Q</FormLabel>
-                      <NumberInput min={1} max={100} value={editForm.marks_per_question} onChange={(_, v) => setEditForm(f => ({ ...f, marks_per_question: v || 10 }))}>
+                      <FormLabel fontSize="xs" fontWeight="600">Questions / Student</FormLabel>
+                      <NumberInput
+                        size="sm"
+                        min={1}
+                        max={50}
+                        value={editForm.num_questions}
+                        onChange={(_, v) => setEditForm((f) => ({ ...f, num_questions: v || 5 }))}
+                      >
                         <NumberInputField />
                         <NumberInputStepper>
                           <NumberIncrementStepper />
@@ -321,193 +635,679 @@ const CreateLabAssessment = () => {
                     </FormControl>
                   </SimpleGrid>
 
+                  {/* Allocation Mode Selector */}
+                  <FormControl isRequired w="full">
+                    <FormLabel fontSize="xs" fontWeight="600">Allocation Mode</FormLabel>
+                    <Select
+                      size="sm"
+                      value={editForm.allocation_mode}
+                      onChange={(e) => setEditForm((f) => ({ ...f, allocation_mode: e.target.value }))}
+                    >
+                      <option value="specific">Mode A — Faculty Selects Specific Questions</option>
+                      <option value="random">Mode B — Automatic Random Allocation</option>
+                      <option value="hybrid">Mode C — Hybrid Allocation</option>
+                    </Select>
+                    <FormHelperText fontSize="10px">
+                      {isModeA && 'Select the exact questions below. All students receive these questions.'}
+                      {isModeB && 'Questions will be randomly picked from the selected topics for each student.'}
+                      {isModeC && 'Assign exact questions to particular students; rest get random allocation.'}
+                    </FormHelperText>
+                  </FormControl>
+
                   <Button
+                    size="sm"
                     colorScheme="brand"
                     w="full"
-                    onClick={handleSave}
+                    onClick={() => handleSave()}
                     isLoading={isSaving}
-                    loadingText="Saving..."
                   >
-                    Save Settings
+                    Save Assessment Settings
                   </Button>
                 </VStack>
-              </CardBody>
-            </Card>
-          </VStack>
-        )}
-
-        {/* Assessment Overview (non-draft) */}
-        {!isDraft && (
-          <VStack spacing={4} align="stretch">
-            <Heading size="md" color={headingColor}>Assessment Details</Heading>
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px">
-              <CardBody>
-                <VStack spacing={3} align="start">
+              ) : (
+                <VStack spacing={3} align="start" fontSize="xs">
                   <HStack justify="space-between" w="full">
-                    <Text color={secondaryColor} fontSize="sm">Start</Text>
-                    <Text color={bodyColor} fontSize="sm">{formatDT(lab.start_time)}</Text>
+                    <Text color={mutedText}>Start:</Text>
+                    <Text fontWeight="600">{formatDT(lab.start_time)}</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color={secondaryColor} fontSize="sm">End</Text>
-                    <Text color={bodyColor} fontSize="sm">{formatDT(lab.end_time)}</Text>
+                    <Text color={mutedText}>End:</Text>
+                    <Text fontWeight="600">{formatDT(lab.end_time)}</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color={secondaryColor} fontSize="sm">Duration</Text>
-                    <Text color={bodyColor} fontSize="sm">{lab.duration} minutes</Text>
+                    <Text color={mutedText}>Duration:</Text>
+                    <Text fontWeight="600">{lab.duration} mins</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color={secondaryColor} fontSize="sm">Questions / Student</Text>
-                    <Text color={bodyColor} fontSize="sm">{lab.num_questions}</Text>
+                    <Text color={mutedText}>Questions:</Text>
+                    <Text fontWeight="600">{lab.num_questions}</Text>
                   </HStack>
                   <HStack justify="space-between" w="full">
-                    <Text color={secondaryColor} fontSize="sm">Total Marks</Text>
-                    <Text color={accentColor} fontSize="sm" fontWeight="bold">
-                      {lab.num_questions * lab.marks_per_question}
-                    </Text>
+                    <Text color={mutedText}>Allocation Mode:</Text>
+                    <Badge colorScheme="purple">{lab.allocation_mode}</Badge>
                   </HStack>
                 </VStack>
-              </CardBody>
-            </Card>
-          </VStack>
-        )}
+              )}
+            </CardBody>
+          </Card>
 
-        {/* Right: Topics & Question Pool */}
-        <VStack spacing={5} align="stretch">
-          <HStack justify="space-between">
-            <Heading size="md" color={headingColor}>Selected Topics</Heading>
-            {isDraft && (
-              <Button size="sm" leftIcon={<AddIcon />} colorScheme="brand" variant="outline" onClick={onAddTopicOpen}>
-                Add Topic
-              </Button>
-            )}
-          </HStack>
+          {/* Curriculum Topics Card */}
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl" boxShadow="sm">
+            <CardBody p={5}>
+              <Flex justify="space-between" align="center" mb={3}>
+                <Heading size="sm" color={textColor}>
+                  Selected Topics ({lab.topics?.length || 0})
+                </Heading>
+                {isDraft && (
+                  <Button
+                    size="xs"
+                    leftIcon={<AddIcon />}
+                    colorScheme="brand"
+                    variant="outline"
+                    onClick={onAddTopicOpen}
+                  >
+                    Add Topic
+                  </Button>
+                )}
+              </Flex>
 
-          {lab.topics?.length === 0 ? (
-            <Box p={6} bg={surfaceBg} borderRadius="xl" textAlign="center" border="1px dashed" borderColor={dividerColor}>
-              <Text color={secondaryColor} fontSize="sm">No topics selected yet. Add topics to build the question pool.</Text>
-            </Box>
-          ) : (
-            <VStack spacing={3} align="stretch">
-              {poolStats.map((stat) => (
-                <Card key={stat.topic_id} bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl">
-                  <CardBody py={3}>
-                    <Flex align="center" justify="space-between">
-                      <VStack align="start" spacing={1} flex={1}>
-                        <Text color={bodyColor} fontWeight="600" fontSize="sm">{stat.topic_title}</Text>
-                        <HStack spacing={2}>
-                          <Badge colorScheme={stat.question_count >= (lab.num_questions || 5) ? 'green' : 'orange'} fontSize="xs">
-                            {stat.question_count} question{stat.question_count !== 1 ? 's' : ''}
-                          </Badge>
-                          {stat.question_count === 0 && (
-                            <Text color="orange.500" fontSize="xs">⚠ No questions</Text>
-                          )}
-                        </HStack>
-                      </VStack>
+              {lab.topics?.length === 0 ? (
+                <Box p={4} bg={surfaceBg} borderRadius="xl" textAlign="center">
+                  <Text fontSize="xs" color={mutedText}>
+                    No topics added yet. Add topics to create the question pool.
+                  </Text>
+                </Box>
+              ) : (
+                <VStack spacing={2.5} align="stretch">
+                  {poolStats.map((stat) => (
+                    <Box
+                      key={stat.topic_id}
+                      p={2.5}
+                      borderRadius="lg"
+                      bg={surfaceBg}
+                      borderWidth="1px"
+                      borderColor={cardBorder}
+                    >
+                      <Flex justify="space-between" align="center">
+                        <Box>
+                          <Text fontWeight="700" fontSize="xs" noOfLines={1}>
+                            {stat.topic_title}
+                          </Text>
+                          <HStack spacing={1} mt={0.5}>
+                            <Badge size="xs" colorScheme={stat.question_count > 0 ? 'green' : 'orange'} fontSize="10px">
+                              {stat.question_count} published Qs
+                            </Badge>
+                          </HStack>
+                        </Box>
+                        {isDraft && (
+                          <IconButton
+                            icon={<DeleteIcon />}
+                            size="xs"
+                            colorScheme="red"
+                            variant="ghost"
+                            aria-label="Remove topic"
+                            onClick={() => handleRemoveTopic(stat.topic_id)}
+                          />
+                        )}
+                      </Flex>
+                    </Box>
+                  ))}
+
+                  {/* Pool Progress */}
+                  <Box mt={2} p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                    <Flex justify="space-between" fontSize="xs" mb={1.5}>
+                      <Text color={mutedText}>Total Published Pool:</Text>
+                      <Text fontWeight="bold" color={totalEligible >= numReq ? 'green.600' : 'orange.600'}>
+                        {totalEligible} / {numReq} required
+                      </Text>
+                    </Flex>
+                    <Progress
+                      value={Math.min(100, (totalEligible / numReq) * 100)}
+                      colorScheme={totalEligible >= numReq ? 'green' : 'orange'}
+                      size="sm"
+                      borderRadius="full"
+                    />
+                  </Box>
+                </VStack>
+              )}
+            </CardBody>
+          </Card>
+        </VStack>
+
+        {/* Right Column (2 cols): Question Selection & Allocation Engine */}
+        <Box gridColumn={{ base: '1', lg: 'span 2' }}>
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl" boxShadow="sm">
+            <CardBody p={5}>
+              {/* Mode A — Faculty Selects Specific Questions */}
+              {isModeA && (
+                <Box>
+                  <Flex justify="space-between" align={{ base: 'start', sm: 'center' }} mb={4} direction={{ base: 'column', sm: 'row' }} gap={2}>
+                    <Box>
+                      <Heading size="sm" color={textColor}>
+                        Mode A: Select Specific Questions
+                      </Heading>
+                      <Text fontSize="xs" color={mutedText}>
+                        Select exact questions to include. All students will receive these identical questions.
+                      </Text>
+                    </Box>
+                    <HStack spacing={2}>
+                      <Tag size="md" colorScheme={selectedQuestionIds.length >= numReq ? 'green' : 'orange'} variant="solid">
+                        {selectedQuestionIds.length} / {numReq} Selected
+                      </Tag>
+                      <Tag size="md" colorScheme="blue" variant="outline">
+                        {totalSelectedMarks} Total Marks
+                      </Tag>
                       {isDraft && (
                         <Button
-                          size="xs"
-                          colorScheme="red"
-                          variant="ghost"
-                          onClick={() => handleRemoveTopic(stat.topic_id)}
+                          size="sm"
+                          colorScheme="brand"
+                          onClick={() => handleSave()}
+                          isLoading={isSaving}
                         >
-                          <DeleteIcon />
+                          Save Selection
                         </Button>
                       )}
-                    </Flex>
-                  </CardBody>
-                </Card>
-              ))}
+                    </HStack>
+                  </Flex>
 
-              <Box p={3} bg={surfaceBg} borderRadius="lg" borderWidth="1px" borderColor={dividerColor}>
-                <Flex justify="space-between" mb={2}>
-                  <Text color={secondaryColor} fontSize="sm">Total Pool</Text>
-                  <Text color={questionSufficiency ? accentColor : 'orange.500'} fontSize="sm" fontWeight="bold">
-                    {totalEligible} / {lab.num_questions} required
+                  {/* Question Browser Filters */}
+                  <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={4}>
+                    <InputGroup size="sm">
+                      <InputLeftElement pointerEvents="none">
+                        <SearchIcon color="gray.400" />
+                      </InputLeftElement>
+                      <Input
+                        placeholder="Search questions..."
+                        value={qSearch}
+                        onChange={(e) => setQSearch(e.target.value)}
+                        borderRadius="lg"
+                      />
+                    </InputGroup>
+
+                    <Select
+                      size="sm"
+                      borderRadius="lg"
+                      value={qTopicFilter}
+                      onChange={(e) => setQTopicFilter(e.target.value)}
+                    >
+                      <option value="all">All Selected Topics</option>
+                      {(lab.topics || []).map((t) => (
+                        <option key={t.topic_id} value={t.topic_id}>
+                          {t.topic_title}
+                        </option>
+                      ))}
+                    </Select>
+
+                    <Select
+                      size="sm"
+                      borderRadius="lg"
+                      value={qDiffFilter}
+                      onChange={(e) => setQDiffFilter(e.target.value)}
+                    >
+                      <option value="all">All Difficulties</option>
+                      <option value="easy">Easy (5 marks)</option>
+                      <option value="medium">Medium (10 marks)</option>
+                      <option value="hard">Hard (15 marks)</option>
+                    </Select>
+                  </SimpleGrid>
+
+                  {/* Available Questions Table */}
+                  {filteredAvailableQuestions.length === 0 ? (
+                    <Box p={8} textAlign="center" borderRadius="xl" bg={surfaceBg}>
+                      <Text color={mutedText} fontSize="sm">
+                        No published questions available for the selected topics and filters.
+                      </Text>
+                    </Box>
+                  ) : (
+                    <VStack spacing={2.5} align="stretch" maxH="550px" overflowY="auto" pr={1}>
+                      {filteredAvailableQuestions.map((q) => {
+                        const isSelected = selectedQuestionIds.includes(q.lab_question_id);
+                        const diffColor = DIFFICULTY_COLORS[q.difficulty] || 'gray';
+                        const marks = q.marks || DIFFICULTY_MARKS[q.difficulty] || 10;
+                        return (
+                          <Box
+                            key={q.lab_question_id}
+                            p={3.5}
+                            borderRadius="xl"
+                            bg={isSelected ? surfaceBg : 'transparent'}
+                            borderWidth="2px"
+                            borderColor={isSelected ? 'blue.400' : cardBorder}
+                            transition="all 0.15s ease"
+                            _hover={{ borderColor: 'blue.300' }}
+                          >
+                            <Flex justify="space-between" align="start" gap={3}>
+                              <HStack spacing={3} align="start" flex={1}>
+                                {isDraft && (
+                                  <Checkbox
+                                    mt={1}
+                                    colorScheme="brand"
+                                    isChecked={isSelected}
+                                    onChange={() => handleToggleSelectQuestion(q.lab_question_id)}
+                                  />
+                                )}
+                                <VStack align="start" spacing={1}>
+                                  <HStack spacing={2} wrap="wrap">
+                                    <Text fontWeight="700" fontSize="sm" color={textColor}>
+                                      {q.title}
+                                    </Text>
+                                    <Badge colorScheme={diffColor} fontSize="xs">
+                                      {q.difficulty} ({marks}m)
+                                    </Badge>
+                                    {q.topic_title && (
+                                      <Badge colorScheme="blue" variant="subtle" fontSize="10px">
+                                        {q.topic_title}
+                                      </Badge>
+                                    )}
+                                  </HStack>
+                                  <Text fontSize="xs" color={mutedText} noOfLines={2}>
+                                    {q.problem_statement}
+                                  </Text>
+                                </VStack>
+                              </HStack>
+
+                              <HStack spacing={1}>
+                                <Tooltip label="Preview problem statement" hasArrow>
+                                  <IconButton
+                                    icon={<ViewIcon />}
+                                    size="xs"
+                                    variant="ghost"
+                                    colorScheme="blue"
+                                    aria-label="Preview"
+                                    onClick={() => {
+                                      setPreviewQuestion(q);
+                                      onPreviewOpen();
+                                    }}
+                                  />
+                                </Tooltip>
+                              </HStack>
+                            </Flex>
+                          </Box>
+                        );
+                      })}
+                    </VStack>
+                  )}
+                </Box>
+              )}
+
+              {/* Mode B — Automatic Random Allocation */}
+              {isModeB && (
+                <Box>
+                  <Heading size="sm" color={textColor} mb={1}>
+                    Mode B: Automatic Random Allocation
+                  </Heading>
+                  <Text fontSize="xs" color={mutedText} mb={4}>
+                    The system dynamically and securely allocates {numReq} unique questions from the selected topic pool to each student when they start the assessment.
                   </Text>
-                </Flex>
-                <Progress
-                  value={Math.min(100, (totalEligible / (lab.num_questions || 5)) * 100)}
-                  colorScheme={questionSufficiency ? 'green' : 'orange'}
-                  size="sm"
-                  borderRadius="full"
-                />
-              </Box>
 
-              <Button
-                as={RouterLink}
-                to="/faculty/lab-questions"
-                variant="outline"
-                colorScheme="brand"
-                size="sm"
-                rightIcon={<ArrowForwardIcon />}
-              >
-                Manage Question Bank
-              </Button>
-            </VStack>
-          )}
-        </VStack>
+                  <Alert status="info" borderRadius="xl" mb={4}>
+                    <AlertIcon />
+                    <Box fontSize="xs">
+                      <AlertTitle fontWeight="bold">How Mode B Operates:</AlertTitle>
+                      <AlertDescription>
+                        1. When a student enters the lab workspace, the backend selects {numReq} questions randomly without repetition from the {totalEligible} published questions in the selected topics.
+                        <br />
+                        2. The allocation is permanently saved in PostgreSQL (<Code fontSize="10px">la_student_allocations</Code>), ensuring refreshing or reconnecting returns the exact same questions.
+                        <br />
+                        3. Students cannot access questions or marks assigned to other students.
+                      </AlertDescription>
+                    </Box>
+                  </Alert>
+
+                  <Heading size="xs" textTransform="uppercase" color="gray.500" mb={2}>
+                    Eligible Question Pool Preview ({availableQuestions.length} Questions)
+                  </Heading>
+                  <VStack spacing={2} align="stretch" maxH="450px" overflowY="auto">
+                    {availableQuestions.map((q) => (
+                      <Box key={q.lab_question_id} p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                        <Flex justify="space-between" align="center">
+                          <VStack align="start" spacing={0.5}>
+                            <HStack spacing={2}>
+                              <Text fontWeight="600" fontSize="xs">{q.title}</Text>
+                              <Badge colorScheme={DIFFICULTY_COLORS[q.difficulty]} fontSize="9px">{q.difficulty} ({q.marks || DIFFICULTY_MARKS[q.difficulty]}m)</Badge>
+                              <Badge colorScheme="blue" variant="subtle" fontSize="9px">{q.topic_title}</Badge>
+                            </HStack>
+                            <Text fontSize="10px" color={mutedText} noOfLines={1}>{q.problem_statement}</Text>
+                          </VStack>
+                          <IconButton
+                            icon={<ViewIcon />}
+                            size="xs"
+                            variant="ghost"
+                            colorScheme="blue"
+                            aria-label="Preview"
+                            onClick={() => {
+                              setPreviewQuestion(q);
+                              onPreviewOpen();
+                            }}
+                          />
+                        </Flex>
+                      </Box>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+
+              {/* Mode C — Hybrid Allocation */}
+              {isModeC && (
+                <Box>
+                  <Flex justify="space-between" align={{ base: 'start', sm: 'center' }} mb={3} direction={{ base: 'column', sm: 'row' }} gap={2}>
+                    <Box>
+                      <Heading size="sm" color={textColor}>
+                        Mode C: Hybrid Allocation
+                      </Heading>
+                      <Text fontSize="xs" color={mutedText}>
+                        Manually designate questions for specific students. All remaining students receive randomized questions from the pool.
+                      </Text>
+                    </Box>
+                    {isDraft && (
+                      <HStack spacing={2}>
+                        <Button
+                          size="sm"
+                          leftIcon={<AddIcon />}
+                          colorScheme="brand"
+                          variant="outline"
+                          onClick={handleOpenManualAssignment}
+                        >
+                          Assign Student
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="brand"
+                          onClick={() => handleSave()}
+                          isLoading={isSaving}
+                        >
+                          Save Allocations
+                        </Button>
+                      </HStack>
+                    )}
+                  </Flex>
+
+                  {/* Manual Student Assignments List */}
+                  <Heading size="xs" textTransform="uppercase" color="gray.500" mb={2}>
+                    Manual Student Assignments ({manualAllocations.length})
+                  </Heading>
+
+                  {manualAllocations.length === 0 ? (
+                    <Box p={6} borderRadius="xl" bg={surfaceBg} textAlign="center" mb={4}>
+                      <Text fontSize="xs" color={mutedText}>
+                        No students have been manually assigned yet. Click "Assign Student" above to assign specific questions to individual students.
+                      </Text>
+                    </Box>
+                  ) : (
+                    <VStack spacing={2.5} align="stretch" mb={4}>
+                      {manualAllocations.map((ma) => (
+                        <Box key={ma.student_id} p={3} borderRadius="xl" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                          <Flex justify="space-between" align="center">
+                            <Box>
+                              <HStack spacing={2}>
+                                <Text fontWeight="bold" fontSize="xs">Student #{ma.student_id}</Text>
+                                {ma.student_name && <Badge colorScheme="purple">{ma.student_name}</Badge>}
+                                {ma.roll_number && <Badge colorScheme="gray">{ma.roll_number}</Badge>}
+                              </HStack>
+                              <Text fontSize="10px" color={mutedText} mt={0.5}>
+                                Assigned Questions: {ma.question_ids?.join(', ')} ({ma.question_ids?.length} Qs)
+                              </Text>
+                            </Box>
+                            {isDraft && (
+                              <IconButton
+                                icon={<DeleteIcon />}
+                                size="xs"
+                                colorScheme="red"
+                                variant="ghost"
+                                aria-label="Remove assignment"
+                                onClick={() => handleRemoveManualAssignment(ma.student_id)}
+                              />
+                            )}
+                          </Flex>
+                        </Box>
+                      ))}
+                    </VStack>
+                  )}
+
+                  <Alert status="info" size="sm" borderRadius="lg" fontSize="xs">
+                    <AlertIcon />
+                    All unassigned students will receive {numReq} randomized questions from the {totalEligible} questions in the topic pool when starting.
+                  </Alert>
+                </Box>
+              )}
+            </CardBody>
+          </Card>
+        </Box>
       </SimpleGrid>
 
-      {/* Add Topic Modal */}
-      <Modal isOpen={isAddTopicOpen} onClose={onAddTopicClose}>
-        <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent>
-          <ModalHeader color={headingColor}>Add Topic to Assessment</ModalHeader>
+      {/* ── QUESTION PREVIEW MODAL (STUDENT VIEW) ─────────── */}
+      <Modal isOpen={isPreviewOpen} onClose={onPreviewClose} size="3xl" scrollBehavior="inside">
+        <ModalOverlay backdropFilter="blur(3px)" />
+        <ModalContent borderRadius="2xl" bg={cardBg} borderColor={cardBorder} borderWidth="1px">
+          <ModalHeader pb={1}>
+            <HStack spacing={2}>
+              <ViewIcon color="blue.500" />
+              <Heading size="md" color={textColor}>Question Preview</Heading>
+            </HStack>
+            <HStack spacing={2} mt={1}>
+              <Badge colorScheme={DIFFICULTY_COLORS[previewQuestion?.difficulty]}>
+                {previewQuestion?.difficulty} ({previewQuestion?.marks || DIFFICULTY_MARKS[previewQuestion?.difficulty] || 10} marks)
+              </Badge>
+              {previewQuestion?.topic_title && <Badge colorScheme="blue">{previewQuestion.topic_title}</Badge>}
+            </HStack>
+          </ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
-            <FormControl>
-              <FormLabel color={secondaryColor} fontSize="sm">Select Topic</FormLabel>
-              <Select
-                value={selectedTopicId}
-                onChange={e => setSelectedTopicId(e.target.value)}
-                placeholder="Choose a topic..."
-              >
-                {availableTopics.map(t => (
-                  <option key={t.topic_id} value={t.topic_id}>
-                    {t.title} — ({t.question_count ?? 0} questions in pool)
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            {availableTopics.length === 0 && (
-              <Text color={secondaryColor} fontSize="sm" mt={3}>All topics have been added.</Text>
+          <ModalBody py={4}>
+            {previewQuestion && (
+              <VStack spacing={4} align="stretch">
+                <Box>
+                  <Heading size="sm" color={textColor} mb={2}>{previewQuestion.title}</Heading>
+                  <Box p={4} borderRadius="xl" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                    <Text fontSize="sm" whiteSpace="pre-wrap">{previewQuestion.problem_statement}</Text>
+                  </Box>
+                </Box>
+
+                {previewQuestion.input_format && (
+                  <Box>
+                    <Text fontWeight="bold" fontSize="xs" color="gray.600" mb={1}>Input Format</Text>
+                    <Box p={2.5} borderRadius="md" bg={surfaceBg} fontSize="xs">{previewQuestion.input_format}</Box>
+                  </Box>
+                )}
+
+                {previewQuestion.output_format && (
+                  <Box>
+                    <Text fontWeight="bold" fontSize="xs" color="gray.600" mb={1}>Output Format</Text>
+                    <Box p={2.5} borderRadius="md" bg={surfaceBg} fontSize="xs">{previewQuestion.output_format}</Box>
+                  </Box>
+                )}
+
+                {previewQuestion.constraints && (
+                  <Box>
+                    <Text fontWeight="bold" fontSize="xs" color="gray.600" mb={1}>Constraints</Text>
+                    <Code p={2} borderRadius="md" w="full" fontSize="xs">{previewQuestion.constraints}</Code>
+                  </Box>
+                )}
+
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                  <Box p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                    <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>Sample Input</Text>
+                    <Code p={2} borderRadius="md" w="full" fontSize="xs" whiteSpace="pre-wrap">
+                      {previewQuestion.sample_input || '(none)'}
+                    </Code>
+                  </Box>
+                  <Box p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                    <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>Sample Output</Text>
+                    <Code p={2} borderRadius="md" w="full" fontSize="xs" whiteSpace="pre-wrap">
+                      {previewQuestion.sample_output || '(none)'}
+                    </Code>
+                  </Box>
+                </SimpleGrid>
+
+                {previewQuestion.explanation && (
+                  <Box p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                    <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>Sample Explanation</Text>
+                    <Text fontSize="xs">{previewQuestion.explanation}</Text>
+                  </Box>
+                )}
+              </VStack>
             )}
           </ModalBody>
-          <ModalFooter gap={3}>
-            <Button variant="ghost" colorScheme="gray" onClick={onAddTopicClose}>Cancel</Button>
-            <Button colorScheme="brand" onClick={handleAddTopic} isDisabled={!selectedTopicId}>Add Topic</Button>
+          <ModalFooter>
+            <Button colorScheme="brand" onClick={onPreviewClose}>Close Preview</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      {/* Publish Confirmation Modal */}
-      <Modal isOpen={isPublishOpen} onClose={onPublishClose}>
-        <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent>
-          <ModalHeader color={headingColor}>Publish Assessment</ModalHeader>
+      {/* ── MANUAL ASSIGNMENT MODAL (MODE C) ─────────────── */}
+      <Modal isOpen={isManualModalOpen} onClose={onManualModalClose} size="2xl" scrollBehavior="inside">
+        <ModalOverlay backdropFilter="blur(3px)" />
+        <ModalContent borderRadius="2xl" bg={cardBg} borderColor={cardBorder} borderWidth="1px">
+          <ModalHeader>
+            <Heading size="md" color={textColor}>Assign Questions to Student</Heading>
+            <Text fontSize="xs" color={mutedText} mt={1}>
+              Select exactly {numReq} questions for this specific student.
+            </Text>
+          </ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4} align="start">
-              <Text color={bodyColor}>
-                Publishing will make <strong>{lab.title}</strong> available to eligible students at the configured start time.
-              </Text>
-              <Box p={4} bg={surfaceBg} borderRadius="lg" w="full" border="1px solid" borderColor={dividerColor}>
-                <VStack align="start" spacing={2}>
-                  <Text color={secondaryColor} fontSize="sm">📅 Start: {formatDT(lab.start_time)}</Text>
-                  <Text color={secondaryColor} fontSize="sm">🏁 End: {formatDT(lab.end_time)}</Text>
-                  <Text color={secondaryColor} fontSize="sm">⏱ Duration: {lab.duration} minutes</Text>
-                  <Text color={secondaryColor} fontSize="sm">❓ Questions/student: {lab.num_questions}</Text>
-                  <Text color={secondaryColor} fontSize="sm">📊 Pool: {totalEligible} eligible questions</Text>
-                </VStack>
-              </Box>
-              <Text color="orange.500" fontSize="sm">
-                ⚠ Once published, settings cannot be edited. Ensure everything is correct.
-              </Text>
+          <ModalBody py={4}>
+            <VStack spacing={4} align="stretch">
+              <SimpleGrid columns={2} spacing={3}>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs">Student ID</FormLabel>
+                  <Input
+                    size="sm"
+                    placeholder="e.g. 1"
+                    value={targetStudentId}
+                    onChange={(e) => setTargetStudentId(e.target.value)}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel fontSize="xs">Student Name (Optional Label)</FormLabel>
+                  <Input
+                    size="sm"
+                    placeholder="e.g. Harish Patil"
+                    value={targetStudentName}
+                    onChange={(e) => setTargetStudentName(e.target.value)}
+                  />
+                </FormControl>
+              </SimpleGrid>
+
+              <Flex justify="space-between" align="center">
+                <Text fontSize="xs" fontWeight="bold">
+                  Select {numReq} Questions:
+                </Text>
+                <Badge colorScheme={studentSpecificQIds.length === numReq ? 'green' : 'orange'}>
+                  {studentSpecificQIds.length} / {numReq} Chosen
+                </Badge>
+              </Flex>
+
+              <VStack spacing={2} align="stretch" maxH="320px" overflowY="auto">
+                {availableQuestions.map((q) => {
+                  const isChecked = studentSpecificQIds.includes(q.lab_question_id);
+                  return (
+                    <Box
+                      key={q.lab_question_id}
+                      p={2.5}
+                      borderRadius="lg"
+                      bg={isChecked ? surfaceBg : 'transparent'}
+                      borderWidth="1px"
+                      borderColor={isChecked ? 'blue.400' : cardBorder}
+                      cursor="pointer"
+                      onClick={() => {
+                        setStudentSpecificQIds((prev) =>
+                          prev.includes(q.lab_question_id)
+                            ? prev.filter((id) => id !== q.lab_question_id)
+                            : prev.length < numReq
+                            ? [...prev, q.lab_question_id]
+                            : prev
+                        );
+                      }}
+                    >
+                      <Flex justify="space-between" align="center">
+                        <HStack spacing={2}>
+                          <Checkbox isChecked={isChecked} colorScheme="brand" pointerEvents="none" />
+                          <Text fontSize="xs" fontWeight="600">{q.title}</Text>
+                        </HStack>
+                        <Badge size="xs" colorScheme={DIFFICULTY_COLORS[q.difficulty]}>
+                          {q.difficulty}
+                        </Badge>
+                      </Flex>
+                    </Box>
+                  );
+                })}
+              </VStack>
             </VStack>
           </ModalBody>
-          <ModalFooter gap={3}>
-            <Button variant="ghost" colorScheme="gray" onClick={onPublishClose}>Go Back</Button>
-            <Button colorScheme="brand" onClick={handlePublish} isLoading={isPublishing} loadingText="Publishing...">
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onManualModalClose}>Cancel</Button>
+            <Button
+              colorScheme="brand"
+              isDisabled={studentSpecificQIds.length !== numReq || !targetStudentId}
+              onClick={handleSaveStudentAssignment}
+            >
+              Assign to Student
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* ── ADD TOPIC MODAL ──────────────────────────────── */}
+      <Modal isOpen={isAddTopicOpen} onClose={onAddTopicClose}>
+        <ModalOverlay backdropFilter="blur(3px)" />
+        <ModalContent borderRadius="2xl" bg={cardBg} borderColor={cardBorder} borderWidth="1px">
+          <ModalHeader color={textColor}>Add Topic to Assessment</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel fontSize="sm">Select Curriculum Topic</FormLabel>
+              <Select
+                value={selectedTopicId}
+                onChange={(e) => setSelectedTopicId(e.target.value)}
+                placeholder="Choose a topic..."
+              >
+                {availableTopicsToAdd.map((t) => (
+                  <option key={t.topic_id} value={t.topic_id}>
+                    {t.title} ({t.question_count || 0} questions)
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onAddTopicClose}>Cancel</Button>
+            <Button colorScheme="brand" onClick={handleAddTopic} isDisabled={!selectedTopicId}>
+              Add Topic
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* ── PUBLISH CONFIRMATION MODAL ───────────────────── */}
+      <Modal isOpen={isPublishOpen} onClose={onPublishClose}>
+        <ModalOverlay backdropFilter="blur(3px)" />
+        <ModalContent borderRadius="2xl" bg={cardBg} borderColor={cardBorder} borderWidth="1px">
+          <ModalHeader color={textColor}>Publish Lab Assessment</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="sm">
+                Publishing makes <strong>{lab.title}</strong> accessible to eligible students.
+              </Text>
+              <Box p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder} fontSize="xs">
+                <Text>📅 <strong>Start:</strong> {formatDT(lab.start_time)}</Text>
+                <Text mt={1}>🏁 <strong>End:</strong> {formatDT(lab.end_time)}</Text>
+                <Text mt={1}>⏱ <strong>Duration:</strong> {lab.duration} mins</Text>
+                <Text mt={1}>❓ <strong>Questions:</strong> {numReq} per student</Text>
+                <Text mt={1}>⚙ <strong>Mode:</strong> {isModeA ? 'Mode A (Specific Questions)' : isModeC ? 'Mode C (Hybrid)' : 'Mode B (Random Pool)'}</Text>
+                {isModeA && (
+                  <Text mt={1} color="green.600" fontWeight="bold">
+                    🎯 {selectedQuestionIds.length} exact questions will be given to all students.
+                  </Text>
+                )}
+              </Box>
+              <Alert status="warning" borderRadius="md" size="sm">
+                <AlertIcon />
+                <Text fontSize="xs">Once published, question configuration and topics cannot be modified.</Text>
+              </Alert>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onPublishClose}>Go Back</Button>
+            <Button colorScheme="brand" onClick={handlePublish} isLoading={isPublishing}>
               Confirm &amp; Publish
             </Button>
           </ModalFooter>

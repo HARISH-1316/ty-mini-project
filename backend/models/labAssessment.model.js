@@ -15,12 +15,13 @@ const LabAssessmentModel = {
     total_marks,
     num_questions = 5,
     marks_per_question = 10,
+    allocation_mode = 'random',
   }) => {
     const result = await query(
       `INSERT INTO lab_assessment
          (faculty_id, title, description, start_time, end_time,
-          duration, total_marks, num_questions, marks_per_question, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft')
+          duration, total_marks, num_questions, marks_per_question, allocation_mode, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'draft')
        RETURNING *`,
       [
         faculty_id,
@@ -32,6 +33,7 @@ const LabAssessmentModel = {
         total_marks || (num_questions * marks_per_question),
         num_questions,
         marks_per_question,
+        allocation_mode || 'random',
       ]
     );
     return result.rows[0];
@@ -120,6 +122,7 @@ const LabAssessmentModel = {
     total_marks,
     num_questions,
     marks_per_question,
+    allocation_mode,
   }) => {
     const result = await query(
       `UPDATE lab_assessment
@@ -130,11 +133,12 @@ const LabAssessmentModel = {
            duration = COALESCE($5, duration),
            total_marks = COALESCE($6, total_marks),
            num_questions = COALESCE($7, num_questions),
-           marks_per_question = COALESCE($8, marks_per_question)
-       WHERE lab_id = $9
+           marks_per_question = COALESCE($8, marks_per_question),
+           allocation_mode = COALESCE($9, allocation_mode)
+       WHERE lab_id = $10
          AND status = 'draft'
        RETURNING *`,
-      [title, description, start_time, end_time, duration, total_marks, num_questions, marks_per_question, labId]
+      [title, description, start_time, end_time, duration, total_marks, num_questions, marks_per_question, allocation_mode, labId]
     );
     return result.rows[0] || null;
   },

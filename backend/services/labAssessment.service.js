@@ -20,6 +20,7 @@ import LaAttemptModel from '../models/laAttempt.model.js';
 import LaQuestionSubmissionModel from '../models/laQuestionSubmission.model.js';
 import FacultyModel from '../models/faculty.model.js';
 import StudentModel from '../models/student.model.js';
+import LaSelectedQuestionModel from '../models/laSelectedQuestion.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,7 +107,7 @@ const LabAssessmentService = {
     if (!faculty) {
       const e = new Error('Faculty profile not found.'); e.statusCode = 404; throw e;
     }
-    const { topic_ids, ...labData } = data;
+    const { topic_ids, selected_question_ids, manual_allocations, ...labData } = data;
     const lab = await LabAssessmentModel.create({
       faculty_id: faculty.faculty_id,
       ...labData,
@@ -117,7 +118,29 @@ const LabAssessmentService = {
         await LaAssessmentTopicModel.create({ lab_id: lab.lab_id, topic_id: tId });
       }
     }
+    // Link selected questions for Mode A
+    if (Array.isArray(selected_question_ids) && selected_question_ids.length > 0) {
+      await LaSelectedQuestionModel.bulkSet(lab.lab_id, selected_question_ids);
+    }
+    // Set manual allocations for Mode C (hybrid)
+    if (Array.isArray(manual_allocations) && manual_allocations.length > 0) {
+      const client = await getClient();
+      try {
+        await client.query('BEGIN');
+        for (const ma of manual_allocations) {
+          const qItems = ma.question_ids.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
+          await LaAllocationModel.bulkCreate(client, ma.student_id, lab.lab_id, qItems, true);
+        }
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
     lab.topics = await LaAssessmentTopicModel.findByLabId(lab.lab_id);
+    lab.selectedQuestions = await LaSelectedQuestionModel.findByLabId(lab.lab_id);
     return lab;
   },
 
@@ -136,6 +159,7 @@ const LabAssessmentService = {
     // Attach topic list to each lab
     for (const lab of labs) {
       lab.topics = await LaAssessmentTopicModel.findByLabId(lab.lab_id);
+      lab.selectedQuestions = await LaSelectedQuestionModel.findByLabId(lab.lab_id);
     }
     return labs;
   },
@@ -148,7 +172,7 @@ const LabAssessmentService = {
   },
 
   /**
-   * Get a specific assessment with topics and question pool stats.
+   * Get a specific assessment with topics, question pool stats, and selected questions.
    * Faculty can only access their own assessments, Admin can access all.
    */
   getAssessmentDetail: async (userId, labId, role = 'faculty') => {
@@ -166,12 +190,14 @@ const LabAssessmentService = {
     lab.topics = await LaAssessmentTopicModel.findByLabId(labId);
     lab.questionPoolStats = await LaAssessmentTopicModel.getQuestionPoolStats(labId);
     lab.totalEligibleQuestions = await LaAssessmentTopicModel.getTotalEligibleQuestions(labId);
+    lab.selectedQuestions = await LaSelectedQuestionModel.findByLabId(labId);
+    lab.allocations = await LaAllocationModel.findAllocationsByLab(labId);
     return lab;
   },
 
   /**
    * Update assessment (only allowed in draft status).
-   * Also synchronizes topics if topic_ids is provided.
+   * Also synchronizes topics, selected questions, and manual allocations.
    */
   updateAssessment: async (userId, labId, data, role = 'faculty') => {
     const lab = await LabAssessmentModel.findById(labId);
@@ -183,7 +209,7 @@ const LabAssessmentService = {
     if (lab.status !== 'draft') {
       const e = new Error('Only draft assessments can be edited.'); e.statusCode = 400; throw e;
     }
-    const { topic_ids, ...updateData } = data;
+    const { topic_ids, selected_question_ids, manual_allocations, ...updateData } = data;
     const updated = await LabAssessmentModel.update(labId, updateData);
     if (Array.isArray(topic_ids)) {
       await LaAssessmentTopicModel.deleteByLabId(labId);
@@ -191,15 +217,36 @@ const LabAssessmentService = {
         await LaAssessmentTopicModel.create({ lab_id: labId, topic_id: tId });
       }
     }
+    if (Array.isArray(selected_question_ids)) {
+      await LaSelectedQuestionModel.bulkSet(labId, selected_question_ids);
+    }
+    if (Array.isArray(manual_allocations)) {
+      const client = await getClient();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM la_student_allocations WHERE lab_id = $1 AND is_manual = TRUE', [labId]);
+        for (const ma of manual_allocations) {
+          const qItems = ma.question_ids.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
+          await LaAllocationModel.bulkCreate(client, ma.student_id, labId, qItems, true);
+        }
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
     if (updated) {
       updated.topics = await LaAssessmentTopicModel.findByLabId(labId);
+      updated.selectedQuestions = await LaSelectedQuestionModel.findByLabId(labId);
     }
     return updated;
   },
 
   /**
    * Publish an assessment.
-   * Validates: sufficient question pool, start/end time set.
+   * Validates: start/end time set, topic selected, and sufficient published questions according to allocation mode.
    */
   publishAssessment: async (userId, labId, role = 'faculty') => {
     const lab = await LabAssessmentModel.findById(labId);
@@ -220,14 +267,33 @@ const LabAssessmentService = {
       const e = new Error('At least one topic must be selected before publishing.'); e.statusCode = 400; throw e;
     }
 
-    const totalEligible = await LaAssessmentTopicModel.getTotalEligibleQuestions(labId);
-    if (totalEligible < lab.num_questions) {
-      const e = new Error(
-        `Insufficient questions in the pool. Need ${lab.num_questions} but only ${totalEligible} available. ` +
-        `Please add more questions to the selected topics or reduce the number of questions.`
-      );
-      e.statusCode = 400;
-      throw e;
+    if (lab.allocation_mode === 'specific') {
+      const selected = await LaSelectedQuestionModel.findByLabId(labId);
+      if (selected.length < lab.num_questions) {
+        const e = new Error(
+          `In 'Faculty Selects Specific Questions' mode, you must select at least ${lab.num_questions} questions. Currently selected: ${selected.length}.`
+        );
+        e.statusCode = 400;
+        throw e;
+      }
+      const unpub = selected.filter(q => !q.is_published || q.status !== 'published');
+      if (unpub.length > 0) {
+        const e = new Error(
+          `Selected question "${unpub[0].title}" is unpublished or draft. All selected questions must be published.`
+        );
+        e.statusCode = 400;
+        throw e;
+      }
+    } else {
+      const totalEligible = await LaAssessmentTopicModel.getTotalEligibleQuestions(labId);
+      if (totalEligible < lab.num_questions) {
+        const e = new Error(
+          `Insufficient published questions in the pool. Need ${lab.num_questions} but only ${totalEligible} available. ` +
+          `Please add and publish more questions for the selected topics or reduce the number of questions.`
+        );
+        e.statusCode = 400;
+        throw e;
+      }
     }
 
     const updated = await LabAssessmentModel.updateStatus(labId, 'published');
@@ -376,6 +442,16 @@ const LabAssessmentService = {
       }
     }
 
+    const requestedStatus = data.status || (data.is_published === false ? 'draft' : 'published');
+    const isPublished = requestedStatus === 'published' && data.is_published !== false;
+
+    // Incomplete questions cannot be published
+    if (isPublished && rawTestCases.length === 0) {
+      const e = new Error('A published question must contain at least one valid test case.');
+      e.statusCode = 400;
+      throw e;
+    }
+
     // 5. Transaction: Save question and all its test cases atomically
     const client = await getClient();
     try {
@@ -388,6 +464,8 @@ const LabAssessmentService = {
           marks,
           created_by_faculty_id: faculty ? faculty.faculty_id : null,
           supported_languages: data.supported_languages || ['c', 'cpp', 'java', 'python'],
+          status: requestedStatus,
+          is_published: isPublished,
         },
         client
       );
@@ -420,8 +498,23 @@ const LabAssessmentService = {
     }
   },
 
-  listQuestions: async (topicId = null) => {
-    return LabCodingQuestionModel.findAll(topicId);
+  listQuestions: async (topicId = null, filters = {}, userRole = 'faculty') => {
+    const isStudent = userRole === 'student';
+    const opts = {
+      ...filters,
+      topicId: topicId || filters.topicId,
+      onlyPublished: isStudent || filters.onlyPublished,
+    };
+    const questions = await LabCodingQuestionModel.findAll(opts.topicId, opts);
+    if (isStudent) {
+      // Protect hidden test cases, individual marks and difficulty labels from students
+      return questions.map(q => {
+        const { marks, difficulty, ...safeQ } = q;
+        safeQ.testCases = (q.testCases || []).filter(tc => !tc.is_hidden);
+        return safeQ;
+      });
+    }
+    return questions;
   },
 
   getQuestion: async (questionId) => {
@@ -468,6 +561,11 @@ const LabAssessmentService = {
     if (updateData.difficulty) {
       updateData.difficulty = updateData.difficulty.toLowerCase();
       updateData.marks = getMarksForDifficulty(updateData.difficulty);
+    }
+    if (updateData.status) {
+      updateData.is_published = updateData.status === 'published';
+    } else if (updateData.is_published !== undefined) {
+      updateData.status = updateData.is_published ? 'published' : 'draft';
     }
 
     const rawTestCases = data.test_cases || data.testCases;
@@ -536,7 +634,7 @@ const LabAssessmentService = {
       await LabCodingQuestionModel.archive(questionId);
       return {
         action: 'archived',
-        message: 'Question is referenced by active lab assessments or student submissions. It has been safely archived to protect historical academic records.',
+        message: 'Question is referenced by lab assessments or student submissions. It has been safely archived to protect historical academic records.',
       };
     }
 
@@ -546,6 +644,58 @@ const LabAssessmentService = {
       action: 'deleted',
       message: 'Question and test cases deleted permanently.',
     };
+  },
+
+  setQuestionPublishStatus: async (userId, questionId, isPublished, role = 'faculty') => {
+    const q = await LabCodingQuestionModel.findById(questionId);
+    if (!q) { const e = new Error('Question not found.'); e.statusCode = 404; throw e; }
+    if (role !== 'admin') {
+      const faculty = await FacultyModel.findByUserId(userId);
+      if (!faculty || (q.created_by_faculty_id && q.created_by_faculty_id !== faculty.faculty_id)) {
+        const e = new Error('Access denied. You can only modify your own questions.'); e.statusCode = 403; throw e;
+      }
+    }
+    if (isPublished) {
+      if (!q.title || q.title.trim().length < 3) {
+        const e = new Error('Incomplete question: Question title must be at least 3 characters before publishing.'); e.statusCode = 400; throw e;
+      }
+      if (!q.problem_statement || q.problem_statement.trim().length < 10) {
+        const e = new Error('Incomplete question: Problem statement must be at least 10 characters before publishing.'); e.statusCode = 400; throw e;
+      }
+      const tcs = await LabTestCaseModel.findByQuestionId(questionId);
+      if (!tcs || tcs.length === 0) {
+        const e = new Error('Incomplete question: At least one test case is required before publishing.'); e.statusCode = 400; throw e;
+      }
+    }
+    return LabCodingQuestionModel.setPublishStatus(questionId, isPublished);
+  },
+
+  archiveQuestion: async (userId, questionId, role = 'faculty') => {
+    const q = await LabCodingQuestionModel.findById(questionId);
+    if (!q) { const e = new Error('Question not found.'); e.statusCode = 404; throw e; }
+    if (role !== 'admin') {
+      const faculty = await FacultyModel.findByUserId(userId);
+      if (!faculty || (q.created_by_faculty_id && q.created_by_faculty_id !== faculty.faculty_id)) {
+        const e = new Error('Access denied.'); e.statusCode = 403; throw e;
+      }
+    }
+    return LabCodingQuestionModel.archive(questionId);
+  },
+
+  unarchiveQuestion: async (userId, questionId, role = 'faculty') => {
+    const q = await LabCodingQuestionModel.findById(questionId);
+    if (!q) { const e = new Error('Question not found.'); e.statusCode = 404; throw e; }
+    if (role !== 'admin') {
+      const faculty = await FacultyModel.findByUserId(userId);
+      if (!faculty || (q.created_by_faculty_id && q.created_by_faculty_id !== faculty.faculty_id)) {
+        const e = new Error('Access denied.'); e.statusCode = 403; throw e;
+      }
+    }
+    return LabCodingQuestionModel.unarchive(questionId);
+  },
+
+  getQuestionBankTopicsSummary: async () => {
+    return LabCodingQuestionModel.getTopicQuestionStats();
   },
 
   // ── Student Operations ─────────────────────────────────────
@@ -655,26 +805,53 @@ const LabAssessmentService = {
         return { attempt, questions, isNew: false };
       }
 
-      // Get eligible question pool
-      const pool = await LaAllocationModel.getEligiblePool(labId);
-      if (pool.length < lab.num_questions) {
-        await client.query('ROLLBACK');
-        const e = new Error(
-          `Insufficient questions in pool. Required: ${lab.num_questions}, Available: ${pool.length}.`
-        );
-        e.statusCode = 400; throw e;
-      }
+      let selected = [];
+      let isAlreadyAllocated = false;
 
-      // Random selection
-      shuffleArray(pool);
-      const selected = pool.slice(0, lab.num_questions);
+      // Check if student already has a pre-assigned manual allocation (Mode C Hybrid)
+      const manualAssigned = await client.query(
+        `SELECT lcq.lab_question_id, lcq.marks, lcq.difficulty, lcq.title, a.question_order
+         FROM la_student_allocations a
+         JOIN lab_coding_questions lcq ON a.lab_question_id = lcq.lab_question_id
+         WHERE a.lab_id = $1 AND a.student_id = $2 AND a.is_manual = TRUE
+         ORDER BY a.question_order`,
+        [labId, student.student_id]
+      );
+
+      if (manualAssigned.rows.length > 0) {
+        selected = manualAssigned.rows;
+        isAlreadyAllocated = true;
+      } else if (lab.allocation_mode === 'specific') {
+        // Mode A: Faculty Selects Specific Questions
+        const specificSelected = await LaSelectedQuestionModel.findByLabId(labId, client);
+        if (specificSelected.length < lab.num_questions) {
+          await client.query('ROLLBACK');
+          const e = new Error(
+            `Incomplete assessment configuration. Needed ${lab.num_questions} questions, but only ${specificSelected.length} specific questions configured.`
+          );
+          e.statusCode = 400; throw e;
+        }
+        selected = specificSelected.slice(0, lab.num_questions);
+      } else {
+        // Mode B (Random) or Mode C unassigned student: Random selection from eligible pool
+        const pool = await LaAllocationModel.getEligiblePool(labId);
+        if (pool.length < lab.num_questions) {
+          await client.query('ROLLBACK');
+          const e = new Error(
+            `Insufficient questions in pool. Required: ${lab.num_questions}, Available: ${pool.length}.`
+          );
+          e.statusCode = 400; throw e;
+        }
+        shuffleArray(pool);
+        selected = pool.slice(0, lab.num_questions);
+      }
 
       // Calculate effective_deadline = min(now + duration_minutes, end_time)
       const deadlineFromDuration = new Date(now.getTime() + lab.duration * 60 * 1000);
       const effectiveDeadline = deadlineFromDuration < endTime ? deadlineFromDuration : endTime;
 
-      // Calculate total marks
-      const totalMarks = lab.num_questions * lab.marks_per_question;
+      // Calculate total marks based on selected questions
+      const totalMarks = selected.reduce((sum, q) => sum + (q.marks || lab.marks_per_question || 10), 0);
 
       // Create attempt
       const newAttempt = await client.query(
@@ -686,13 +863,16 @@ const LabAssessmentService = {
       );
       attempt = newAttempt.rows[0];
 
-      // Bulk-insert allocation
-      await LaAllocationModel.bulkCreate(
-        client,
-        student.student_id,
-        labId,
-        selected.map((q, i) => ({ lab_question_id: q.lab_question_id, question_order: i + 1 }))
-      );
+      // Bulk-insert allocation if not already pre-allocated manually
+      if (!isAlreadyAllocated) {
+        await LaAllocationModel.bulkCreate(
+          client,
+          student.student_id,
+          labId,
+          selected.map((q, i) => ({ lab_question_id: q.lab_question_id, question_order: i + 1 })),
+          false
+        );
+      }
 
       await client.query('COMMIT');
 

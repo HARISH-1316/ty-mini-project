@@ -1608,19 +1608,21 @@ async function seed() {
   let totalTestCasesCreated = 0;
 
   for (const [subtopicTitle, questions] of Object.entries(subtopicQuestions)) {
-    // Find the subtopic
-    const stRes = await pool.query(
-      'SELECT subtopic_id FROM subtopics WHERE topic_id = $1 AND title = $2',
-      [dsaTopicId, subtopicTitle]
+    // 1. Find the specific topic for this category in the topics table
+    const targetTopicRes = await pool.query(
+      'SELECT topic_id FROM topics WHERE title = $1',
+      [subtopicTitle]
     );
-    if (stRes.rows.length === 0) {
-      console.warn(`  ⚠ Subtopic not found: "${subtopicTitle}" — skipping`);
-      continue;
-    }
+    const targetTopicId = targetTopicRes.rows[0]?.topic_id || dsaTopicId;
 
-    // Also use topic_id for the lab_coding_questions association
-    // We associate questions with the DSA TOPIC (not subtopic, since schema uses topic_id)
-    console.log(`\n📚 Subtopic: "${subtopicTitle}" (${questions.length} questions)`);
+    // 2. Find the subtopic in subtopics table
+    const stRes = await pool.query(
+      'SELECT subtopic_id FROM subtopics WHERE title = $1 LIMIT 1',
+      [subtopicTitle]
+    );
+    const targetSubtopicId = stRes.rows[0]?.subtopic_id || null;
+
+    console.log(`\n📚 Topic: "${subtopicTitle}" (Topic ID: ${targetTopicId}, Subtopic ID: ${targetSubtopicId}, ${questions.length} questions)`);
 
     for (let qi = 0; qi < questions.length; qi++) {
       const q = questions[qi];
@@ -1637,35 +1639,37 @@ async function seed() {
         questionId = existing.rows[0].lab_question_id;
         await pool.query(
           `UPDATE lab_coding_questions
-           SET topic_id = $1, problem_statement = $2, input_format = $3,
-               output_format = $4, constraints = $5, sample_input = $6,
-               sample_output = $7, explanation = $8, difficulty = $9, marks = $10
-           WHERE lab_question_id = $11`,
+           SET topic_id = $1, subtopic_id = $2, problem_statement = $3, input_format = $4,
+               output_format = $5, constraints = $6, sample_input = $7,
+               sample_output = $8, explanation = $9, difficulty = $10, marks = $11,
+               status = 'published', is_published = TRUE, is_archived = FALSE,
+               supported_languages = '["c", "cpp", "java", "python"]'::jsonb
+           WHERE lab_question_id = $12`,
           [
-            dsaTopicId, q.problem_statement, q.input_format, q.output_format,
+            targetTopicId, targetSubtopicId, q.problem_statement, q.input_format, q.output_format,
             q.constraints, q.sample_input, q.sample_output, q.explanation,
             q.difficulty, enforceMarks, questionId,
           ]
         );
         totalQuestionsUpdated++;
-        console.log(`  ↻ Updated: "${q.title}" (${q.difficulty}, ${enforceMarks} marks)`);
+        console.log(`  ↻ Updated: "${q.title}" (${q.difficulty}, ${enforceMarks} marks) -> Topic ${targetTopicId}`);
       } else {
         const ins = await pool.query(
           `INSERT INTO lab_coding_questions
-             (topic_id, title, problem_statement, input_format, output_format,
+             (topic_id, subtopic_id, title, problem_statement, input_format, output_format,
               constraints, sample_input, sample_output, explanation,
-              difficulty, marks, order_index, created_by_faculty_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+              difficulty, marks, order_index, created_by_faculty_id, status, is_published, is_archived, supported_languages)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'published',TRUE,FALSE,'["c", "cpp", "java", "python"]'::jsonb)
            RETURNING lab_question_id`,
           [
-            dsaTopicId, q.title, q.problem_statement, q.input_format, q.output_format,
+            targetTopicId, targetSubtopicId, q.title, q.problem_statement, q.input_format, q.output_format,
             q.constraints, q.sample_input, q.sample_output, q.explanation,
             q.difficulty, enforceMarks, qi + 1, facultyId,
           ]
         );
         questionId = ins.rows[0].lab_question_id;
         totalQuestionsCreated++;
-        console.log(`  + Created: "${q.title}" (${q.difficulty}, ${enforceMarks} marks)`);
+        console.log(`  + Created: "${q.title}" (${q.difficulty}, ${enforceMarks} marks) -> Topic ${targetTopicId}`);
       }
 
       // Seed test cases (idempotent by checking input+is_hidden)
@@ -1691,17 +1695,16 @@ async function seed() {
 
   // Summary
   console.log('\n══════════════════════════════════════════════════════');
-  console.log('📊 DSA Question Bank Seeding Summary:');
+  console.log('📊 DSA Question Bank Seeding Summary (Topic-Wise):');
   const topicStats = await pool.query(`
-    SELECT t.title, COUNT(lcq.lab_question_id)::INT AS q_count
+    SELECT t.topic_id, t.title, COUNT(lcq.lab_question_id)::INT AS q_count
     FROM topics t
-    LEFT JOIN lab_coding_questions lcq ON lcq.topic_id = t.topic_id
-    WHERE t.title = $1
-    GROUP BY t.title
-  `, [DSA_TOPIC_TITLE]);
-  topicStats.rows.forEach(r => {
-    console.log(`  - ${r.title}: ${r.q_count} total coding questions`);
-  });
+    LEFT JOIN lab_coding_questions lcq ON lcq.topic_id = t.topic_id AND lcq.is_archived = FALSE
+    WHERE t.title != 'Data Structures and Algorithms' AND t.title != 'Stacks and Queues'
+    GROUP BY t.topic_id, t.title
+    ORDER BY t.topic_id
+  `);
+  console.table(topicStats.rows);
   console.log(`  Questions created: ${totalQuestionsCreated}`);
   console.log(`  Questions updated: ${totalQuestionsUpdated}`);
   console.log(`  Test cases created: ${totalTestCasesCreated}`);

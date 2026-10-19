@@ -58,6 +58,7 @@ const NavItem = ({ label, path, onClick }) => {
       px={4}
       py={3}
       borderRadius="xl"
+      color="text.primary"
       transition="all 0.2s"
       _hover={{
         bg: 'accent.soft',
@@ -65,8 +66,8 @@ const NavItem = ({ label, path, onClick }) => {
       }}
       style={({ isActive }) => ({
         backgroundColor: isActive ? 'var(--chakra-colors-accent-soft)' : 'transparent',
-        color: isActive ? 'var(--chakra-colors-accent-primary)' : 'inherit',
-        fontWeight: isActive ? '700' : '500',
+        color: isActive ? 'var(--chakra-colors-accent-primary)' : 'var(--chakra-colors-text-primary)',
+        fontWeight: isActive ? '700' : '600',
       })}
     >
       <HStack spacing={3}>
@@ -101,9 +102,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       <Box
         display={{ base: 'none', md: 'block' }}
         w="240px"
-        bg="slate.900"
+        bg="bg.surface"
         borderRight="1px solid"
-        borderColor="slate.800"
+        borderColor="border.primary"
         p={4}
         minH="calc(100vh - 61px)"
       >
@@ -113,9 +114,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay backdropFilter="blur(4px)" />
-        <DrawerContent bg="slate.900" color="text.primary">
+        <DrawerContent bg="bg.surface" color="text.primary">
           <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px" borderColor="slate.800">
+          <DrawerHeader borderBottomWidth="1px" borderColor="border.primary">
             WCE Virtual Lab
           </DrawerHeader>
           <DrawerBody p={4}>

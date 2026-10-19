@@ -42,6 +42,7 @@ import {
   Progress,
   Card,
   CardBody,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   TimeIcon,
@@ -137,6 +138,14 @@ const LabAssessmentWorkspace = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
+  // Consistent normal theme tokens: crisp white cards, green accents, high-contrast dark text
+  const cardBg = '#FFFFFF';
+  const cardBorder = '#DDE5DD';
+  const surfaceBg = '#F2F6F3';
+  const textColor = '#1A2024';
+  const mutedText = '#505750';
+  const accentColor = '#2F8D46';
+
   const [isLoading, setIsLoading] = useState(true);
   const [lab, setLab] = useState(null);
   const [attempt, setAttempt] = useState(null);
@@ -166,8 +175,49 @@ const LabAssessmentWorkspace = () => {
   const { isOpen: isFinishOpen, onOpen: onFinishOpen, onClose: onFinishClose } = useDisclosure();
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false);
 
-  // Copy helper
-  const [copied, setCopied] = useState(false);
+  // Anti-cheat clipboard prevention
+  const notifyCopyPasteDisabled = () => {
+    if (!toast.isActive('clipboard-blocked-alert')) {
+      toast({
+        id: 'clipboard-blocked-alert',
+        title: 'Action Disabled',
+        description: 'Copying and pasting is disabled in the IDE during assessments.',
+        status: 'warning',
+        duration: 2500,
+        isClosable: true,
+        position: 'top',
+      });
+    }
+  };
+
+  const handleEditorDidMount = (editor, monaco) => {
+    // Intercept keyboard shortcuts: Ctrl+C, Ctrl+V, Ctrl+X, Cmd+C, Cmd+V, Cmd+X, Shift+Insert
+    editor.onKeyDown((e) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      if (
+        (isCtrlOrCmd && (e.keyCode === monaco.KeyCode.KeyC || e.keyCode === monaco.KeyCode.KeyV || e.keyCode === monaco.KeyCode.KeyX)) ||
+        (e.shiftKey && e.keyCode === monaco.KeyCode.Insert)
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        notifyCopyPasteDisabled();
+      }
+    });
+
+    // Override Monaco internal commands for clipboard
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+      notifyCopyPasteDisabled();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
+      notifyCopyPasteDisabled();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
+      notifyCopyPasteDisabled();
+    });
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Insert, () => {
+      notifyCopyPasteDisabled();
+    });
+  };
 
   // Initialize and load assessment attempt & questions
   useEffect(() => {
@@ -472,7 +522,7 @@ const LabAssessmentWorkspace = () => {
   return (
     <VStack spacing={4} align="stretch" w="full" minH="calc(100vh - 100px)">
       {/* Top Bar: Assessment Title, Timer, Question Navigation, Finish Button */}
-      <Card bg="slate.900" borderColor="slate.800" borderWidth="1px" p={4} borderRadius="xl">
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" p={4} borderRadius="xl" boxShadow="sm">
         <Flex
           justify="space-between"
           align="center"
@@ -482,14 +532,14 @@ const LabAssessmentWorkspace = () => {
           {/* Title & Attempt Info */}
           <VStack align="start" spacing={0}>
             <HStack>
-              <Heading size="md" color="white">
+              <Heading size="md" color={textColor} fontWeight="800">
                 Practical Assessment
               </Heading>
-              <Badge colorScheme="purple" px={2} py={0.5} borderRadius="md">
+              <Badge colorScheme="green" px={2} py={0.5} borderRadius="md">
                 {questions.length} Questions
               </Badge>
             </HStack>
-            <Text fontSize="xs" color="gray.400">
+            <Text fontSize="xs" color={mutedText}>
               Questions randomly allocated from curriculum topics • All changes saved
             </Text>
           </VStack>
@@ -516,7 +566,7 @@ const LabAssessmentWorkspace = () => {
                   key={q.lab_question_id}
                   size="sm"
                   variant={isCurrent ? 'solid' : 'outline'}
-                  colorScheme={isCurrent ? 'purple' : btnColorScheme}
+                  colorScheme={isCurrent ? 'green' : btnColorScheme}
                   onClick={() => setSelectedIndex(idx)}
                   borderRadius="lg"
                   px={3}
@@ -524,7 +574,7 @@ const LabAssessmentWorkspace = () => {
                 >
                   Q{idx + 1}
                   {subStatus === 'accepted' && (
-                    <Icon as={CheckCircleIcon} color="green.300" ml={1} boxSize={3} />
+                    <Icon as={CheckCircleIcon} color={isCurrent ? 'white' : 'green.500'} ml={1} boxSize={3} />
                   )}
                 </Button>
               );
@@ -535,24 +585,24 @@ const LabAssessmentWorkspace = () => {
           <HStack spacing={4}>
             {/* Live Timer */}
             <HStack
-              bg={isTimerCritical ? 'red.900' : isTimerWarning ? 'orange.900' : 'slate.800'}
+              bg={isTimerCritical ? '#FEE2E2' : isTimerWarning ? '#FFEDD5' : '#E8F5E9'}
               border="1px solid"
-              borderColor={isTimerCritical ? 'red.500' : isTimerWarning ? 'orange.500' : 'slate.700'}
+              borderColor={isTimerCritical ? '#FCA5A5' : isTimerWarning ? '#FDBA74' : '#A5D6A7'}
               px={4}
               py={2}
               borderRadius="xl"
-              boxShadow="inner"
+              boxShadow="sm"
             >
               <Icon
                 as={TimeIcon}
-                color={isTimerCritical ? 'red.400' : isTimerWarning ? 'orange.400' : 'purple.400'}
+                color={isTimerCritical ? '#DC2626' : isTimerWarning ? '#EA580C' : '#2F8D46'}
                 boxSize={4}
               />
               <Text
                 fontFamily="mono"
                 fontWeight="bold"
                 fontSize="md"
-                color={isTimerCritical ? 'red.200' : isTimerWarning ? 'orange.200' : 'white'}
+                color={isTimerCritical ? '#991B1B' : isTimerWarning ? '#9A3412' : '#174723'}
               >
                 {formatTimeRemaining(remainingSeconds)}
               </Text>
@@ -563,7 +613,6 @@ const LabAssessmentWorkspace = () => {
               variant="outline"
               size="sm"
               onClick={onFinishOpen}
-              _hover={{ bg: 'red.900', color: 'white' }}
             >
               Finish Assessment
             </Button>
@@ -576,13 +625,14 @@ const LabAssessmentWorkspace = () => {
         {/* Left Column: Problem Statement & Test Cases (5 Cols) */}
         <Box gridColumn={{ lg: 'span 5' }}>
           <Card
-            bg="slate.900"
-            borderColor="slate.800"
+            bg={cardBg}
+            borderColor={cardBorder}
             borderWidth="1px"
             h="calc(100vh - 210px)"
             overflowY="auto"
             borderRadius="xl"
             p={5}
+            boxShadow="sm"
           >
             {currentQuestion ? (
               <VStack align="stretch" spacing={5}>
@@ -590,7 +640,7 @@ const LabAssessmentWorkspace = () => {
                 <VStack align="start" spacing={1}>
                   <HStack justify="space-between" w="full">
                     <HStack>
-                      <Badge colorScheme="purple" px={2} py={0.5} borderRadius="md">
+                      <Badge colorScheme="green" px={2} py={0.5} borderRadius="md">
                         Question {selectedIndex + 1} of {questions.length}
                       </Badge>
                       <Badge
@@ -609,12 +659,12 @@ const LabAssessmentWorkspace = () => {
                         {currentQuestion.difficulty || 'Medium'}
                       </Badge>
                     </HStack>
-                    <Text fontSize="sm" fontWeight="bold" color="cyan.400">
+                    <Text fontSize="sm" fontWeight="bold" color={accentColor}>
                       {currentQuestion.marks || 10} Marks
                     </Text>
                   </HStack>
 
-                  <Heading size="md" color="white" pt={1}>
+                  <Heading size="md" color={textColor} pt={1} fontWeight="800">
                     {currentQuestion.title || `Problem #${selectedIndex + 1}`}
                   </Heading>
                 </VStack>
@@ -640,14 +690,14 @@ const LabAssessmentWorkspace = () => {
                   </Alert>
                 )}
 
-                <Divider borderColor="slate.800" />
+                <Divider borderColor={cardBorder} />
 
                 {/* Problem Statement */}
                 <Box>
-                  <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={1}>
+                  <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                     Problem Statement
                   </Text>
-                  <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
+                  <Text color={textColor} fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
                     {currentQuestion.problem_statement}
                   </Text>
                 </Box>
@@ -655,10 +705,10 @@ const LabAssessmentWorkspace = () => {
                 {/* Input Format */}
                 {currentQuestion.input_format && (
                   <Box>
-                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={1}>
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Input Format
                     </Text>
-                    <Text color="gray.300" fontSize="xs" whiteSpace="pre-wrap">
+                    <Text color={textColor} fontSize="sm" whiteSpace="pre-wrap">
                       {currentQuestion.input_format}
                     </Text>
                   </Box>
@@ -667,10 +717,10 @@ const LabAssessmentWorkspace = () => {
                 {/* Output Format */}
                 {currentQuestion.output_format && (
                   <Box>
-                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={1}>
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Output Format
                     </Text>
-                    <Text color="gray.300" fontSize="xs" whiteSpace="pre-wrap">
+                    <Text color={textColor} fontSize="sm" whiteSpace="pre-wrap">
                       {currentQuestion.output_format}
                     </Text>
                   </Box>
@@ -679,10 +729,10 @@ const LabAssessmentWorkspace = () => {
                 {/* Constraints */}
                 {currentQuestion.constraints && (
                   <Box>
-                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={1}>
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Constraints
                     </Text>
-                    <Code p={2} borderRadius="md" w="full" colorScheme="gray" fontSize="xs" whiteSpace="pre-wrap">
+                    <Code p={2.5} borderRadius="md" w="full" bg={surfaceBg} color={textColor} borderColor={cardBorder} borderWidth="1px" fontSize="xs" whiteSpace="pre-wrap">
                       {currentQuestion.constraints}
                     </Code>
                   </Box>
@@ -691,21 +741,10 @@ const LabAssessmentWorkspace = () => {
                 {/* Sample Input / Output */}
                 {currentQuestion.sample_input && (
                   <Box>
-                    <Flex justify="space-between" align="center" mb={1}>
-                      <Text fontWeight="semibold" color="gray.300" fontSize="sm">
-                        Sample Input
-                      </Text>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="gray"
-                        leftIcon={copied ? <CheckIcon /> : <CopyIcon />}
-                        onClick={() => handleCopyInput(currentQuestion.sample_input)}
-                      >
-                        {copied ? 'Copied' : 'Copy'}
-                      </Button>
-                    </Flex>
-                    <Code p={3} borderRadius="md" w="full" colorScheme="purple" fontSize="xs" whiteSpace="pre-wrap">
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
+                      Sample Input
+                    </Text>
+                    <Code p={3} borderRadius="md" w="full" bg={surfaceBg} color={textColor} borderColor={cardBorder} borderWidth="1px" fontSize="xs" whiteSpace="pre-wrap">
                       {currentQuestion.sample_input}
                     </Code>
                   </Box>
@@ -713,10 +752,10 @@ const LabAssessmentWorkspace = () => {
 
                 {currentQuestion.sample_output && (
                   <Box>
-                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={1}>
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Sample Output
                     </Text>
-                    <Code p={3} borderRadius="md" w="full" colorScheme="green" fontSize="xs" whiteSpace="pre-wrap">
+                    <Code p={3} borderRadius="md" w="full" bg={surfaceBg} color={textColor} borderColor={cardBorder} borderWidth="1px" fontSize="xs" whiteSpace="pre-wrap">
                       {currentQuestion.sample_output}
                     </Code>
                   </Box>
@@ -725,10 +764,10 @@ const LabAssessmentWorkspace = () => {
                 {/* Explanation */}
                 {currentQuestion.explanation && (
                   <Box>
-                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={1}>
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Explanation
                     </Text>
-                    <Text color="gray.400" fontSize="xs" whiteSpace="pre-wrap">
+                    <Text color={textColor} fontSize="xs" whiteSpace="pre-wrap">
                       {currentQuestion.explanation}
                     </Text>
                   </Box>
@@ -737,15 +776,15 @@ const LabAssessmentWorkspace = () => {
                 {/* Public Test Cases Preview */}
                 {currentQuestion.publicTestCases && currentQuestion.publicTestCases.length > 0 && (
                   <Box>
-                    <Text fontWeight="semibold" color="gray.300" fontSize="sm" mb={2}>
+                    <Text fontWeight="700" color={accentColor} fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={2}>
                       Visible Test Cases ({currentQuestion.publicTestCases.length})
                     </Text>
                     <VStack spacing={2} align="stretch">
                       {currentQuestion.publicTestCases.map((tc, idx) => (
-                        <Box key={tc.lab_testcase_id || idx} p={2} bg="slate.800" borderRadius="md" border="1px solid" borderColor="slate.700" fontSize="xs">
-                          <Text color="gray.400" mb={1}>Case #{idx + 1}:</Text>
-                          <Text color="gray.300">Input: <code>{tc.input || '(empty)'}</code></Text>
-                          <Text color="gray.300">Expected: <code>{tc.expected_output}</code></Text>
+                        <Box key={tc.lab_testcase_id || idx} p={3} bg={surfaceBg} borderRadius="md" border="1px solid" borderColor={cardBorder} fontSize="xs">
+                          <Text color={accentColor} fontWeight="bold" mb={1}>Case #{idx + 1}:</Text>
+                          <Text color={textColor}>Input: <code>{tc.input || '(empty)'}</code></Text>
+                          <Text color={textColor}>Expected: <code>{tc.expected_output}</code></Text>
                         </Box>
                       ))}
                     </VStack>
@@ -753,7 +792,7 @@ const LabAssessmentWorkspace = () => {
                 )}
               </VStack>
             ) : (
-              <Text color="gray.400">Select a question to view problem description.</Text>
+              <Text color={mutedText}>Select a question to view problem description.</Text>
             )}
           </Card>
         </Box>
@@ -762,19 +801,19 @@ const LabAssessmentWorkspace = () => {
         <Box gridColumn={{ lg: 'span 7' }}>
           <VStack spacing={4} align="stretch" h="full">
             {/* Editor Container Card */}
-            <Card bg="slate.900" borderColor="slate.800" borderWidth="1px" borderRadius="xl" overflow="hidden">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" overflow="hidden" boxShadow="sm">
               {/* Editor Header Bar */}
-              <Flex justify="space-between" align="center" bg="slate.800" px={4} py={2} borderBottom="1px solid" borderColor="slate.700">
+              <Flex justify="space-between" align="center" bg={surfaceBg} px={4} py={2} borderBottom="1px solid" borderColor={cardBorder}>
                 <HStack spacing={3}>
-                  <Text fontSize="xs" color="gray.300" fontWeight="bold">
+                  <Text fontSize="xs" color={textColor} fontWeight="bold">
                     Language:
                   </Text>
                   <Select
                     size="xs"
                     w="130px"
-                    bg="dark.bg"
-                    borderColor="slate.600"
-                    color="white"
+                    bg={cardBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
                   >
@@ -793,7 +832,7 @@ const LabAssessmentWorkspace = () => {
                   </Tooltip>
                   <Button
                     size="xs"
-                    colorScheme="purple"
+                    colorScheme="green"
                     variant="outline"
                     onClick={handleRunCode}
                     isLoading={isRunning}
@@ -803,7 +842,7 @@ const LabAssessmentWorkspace = () => {
                   </Button>
                   <Button
                     size="xs"
-                    colorScheme="brand"
+                    colorScheme="green"
                     onClick={handleSubmitQuestion}
                     isLoading={isSubmitting}
                     loadingText="Evaluating..."
@@ -813,14 +852,33 @@ const LabAssessmentWorkspace = () => {
                 </HStack>
               </Flex>
 
-              {/* Monaco Editor */}
-              <Box h="360px" w="full">
+              {/* Monaco Editor with Anti-Cheat Copy-Paste Prevention */}
+              <Box
+                h="360px"
+                w="full"
+                onPaste={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  notifyCopyPasteDisabled();
+                }}
+                onCopy={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  notifyCopyPasteDisabled();
+                }}
+                onCut={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  notifyCopyPasteDisabled();
+                }}
+              >
                 <Editor
                   height="100%"
                   language={MONACO_LANG_MAP[language] || 'cpp'}
                   theme="vs-dark"
                   value={currentCode}
                   onChange={handleCodeChange}
+                  onMount={handleEditorDidMount}
                   options={{
                     minimap: { enabled: false },
                     fontSize: 13,
@@ -829,27 +887,29 @@ const LabAssessmentWorkspace = () => {
                     automaticLayout: true,
                     lineNumbers: 'on',
                     tabSize: 4,
+                    contextmenu: false, // Disables right-click menu (no copy/paste via context menu)
+                    copyWithSyntaxHighlighting: false,
                   }}
                 />
               </Box>
             </Card>
 
             {/* Bottom Panel: Custom Input & Outputs */}
-            <Card bg="slate.900" borderColor="slate.800" borderWidth="1px" borderRadius="xl" p={4} minH="220px">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" p={4} minH="220px" boxShadow="sm">
               <Tabs
                 variant="line"
-                colorScheme="purple"
+                colorScheme="green"
                 index={activeOutputTab}
                 onChange={(idx) => setActiveOutputTab(idx)}
               >
-                <TabList borderColor="slate.800">
-                  <Tab color="gray.400" _selected={{ color: 'white', borderColor: 'purple.400' }} fontSize="xs">
+                <TabList borderColor={cardBorder}>
+                  <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs">
                     Console Output {runResult && (runResult.success ? '✅' : '⚠️')}
                   </Tab>
-                  <Tab color="gray.400" _selected={{ color: 'white', borderColor: 'green.400' }} fontSize="xs">
+                  <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs">
                     Evaluation Results {evalResult && `(${evalResult.passedTestCases}/${evalResult.totalTestCases})`}
                   </Tab>
-                  <Tab color="gray.400" _selected={{ color: 'white', borderColor: 'cyan.400' }} fontSize="xs">
+                  <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs">
                     Custom Input
                   </Tab>
                 </TabList>
@@ -866,14 +926,14 @@ const LabAssessmentWorkspace = () => {
                             {runResult.success ? 'Execution Succeeded' : runResult.errorType || 'Execution Error'}
                           </Badge>
                           {runResult.executionTime !== undefined && (
-                            <Text color="gray.400">Execution time: {runResult.executionTime}ms</Text>
+                            <Text color={mutedText}>Execution time: {runResult.executionTime}ms</Text>
                           )}
                         </HStack>
 
                         {runResult.output && (
                           <Box>
-                            <Text color="gray.400" mb={1}>Standard Output:</Text>
-                            <Code p={3} borderRadius="md" w="full" colorScheme="gray" display="block" whiteSpace="pre-wrap">
+                            <Text color={mutedText} mb={1}>Standard Output:</Text>
+                            <Code p={3} borderRadius="md" w="full" bg={surfaceBg} color={textColor} borderColor={cardBorder} borderWidth="1px" display="block" whiteSpace="pre-wrap">
                               {runResult.output}
                             </Code>
                           </Box>
@@ -881,7 +941,7 @@ const LabAssessmentWorkspace = () => {
 
                         {runResult.error && (
                           <Box>
-                            <Text color="red.400" mb={1}>Error / Stderr:</Text>
+                            <Text color="red.500" mb={1}>Error / Stderr:</Text>
                             <Code p={3} borderRadius="md" w="full" colorScheme="red" display="block" whiteSpace="pre-wrap">
                               {runResult.error}
                             </Code>
@@ -889,7 +949,7 @@ const LabAssessmentWorkspace = () => {
                         )}
                       </VStack>
                     ) : (
-                      <Text color="gray.500" fontSize="xs" py={4} textAlign="center">
+                      <Text color={mutedText} fontSize="xs" py={4} textAlign="center">
                         Click "Run Code" to test against custom or sample input without official marks.
                       </Text>
                     )}
@@ -902,7 +962,7 @@ const LabAssessmentWorkspace = () => {
                     ) : evalResult ? (
                       <VStack align="stretch" spacing={3} fontSize="xs">
                         {/* Summary Header */}
-                        <Flex justify="space-between" align="center" bg="slate.800" p={3} borderRadius="lg">
+                        <Flex justify="space-between" align="center" bg={surfaceBg} p={3} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
                           <HStack>
                             <Badge
                               colorScheme={
@@ -920,11 +980,11 @@ const LabAssessmentWorkspace = () => {
                             >
                               {evalResult.status.replace(/_/g, ' ')}
                             </Badge>
-                            <Text color="white" fontWeight="bold">
+                            <Text color={textColor} fontWeight="bold">
                               {evalResult.passedTestCases} of {evalResult.totalTestCases} Test Cases Passed
                             </Text>
                           </HStack>
-                          <Text color="purple.300" fontWeight="bold" fontSize="sm">
+                          <Text color={accentColor} fontWeight="bold" fontSize="sm">
                             Score: {evalResult.score} / {evalResult.totalMarks} Marks
                           </Text>
                         </Flex>
@@ -942,20 +1002,20 @@ const LabAssessmentWorkspace = () => {
                             {evalResult.testCaseResults.map((tc, idx) => (
                               <Box
                                 key={tc.testCaseId || idx}
-                                p={2}
+                                p={2.5}
                                 borderRadius="md"
-                                bg="slate.800"
+                                bg={surfaceBg}
                                 border="1px solid"
-                                borderColor={tc.passed ? 'green.800' : 'red.800'}
+                                borderColor={tc.passed ? 'green.400' : 'red.400'}
                               >
                                 <HStack justify="space-between">
                                   <HStack>
                                     <Icon
                                       as={tc.passed ? CheckCircleIcon : CloseIcon}
-                                      color={tc.passed ? 'green.400' : 'red.400'}
+                                      color={tc.passed ? 'green.500' : 'red.500'}
                                       boxSize={3}
                                     />
-                                    <Text color="white" fontWeight="semibold">
+                                    <Text color={textColor} fontWeight="semibold">
                                       {tc.isHidden ? `Hidden Test Case #${idx + 1}` : `Visible Test Case #${idx + 1}`}
                                     </Text>
                                     <Badge size="xs" colorScheme={tc.passed ? 'green' : 'red'}>
@@ -963,13 +1023,13 @@ const LabAssessmentWorkspace = () => {
                                     </Badge>
                                   </HStack>
                                   {tc.executionTime !== undefined && (
-                                    <Text color="gray.500" fontSize="2xs">{tc.executionTime}ms</Text>
+                                    <Text color={mutedText} fontSize="2xs">{tc.executionTime}ms</Text>
                                   )}
                                 </HStack>
 
                                 {/* Only show input/expected output for visible test cases */}
                                 {!tc.isHidden && (
-                                  <Box mt={1} pt={1} borderTop="1px solid" borderColor="slate.700" color="gray.300" fontSize="2xs">
+                                  <Box mt={1} pt={1} borderTop="1px solid" borderColor={cardBorder} color={textColor} fontSize="2xs">
                                     <Text>Input: <code>{tc.input}</code></Text>
                                     <Text>Expected: <code>{tc.expectedOutput}</code></Text>
                                     <Text>Output: <code>{tc.actualOutput}</code></Text>
@@ -981,7 +1041,7 @@ const LabAssessmentWorkspace = () => {
                         )}
                       </VStack>
                     ) : (
-                      <Text color="gray.500" fontSize="xs" py={4} textAlign="center">
+                      <Text color={mutedText} fontSize="xs" py={4} textAlign="center">
                         Click "Submit Answer" to officially evaluate this question against all test cases.
                       </Text>
                     )}
@@ -989,15 +1049,15 @@ const LabAssessmentWorkspace = () => {
 
                   {/* Tab 2: Custom Input */}
                   <TabPanel px={0} py={3}>
-                    <Text color="gray.400" fontSize="xs" mb={1}>
+                    <Text color={mutedText} fontSize="xs" mb={1}>
                       Standard Input (stdin) for Run Code:
                     </Text>
                     <Textarea
                       size="xs"
                       rows={4}
-                      bg="dark.bg"
-                      borderColor="slate.700"
-                      color="white"
+                      bg={surfaceBg}
+                      borderColor={cardBorder}
+                      color={textColor}
                       value={customInput}
                       onChange={(e) => setCustomInput(e.target.value)}
                       placeholder="Enter custom input here..."
@@ -1013,26 +1073,26 @@ const LabAssessmentWorkspace = () => {
       {/* Finish Assessment Confirmation Modal */}
       <Modal isOpen={isFinishOpen} onClose={onFinishClose} isCentered size="md">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.900" borderColor="slate.700" borderWidth="1px" color="white">
-          <ModalHeader>Final Assessment Submission</ModalHeader>
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} borderRadius="2xl">
+          <ModalHeader color={textColor}>Final Assessment Submission</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
-              <Text fontSize="sm">
+              <Text fontSize="sm" color={textColor}>
                 Are you sure you want to finish and submit the assessment now?
               </Text>
 
-              <Box bg="slate.800" p={4} borderRadius="lg" border="1px solid" borderColor="slate.700">
+              <Box bg={surfaceBg} p={4} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
                 <VStack align="stretch" spacing={2} fontSize="sm">
                   <HStack justify="space-between">
-                    <Text color="gray.300">Questions Attempted:</Text>
-                    <Text fontWeight="bold" color="cyan.400">
+                    <Text color={mutedText}>Questions Attempted:</Text>
+                    <Text fontWeight="bold" color={accentColor}>
                       {attemptedCount} of {questions.length}
                     </Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.300">Remaining Time:</Text>
-                    <Text fontWeight="bold" color="yellow.400">
+                    <Text color={mutedText}>Remaining Time:</Text>
+                    <Text fontWeight="bold" color="orange.600">
                       {formatTimeRemaining(remainingSeconds)}
                     </Text>
                   </HStack>
@@ -1040,7 +1100,7 @@ const LabAssessmentWorkspace = () => {
               </Box>
 
               {attemptedCount < questions.length && (
-                <Alert status="warning" borderRadius="md" bg="orange.900" borderColor="orange.700" borderWidth="1px" fontSize="xs">
+                <Alert status="warning" borderRadius="md" fontSize="xs">
                   <AlertIcon />
                   <AlertDescription>
                     You have {questions.length - attemptedCount} unsubmitted question(s). Unsubmitted questions will receive 0 marks.
@@ -1048,13 +1108,13 @@ const LabAssessmentWorkspace = () => {
                 </Alert>
               )}
 
-              <Text fontSize="xs" color="gray.400">
+              <Text fontSize="xs" color={mutedText}>
                 Once submitted, you will not be able to modify any answers or resume this assessment.
               </Text>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onFinishClose} color="gray.400">
+            <Button variant="ghost" mr={3} onClick={onFinishClose}>
               Continue Working
             </Button>
             <Button

@@ -11,6 +11,11 @@ import theme from './theme';
 import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
+// Ensure standard light theme is default across all workspaces
+if (localStorage.getItem('chakra-ui-color-mode') === 'dark') {
+  localStorage.setItem('chakra-ui-color-mode', 'light');
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ColorModeScript initialColorMode={theme.config.initialColorMode} />

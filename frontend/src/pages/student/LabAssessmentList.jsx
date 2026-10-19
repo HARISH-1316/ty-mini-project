@@ -41,6 +41,7 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   TimeIcon,
@@ -78,6 +79,14 @@ const formatDateTime = (dt) => {
 const LabAssessmentList = () => {
   const navigate = useNavigate();
   const toast = useToast();
+
+  // Color tokens aligned with normal light green theme
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
 
   const [labs, setLabs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -157,16 +166,16 @@ const LabAssessmentList = () => {
       <Box
         p={{ base: 6, md: 8 }}
         borderRadius="2xl"
-        bg="bg.card"
+        bg={cardBg}
         border="1px solid"
-        borderColor="border.primary"
+        borderColor={cardBorder}
         boxShadow="sm"
       >
         <VStack align="start" spacing={2}>
-          <Heading size="lg" color="white">
+          <Heading size="lg" color={textColor} fontWeight="800">
             Practical Lab Assessments (LA) 💻
           </Heading>
-          <Text color="gray.300" fontSize="sm" maxW="3xl">
+          <Text color={mutedText} fontSize="sm" maxW="3xl">
             Timed practical coding assessments allocated directly from curriculum topics. Write, test, and submit your code in sandboxed language environments.
           </Text>
         </VStack>
@@ -174,56 +183,56 @@ const LabAssessmentList = () => {
 
       {/* Stats Overview */}
       <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={6}>
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Available / In-Progress</StatLabel>
-              <StatNumber color="green.400" fontSize="3xl">
+              <StatLabel color={mutedText}>Available / In-Progress</StatLabel>
+              <StatNumber color="green.600" fontSize="3xl" fontWeight="bold">
                 {activeAndInProgress.length}
               </StatNumber>
-              <StatHelpText color="gray.500">Ready to attempt</StatHelpText>
+              <StatHelpText color={mutedText}>Ready to attempt</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Upcoming Assessments</StatLabel>
-              <StatNumber color="cyan.400" fontSize="3xl">
+              <StatLabel color={mutedText}>Upcoming Assessments</StatLabel>
+              <StatNumber color="blue.600" fontSize="3xl" fontWeight="bold">
                 {upcomingLabs.length}
               </StatNumber>
-              <StatHelpText color="gray.500">Scheduled soon</StatHelpText>
+              <StatHelpText color={mutedText}>Scheduled soon</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Completed Assessments</StatLabel>
-              <StatNumber color="purple.400" fontSize="3xl">
+              <StatLabel color={mutedText}>Completed Assessments</StatLabel>
+              <StatNumber color="purple.600" fontSize="3xl" fontWeight="bold">
                 {completedOrSubmitted.length}
               </StatNumber>
-              <StatHelpText color="gray.500">Submitted attempts</StatHelpText>
+              <StatHelpText color={mutedText}>Submitted attempts</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
       </SimpleGrid>
 
       {/* Assessment Tabs */}
-      <Tabs variant="soft-rounded" colorScheme="purple">
-        <TabList bg="slate.900" p={2} borderRadius="xl" border="1px solid" borderColor="slate.800" overflowX="auto">
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'purple.600' }}>
+      <Tabs variant="soft-rounded" colorScheme="green">
+        <TabList bg={cardBg} p={2} borderRadius="xl" border="1px solid" borderColor={cardBorder} overflowX="auto" boxShadow="sm">
+          <Tab color={mutedText} _selected={{ color: 'white', bg: 'green.600', fontWeight: 'bold' }}>
             All Assessments ({labs.length})
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'green.600' }}>
+          <Tab color={mutedText} _selected={{ color: 'white', bg: 'green.600', fontWeight: 'bold' }}>
             Active ({activeAndInProgress.length})
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'cyan.600' }}>
+          <Tab color={mutedText} _selected={{ color: 'white', bg: 'blue.600', fontWeight: 'bold' }}>
             Upcoming ({upcomingLabs.length})
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'purple.700' }}>
+          <Tab color={mutedText} _selected={{ color: 'white', bg: 'purple.600', fontWeight: 'bold' }}>
             Past / Completed ({completedOrSubmitted.length})
           </Tab>
         </TabList>
@@ -298,52 +307,52 @@ const LabAssessmentList = () => {
       {/* Confirmation Modal to Start Assessment */}
       <Modal isOpen={isStartOpen} onClose={onStartClose} isCentered size="lg">
         <ModalOverlay backdropFilter="blur(5px)" />
-        <ModalContent bg="slate.900" borderColor="slate.700" borderWidth="1px" color="white">
-          <ModalHeader>Start Assessment Confirmation</ModalHeader>
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} borderRadius="2xl">
+          <ModalHeader color={textColor}>Start Assessment Confirmation</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
-              <Text fontSize="md">
-                Are you ready to begin <Text as="span" fontWeight="bold" color="purple.300">{selectedLabForStart?.title}</Text>?
+              <Text fontSize="md" color={textColor}>
+                Are you ready to begin <Text as="span" fontWeight="bold" color="green.600">{selectedLabForStart?.title}</Text>?
               </Text>
 
-              <Alert status="warning" borderRadius="md" bg="orange.900" borderColor="orange.700" borderWidth="1px">
+              <Alert status="warning" borderRadius="md">
                 <AlertIcon />
                 <AlertDescription fontSize="sm">
                   Once started, your personalized assessment timer of <strong>{selectedLabForStart?.duration} minutes</strong> will begin counting down immediately. The timer cannot be paused or reset.
                 </AlertDescription>
               </Alert>
 
-              <Box bg="slate.800" p={4} borderRadius="lg" border="1px solid" borderColor="slate.700">
-                <VStack align="stretch" spacing={2} fontSize="sm" color="gray.300">
+              <Box bg={surfaceBg} p={4} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
+                <VStack align="stretch" spacing={2} fontSize="sm" color={textColor}>
                   <HStack justify="space-between">
-                    <Text>Assigned Questions:</Text>
-                    <Text fontWeight="bold" color="white">{selectedLabForStart?.num_questions || 5} questions</Text>
+                    <Text color={mutedText}>Assigned Questions:</Text>
+                    <Text fontWeight="bold">{selectedLabForStart?.num_questions || 5} questions</Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text>Duration:</Text>
-                    <Text fontWeight="bold" color="white">{selectedLabForStart?.duration} minutes</Text>
+                    <Text color={mutedText}>Duration:</Text>
+                    <Text fontWeight="bold">{selectedLabForStart?.duration} minutes</Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text>Maximum Marks:</Text>
-                    <Text fontWeight="bold" color="white">
+                    <Text color={mutedText}>Maximum Marks:</Text>
+                    <Text fontWeight="bold">
                       {(selectedLabForStart?.num_questions || 5) * (selectedLabForStart?.marks_per_question || 10)} marks
                     </Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text>End Deadline:</Text>
-                    <Text fontWeight="bold" color="white">{formatDateTime(selectedLabForStart?.end_time)}</Text>
+                    <Text color={mutedText}>End Deadline:</Text>
+                    <Text fontWeight="bold">{formatDateTime(selectedLabForStart?.end_time)}</Text>
                   </HStack>
                 </VStack>
               </Box>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onStartClose} color="gray.400">
+            <Button variant="ghost" mr={3} onClick={onStartClose}>
               Cancel
             </Button>
             <Button
-              colorScheme="brand"
+              colorScheme="green"
               onClick={handleConfirmStart}
               leftIcon={<ArrowForwardIcon />}
             >
@@ -368,35 +377,39 @@ const AssessmentCard = ({ lab, onStart }) => {
   const hasAttempt = Boolean(lab.attempt);
   const attemptStatus = lab.attempt?.status;
 
-  const totalMarks = (lab.num_questions || 5) * (lab.marks_per_question || 10);
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
 
   return (
     <Card
-      bg="slate.800"
+      bg={cardBg}
       borderColor={
         attemptStatus === 'in_progress'
-          ? 'teal.500'
+          ? 'green.500'
           : attemptStatus === 'submitted'
-          ? 'purple.600'
-          : 'slate.700'
+          ? 'green.600'
+          : cardBorder
       }
       borderWidth="1px"
       borderRadius="xl"
       overflow="hidden"
-      boxShadow="md"
+      boxShadow="sm"
       transition="all 0.2s"
-      _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
+      _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
     >
       <CardBody p={6}>
         <VStack align="stretch" spacing={4}>
           {/* Card Header */}
           <Flex justify="space-between" align="start" gap={2}>
             <VStack align="start" spacing={1} flex={1}>
-              <Heading size="md" color="white" noOfLines={2}>
+              <Heading size="md" color={textColor} noOfLines={2} fontWeight="800">
                 {lab.title}
               </Heading>
               {lab.description && (
-                <Text color="gray.400" fontSize="sm" noOfLines={2}>
+                <Text color={mutedText} fontSize="sm" noOfLines={2}>
                   {lab.description}
                 </Text>
               )}
@@ -415,7 +428,7 @@ const AssessmentCard = ({ lab, onStart }) => {
                 {STATUS_CONFIG[attemptStatus]?.label || attemptStatus}
               </Badge>
             ) : isUpcoming ? (
-              <Badge colorScheme="cyan" px={2.5} py={1} borderRadius="md" fontSize="xs">
+              <Badge colorScheme="blue" px={2.5} py={1} borderRadius="md" fontSize="xs">
                 Upcoming
               </Badge>
             ) : isExpired ? (
@@ -433,41 +446,41 @@ const AssessmentCard = ({ lab, onStart }) => {
           {lab.topics && lab.topics.length > 0 && (
             <HStack spacing={2} wrap="wrap">
               {lab.topics.map((t) => (
-                <Tag key={t.topic_id} size="sm" colorScheme="purple" variant="subtle">
+                <Tag key={t.topic_id} size="sm" colorScheme="green" variant="subtle">
                   <TagLabel>{t.title}</TagLabel>
                 </Tag>
               ))}
             </HStack>
           )}
 
-          <Divider borderColor="slate.700" />
+          <Divider borderColor={cardBorder} />
 
           {/* Metadata Grid */}
-          <SimpleGrid columns={2} spacing={3} fontSize="xs" color="gray.300">
+          <SimpleGrid columns={2} spacing={3} fontSize="xs" color={textColor}>
             <HStack>
-              <Icon as={TimeIcon} color="purple.400" />
+              <Icon as={TimeIcon} color="green.600" />
               <Text>Duration: <strong>{lab.duration} mins</strong></Text>
             </HStack>
             <HStack>
-              <Icon as={CheckCircleIcon} color="teal.400" />
+              <Icon as={CheckCircleIcon} color="green.600" />
               <Text>Questions: <strong>{lab.num_questions || 5}</strong></Text>
             </HStack>
             <HStack>
-              <Icon as={CalendarIcon} color="cyan.400" />
+              <Icon as={CalendarIcon} color="blue.500" />
               <Text>Start: <strong>{formatDateTime(lab.start_time)}</strong></Text>
             </HStack>
             <HStack>
-              <Icon as={CalendarIcon} color="red.400" />
+              <Icon as={CalendarIcon} color="red.500" />
               <Text>End: <strong>{formatDateTime(lab.end_time)}</strong></Text>
             </HStack>
           </SimpleGrid>
 
           {/* Score display if submitted */}
           {attemptStatus === 'submitted' && (
-            <Box bg="purple.950" p={3} borderRadius="lg" border="1px solid" borderColor="purple.800">
+            <Box bg={surfaceBg} p={3} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
               <HStack justify="space-between">
-                <Text fontSize="xs" color="gray.300">Your Final Score:</Text>
-                <Text fontSize="md" fontWeight="bold" color="purple.200">
+                <Text fontSize="xs" color={mutedText}>Your Final Score:</Text>
+                <Text fontSize="md" fontWeight="bold" color="green.600">
                   {lab.attempt?.obtained_marks ?? 0} / {totalMarks} Marks
                 </Text>
               </HStack>
@@ -479,7 +492,7 @@ const AssessmentCard = ({ lab, onStart }) => {
             {attemptStatus === 'in_progress' ? (
               <Button
                 w="full"
-                colorScheme="teal"
+                colorScheme="green"
                 onClick={() => navigate(`/student/lab-assessments/${lab.lab_id}`)}
                 rightIcon={<ArrowForwardIcon />}
               >
@@ -489,7 +502,7 @@ const AssessmentCard = ({ lab, onStart }) => {
               <Button
                 w="full"
                 variant="outline"
-                colorScheme="purple"
+                colorScheme="green"
                 onClick={() => navigate(`/student/lab-assessments/${lab.lab_id}/result`)}
                 rightIcon={<ArrowForwardIcon />}
               >
@@ -506,7 +519,7 @@ const AssessmentCard = ({ lab, onStart }) => {
             ) : (
               <Button
                 w="full"
-                colorScheme="brand"
+                colorScheme="green"
                 onClick={() => onStart(lab)}
                 rightIcon={<ArrowForwardIcon />}
               >

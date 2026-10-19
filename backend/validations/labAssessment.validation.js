@@ -26,6 +26,14 @@ export const createLabAssessmentValidation = Joi.object({
   num_questions: Joi.number().integer().min(1).max(50).default(5),
   marks_per_question: Joi.number().integer().min(1).max(100).default(10),
   topic_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  allocation_mode: Joi.string().valid('specific', 'random', 'hybrid').default('random'),
+  selected_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  manual_allocations: Joi.array().items(
+    Joi.object({
+      student_id: Joi.number().integer().positive().required(),
+      question_ids: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
+    })
+  ).optional(),
 });
 
 export const updateLabAssessmentValidation = Joi.object({
@@ -37,6 +45,14 @@ export const updateLabAssessmentValidation = Joi.object({
   num_questions: Joi.number().integer().min(1).max(50).optional(),
   marks_per_question: Joi.number().integer().min(1).max(100).optional(),
   topic_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  allocation_mode: Joi.string().valid('specific', 'random', 'hybrid').optional(),
+  selected_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  manual_allocations: Joi.array().items(
+    Joi.object({
+      student_id: Joi.number().integer().positive().required(),
+      question_ids: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
+    })
+  ).optional(),
 });
 
 // ── Faculty: Add Topic to Assessment ──────────
@@ -81,6 +97,9 @@ export const createLabQuestionValidation = Joi.object({
   difficulty: Joi.string().valid('easy', 'medium', 'hard').default('medium'),
   marks: Joi.number().integer().min(1).max(100).optional(),
   order_index: Joi.number().integer().optional().allow(null),
+  supported_languages: Joi.array().items(Joi.string().valid('c', 'cpp', 'java', 'python')).optional(),
+  status: Joi.string().valid('draft', 'published', 'archived').optional(),
+  is_published: Joi.boolean().optional(),
   test_cases: Joi.array().items(labTestCaseValidation).optional(),
   testCases: Joi.array().items(labTestCaseValidation).optional(),
 });
@@ -100,6 +119,8 @@ export const updateLabQuestionValidation = Joi.object({
   marks: Joi.number().integer().min(1).max(100).optional(),
   order_index: Joi.number().integer().optional().allow(null),
   supported_languages: Joi.array().items(Joi.string().valid('c', 'cpp', 'java', 'python')).optional(),
+  status: Joi.string().valid('draft', 'published', 'archived').optional(),
+  is_published: Joi.boolean().optional(),
   is_archived: Joi.boolean().optional(),
   test_cases: Joi.array().items(labTestCaseValidation).min(1).optional(),
   testCases: Joi.array().items(labTestCaseValidation).min(1).optional(),

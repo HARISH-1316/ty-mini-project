@@ -75,9 +75,9 @@ async function runTests() {
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       duration: 60,
-      num_questions: 5,
+      num_questions: 10,
       marks_per_question: 10,
-      topic_ids: [linkedListTopic.topic_id], // 3 questions
+      topic_ids: [linkedListTopic.topic_id], // 5 questions available, requesting 10
     });
 
     let publishBlocked = false;

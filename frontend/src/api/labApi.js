@@ -48,8 +48,12 @@ export const getLabResultsApi = (labId) =>
 export const createLabQuestionApi = (data) =>
   api.post('/lab-questions', data);
 
-export const listLabQuestionsApi = (topicId = null) =>
-  api.get('/lab-questions', { params: topicId ? { topicId } : {} });
+export const listLabQuestionsApi = (params = {}) => {
+  const queryParams = typeof params === 'object' && params !== null
+    ? params
+    : (params ? { topicId: params } : {});
+  return api.get('/lab-questions', { params: queryParams });
+};
 
 export const getLabQuestionApi = (questionId) =>
   api.get(`/lab-questions/${questionId}`);
@@ -59,6 +63,21 @@ export const updateLabQuestionApi = (questionId, data) =>
 
 export const deleteLabQuestionApi = (questionId) =>
   api.delete(`/lab-questions/${questionId}`);
+
+export const publishLabQuestionApi = (questionId) =>
+  api.patch(`/lab-questions/${questionId}/publish`);
+
+export const unpublishLabQuestionApi = (questionId) =>
+  api.patch(`/lab-questions/${questionId}/unpublish`);
+
+export const archiveLabQuestionApi = (questionId) =>
+  api.patch(`/lab-questions/${questionId}/archive`);
+
+export const unarchiveLabQuestionApi = (questionId) =>
+  api.patch(`/lab-questions/${questionId}/unarchive`);
+
+export const getQuestionBankTopicsSummaryApi = () =>
+  api.get('/lab-questions/topics-summary');
 
 export const addLabTestCaseApi = (questionId, data) =>
   api.post(`/lab-questions/${questionId}/testcases`, data);

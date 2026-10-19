@@ -43,7 +43,7 @@ const limeGreen = {
 
 const theme = extendTheme({
   config: {
-    initialColorMode: 'dark',
+    initialColorMode: 'light',
     useSystemColorMode: false,
   },
   colors: {
@@ -68,10 +68,10 @@ const theme = extendTheme({
     colors: {
       // ── Core Palette Tokens ──
       'bg.primary': { default: '#FFFFFF', _dark: '#171918' },
-      'bg.secondary': { default: '#F5F7F5', _dark: '#292D2A' },
+      'bg.secondary': { default: '#F2F6F3', _dark: '#292D2A' },
       'bg.card': { default: '#FFFFFF', _dark: '#202321' },
       'bg.surface': { default: '#FFFFFF', _dark: '#202321' },
-      'bg.surfaceSecondary': { default: '#F5F7F5', _dark: '#292D2A' },
+      'bg.surfaceSecondary': { default: '#F2F6F3', _dark: '#292D2A' },
 
       'accent.primary': { default: '#2F8D46', _dark: '#A3E635' },
       'accent.hover': { default: '#26753A', _dark: '#BEF264' },
@@ -90,14 +90,14 @@ const theme = extendTheme({
       'disabled.bg': { default: '#F1EFED', _dark: '#292D2A' },
       'disabled.text': { default: '#859086', _dark: '#606860' },
 
-      // Adaptive text color for components using color="white"
+      // Adaptive text color for components using color="white" on light cards
       white: { default: '#202124', _dark: '#F5F7F5' },
 
       // Legacy token compatibility mapped to new palette
-      'dark.bg': { default: '#FFFFFF', _dark: '#171918' },
+      'dark.bg': { default: '#F2F6F3', _dark: '#171918' },
       'dark.card': { default: '#FFFFFF', _dark: '#202321' },
       'dark.border': { default: '#DDE5DD', _dark: '#3B423C' },
-      'dark.hover': { default: '#F5F7F5', _dark: '#292D2A' },
+      'dark.hover': { default: '#EAF1EC', _dark: '#292D2A' },
       'dark.input': { default: '#FFFFFF', _dark: '#202321' },
 
       // Slate scale mapped to Blackish-Grey (dark) and White / Neutral (light)
@@ -107,23 +107,23 @@ const theme = extendTheme({
       'slate.800': { default: '#FFFFFF', _dark: '#202321' },
       'slate.700': { default: '#E8F5E9', _dark: '#292D2A' },
       'slate.600': { default: '#DDE5DD', _dark: '#3B423C' },
-      'slate.500': { default: '#606860', _dark: '#859086' },
-      'slate.400': { default: '#606860', _dark: '#B8C0B9' },
-      'slate.300': { default: '#3A3E3A', _dark: '#D0D6D1' },
-      'slate.200': { default: '#DDE5DD', _dark: '#3B423C' },
+      'slate.500': { default: '#4A5568', _dark: '#CBD5E0' },
+      'slate.400': { default: '#4A5568', _dark: '#CBD5E0' },
+      'slate.300': { default: '#2D3748', _dark: '#E2E8F0' },
+      'slate.200': { default: '#1A2024', _dark: '#F5F7F5' },
       'slate.100': { default: '#F5F7F5', _dark: '#292D2A' },
       'slate.50': { default: '#FFFFFF', _dark: '#171918' },
 
-      // Grays mapped to prompt palette
-      'gray.900': { default: '#202124', _dark: '#F5F7F5' },
-      'gray.800': { default: '#3B423C', _dark: '#D0D6D1' },
-      'gray.700': { default: '#4A504A', _dark: '#B8C0B9' },
-      'gray.600': { default: '#606860', _dark: '#9FA7A0' },
-      'gray.500': { default: '#606860', _dark: '#859086' },
-      'gray.400': { default: '#606860', _dark: '#B8C0B9' },
-      'gray.300': { default: '#859086', _dark: '#D0D6D1' },
-      'gray.200': { default: '#DDE5DD', _dark: '#3B423C' },
-      'gray.100': { default: '#F5F7F5', _dark: '#292D2A' },
+      // Grays mapped to normal visible font colors (never faint/invisible)
+      'gray.900': { default: '#1A2024', _dark: '#F5F7F5' },
+      'gray.800': { default: '#202124', _dark: '#F5F7F5' },
+      'gray.700': { default: '#2D3748', _dark: '#E2E8F0' },
+      'gray.600': { default: '#2D3748', _dark: '#CBD5E0' },
+      'gray.500': { default: '#4A5568', _dark: '#A0AEC0' },
+      'gray.400': { default: '#4A5568', _dark: '#CBD5E0' },
+      'gray.300': { default: '#2D3748', _dark: '#E2E8F0' },
+      'gray.200': { default: '#1A2024', _dark: '#F5F7F5' },
+      'gray.100': { default: '#1A2024', _dark: '#F5F7F5' },
       'gray.50': { default: '#F5F7F5', _dark: '#202321' },
 
       // Brand / Purple / Cyan / Orange aliases mapped to theme

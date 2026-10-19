@@ -35,6 +35,11 @@ import {
   getLabQuestion,
   updateLabQuestion,
   deleteLabQuestion,
+  publishLabQuestion,
+  unpublishLabQuestion,
+  archiveLabQuestion,
+  unarchiveLabQuestion,
+  getQuestionBankTopicsSummary,
   addLabTestCase,
   updateLabTestCase,
   deleteLabTestCase,
@@ -98,9 +103,20 @@ export const questionBankRouter = Router();
 
 questionBankRouter.post('/', isAuthenticated, isFacultyOrAdmin, validate(createLabQuestionValidation), createLabQuestion);
 questionBankRouter.get('/', isAuthenticated, listLabQuestions);
+questionBankRouter.get('/topics-summary', isAuthenticated, isFacultyOrAdmin, getQuestionBankTopicsSummary);
 questionBankRouter.get('/:questionId', isAuthenticated, getLabQuestion);
 questionBankRouter.put('/:questionId', isAuthenticated, isFacultyOrAdmin, validate(updateLabQuestionValidation), updateLabQuestion);
 questionBankRouter.delete('/:questionId', isAuthenticated, isFacultyOrAdmin, deleteLabQuestion);
+
+// Publishing & Archiving
+questionBankRouter.patch('/:questionId/publish', isAuthenticated, isFacultyOrAdmin, publishLabQuestion);
+questionBankRouter.put('/:questionId/publish', isAuthenticated, isFacultyOrAdmin, publishLabQuestion);
+questionBankRouter.patch('/:questionId/unpublish', isAuthenticated, isFacultyOrAdmin, unpublishLabQuestion);
+questionBankRouter.put('/:questionId/unpublish', isAuthenticated, isFacultyOrAdmin, unpublishLabQuestion);
+questionBankRouter.patch('/:questionId/archive', isAuthenticated, isFacultyOrAdmin, archiveLabQuestion);
+questionBankRouter.put('/:questionId/archive', isAuthenticated, isFacultyOrAdmin, archiveLabQuestion);
+questionBankRouter.patch('/:questionId/unarchive', isAuthenticated, isFacultyOrAdmin, unarchiveLabQuestion);
+questionBankRouter.put('/:questionId/unarchive', isAuthenticated, isFacultyOrAdmin, unarchiveLabQuestion);
 
 // Test cases
 questionBankRouter.post('/:questionId/testcases', isAuthenticated, isFacultyOrAdmin, validate(labTestCaseValidation), addLabTestCase);

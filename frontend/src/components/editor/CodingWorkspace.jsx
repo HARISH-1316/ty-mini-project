@@ -161,16 +161,46 @@ const CodingWorkspace = ({
     });
   };
 
-  const handleCopySample = (text) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: 'Copied to clipboard',
-      status: 'success',
-      duration: 1500,
-      isClosable: true,
+  const notifyCopyPasteDisabled = () => {
+    if (!toast.isActive('clipboard-blocked-alert')) {
+      toast({
+        id: 'clipboard-blocked-alert',
+        title: 'Action Disabled',
+        description: 'Copying and pasting is disabled in the IDE during assessments.',
+        status: 'warning',
+        duration: 2500,
+        isClosable: true,
+        position: 'top',
+      });
+    }
+  };
+
+  const handleEditorDidMount = (editor, monaco) => {
+    // Intercept keyboard shortcuts: Ctrl+C, Ctrl+V, Ctrl+X, Cmd+C, Cmd+V, Cmd+X, Shift+Insert
+    editor.onKeyDown((e) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      if (
+        (isCtrlOrCmd && (e.keyCode === monaco.KeyCode.KeyC || e.keyCode === monaco.KeyCode.KeyV || e.keyCode === monaco.KeyCode.KeyX)) ||
+        (e.shiftKey && e.keyCode === monaco.KeyCode.Insert)
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        notifyCopyPasteDisabled();
+      }
+    });
+
+    // Override Monaco internal commands for clipboard
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+      notifyCopyPasteDisabled();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
+      notifyCopyPasteDisabled();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
+      notifyCopyPasteDisabled();
+    });
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Insert, () => {
+      notifyCopyPasteDisabled();
     });
   };
 
@@ -304,11 +334,11 @@ const CodingWorkspace = ({
 
   if (!questions || questions.length === 0) {
     return (
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
         <CardBody p={8} textAlign="center">
-          <Icon as={TimeIcon} w={8} h={8} color="purple.400" mb={3} />
-          <Heading size="md" color="white">No Coding Problems Available</Heading>
-          <Text color="gray.400" fontSize="sm" mt={2}>
+          <Icon as={TimeIcon} w={8} h={8} color="green.500" mb={3} />
+          <Heading size="md" color="#1A2024">No Coding Problems Available</Heading>
+          <Text color="#505750" fontSize="sm" mt={2}>
             Your instructor has not configured coding questions for this assessment yet.
           </Text>
         </CardBody>
@@ -319,14 +349,14 @@ const CodingWorkspace = ({
   return (
     <VStack spacing={4} align="stretch" w="full">
       {/* ── Top Bar: Title & Question Selector ────────── */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
         <CardBody p={4}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
             <HStack spacing={3}>
-              <Heading size="md" color="white">
+              <Heading size="md" color="#1A2024">
                 {assessmentTitle}
               </Heading>
-              <Badge colorScheme="purple" px={2.5} py={0.5} borderRadius="full">
+              <Badge colorScheme="green" px={2.5} py={0.5} borderRadius="full">
                 {questions.length} Question{questions.length > 1 ? 's' : ''}
               </Badge>
             </HStack>
@@ -334,14 +364,14 @@ const CodingWorkspace = ({
             {/* Question Selector tabs if multiple */}
             {questions.length > 1 && (
               <HStack spacing={2}>
-                <Text fontSize="xs" color="gray.400">Question:</Text>
+                <Text fontSize="xs" color="#505750" fontWeight="bold">Question:</Text>
                 {questions.map((q, idx) => (
                   <Button
                     key={q.tca_question_id || q.scca_id || idx}
                     size="sm"
                     variant={selectedQuestionIndex === idx ? 'solid' : 'outline'}
-                    colorScheme={selectedQuestionIndex === idx ? 'purple' : 'gray'}
-                    borderColor="slate.600"
+                    colorScheme="green"
+                    borderColor="#DDE5DD"
                     onClick={() => setSelectedQuestionIndex(idx)}
                   >
                     Q{idx + 1}
@@ -357,32 +387,32 @@ const CodingWorkspace = ({
       <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={4} alignItems="start">
         {/* LEFT COLUMN: Problem Description (5 cols) */}
         <Box gridColumn={{ base: 'span 12', lg: 'span 5' }}>
-          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" h="full">
+          <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm" h="full">
             <CardBody p={5}>
               <VStack align="stretch" spacing={5}>
                 {/* Problem Header */}
                 <Box>
                   <Flex justify="space-between" align="center" mb={1}>
-                    <Tag size="sm" colorScheme="purple">
+                    <Tag size="sm" colorScheme="green">
                       Question {selectedQuestionIndex + 1} of {questions.length}
                     </Tag>
-                    <Badge colorScheme="cyan" fontSize="xs" px={2} py={0.5}>
+                    <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
                       {currentQuestion?.marks || 10} Marks
                     </Badge>
                   </Flex>
-                  <Heading size="md" color="white" mt={2}>
+                  <Heading size="md" color="#1A2024" mt={2}>
                     {currentQuestion?.title || `Problem ${selectedQuestionIndex + 1}`}
                   </Heading>
                 </Box>
 
-                <Divider borderColor="slate.700" />
+                <Divider borderColor="#DDE5DD" />
 
                 {/* Problem Statement */}
                 <Box>
-                  <Text fontSize="xs" fontWeight="bold" color="purple.300" textTransform="uppercase" letterSpacing="wider" mb={2}>
+                  <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={2}>
                     Problem Statement
                   </Text>
-                  <Text color="gray.200" fontSize="sm" lineHeight="tall" whiteSpace="pre-line">
+                  <Text color="#1A2024" fontSize="sm" lineHeight="tall" whiteSpace="pre-line" fontWeight="400">
                     {currentQuestion?.problem_statement}
                   </Text>
                 </Box>
@@ -390,11 +420,11 @@ const CodingWorkspace = ({
                 {/* Constraints */}
                 {currentQuestion?.constraints && (
                   <Box>
-                    <Text fontSize="xs" fontWeight="bold" color="purple.300" textTransform="uppercase" letterSpacing="wider" mb={2}>
+                    <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={2}>
                       Constraints
                     </Text>
-                    <Box p={3} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.750">
-                      <Code colorScheme="purple" bg="transparent" color="gray.300" fontSize="xs" whiteSpace="pre-line">
+                    <Box p={3} bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
+                      <Code bg="transparent" color="#1A2024" fontSize="xs" whiteSpace="pre-line">
                         {currentQuestion.constraints}
                       </Code>
                     </Box>
@@ -404,22 +434,11 @@ const CodingWorkspace = ({
                 {/* Sample Input / Output */}
                 {currentQuestion?.sample_input && (
                   <Box>
-                    <Flex justify="space-between" align="center" mb={1}>
-                      <Text fontSize="xs" fontWeight="bold" color="purple.300" textTransform="uppercase" letterSpacing="wider">
-                        Sample Input
-                      </Text>
-                      <Button
-                        size="2xs"
-                        variant="ghost"
-                        colorScheme="gray"
-                        leftIcon={copied ? <CheckIcon /> : <CopyIcon />}
-                        onClick={() => handleCopySample(currentQuestion.sample_input)}
-                      >
-                        {copied ? 'Copied' : 'Copy'}
-                      </Button>
-                    </Flex>
-                    <Box p={3} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.750">
-                      <Code colorScheme="purple" bg="transparent" color="emerald.300" fontSize="xs" whiteSpace="pre">
+                    <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
+                      Sample Input
+                    </Text>
+                    <Box p={3} bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
+                      <Code bg="transparent" color="#1A2024" fontSize="xs" whiteSpace="pre">
                         {currentQuestion.sample_input}
                       </Code>
                     </Box>
@@ -428,11 +447,11 @@ const CodingWorkspace = ({
 
                 {currentQuestion?.sample_output && (
                   <Box>
-                    <Text fontSize="xs" fontWeight="bold" color="purple.300" textTransform="uppercase" letterSpacing="wider" mb={1}>
+                    <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Sample Output
                     </Text>
-                    <Box p={3} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.750">
-                      <Code colorScheme="purple" bg="transparent" color="cyan.300" fontSize="xs" whiteSpace="pre">
+                    <Box p={3} bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
+                      <Code bg="transparent" color="#1A2024" fontSize="xs" whiteSpace="pre">
                         {currentQuestion.sample_output}
                       </Code>
                     </Box>
@@ -447,17 +466,17 @@ const CodingWorkspace = ({
         <Box gridColumn={{ base: 'span 12', lg: 'span 7' }}>
           <VStack spacing={4} align="stretch">
             {/* Editor Toolbar */}
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+            <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={3}>
                 <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
                   <HStack spacing={2}>
-                    <Text fontSize="xs" color="gray.400" fontWeight="bold">Language:</Text>
+                    <Text fontSize="xs" color="#1A2024" fontWeight="bold">Language:</Text>
                     <Select
                       size="sm"
                       w="130px"
-                      bg="slate.900"
-                      borderColor="slate.700"
-                      color="white"
+                      bg="#FFFFFF"
+                      borderColor="#DDE5DD"
+                      color="#1A2024"
                       value={language}
                       onChange={handleLanguageChange}
                     >
@@ -483,8 +502,8 @@ const CodingWorkspace = ({
 
                     <Button
                       size="sm"
-                      colorScheme="cyan"
-                      variant="solid"
+                      colorScheme="green"
+                      variant="outline"
                       onClick={handleRunCode}
                       isLoading={isRunning}
                       loadingText="Running..."
@@ -506,15 +525,34 @@ const CodingWorkspace = ({
               </CardBody>
             </Card>
 
-            {/* Monaco Editor Container */}
-            <Card bg="slate.900" borderColor="slate.700" borderWidth="1px" overflow="hidden" borderRadius="xl">
-              <Box h="380px" w="full">
+            {/* Monaco Editor Container with strict Anti-Cheat / No Copy-Paste */}
+            <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" overflow="hidden" borderRadius="xl" boxShadow="sm">
+              <Box
+                h="380px"
+                w="full"
+                onPaste={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  notifyCopyPasteDisabled();
+                }}
+                onCopy={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  notifyCopyPasteDisabled();
+                }}
+                onCut={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  notifyCopyPasteDisabled();
+                }}
+              >
                 <Editor
                   height="100%"
                   language={language === 'c' || language === 'cpp' ? 'cpp' : language}
                   value={codeMap[language]}
                   theme="vs-dark"
                   onChange={handleCodeChange}
+                  onMount={handleEditorDidMount}
                   options={{
                     fontSize: 14,
                     fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
@@ -523,23 +561,25 @@ const CodingWorkspace = ({
                     automaticLayout: true,
                     tabSize: 4,
                     padding: { top: 12, bottom: 12 },
+                    contextmenu: false, // Disables right-click menu (prevent paste & copy options)
+                    copyWithSyntaxHighlighting: false,
                   }}
                 />
               </Box>
             </Card>
 
             {/* Execution / Results Panel */}
-            <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+            <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={4}>
-                <Tabs index={activeTab} onChange={(idx) => setActiveTab(idx)} colorScheme="purple" variant="enclosed">
-                  <TabList borderColor="slate.700">
-                    <Tab color="gray.400" _selected={{ color: 'purple.300', bg: 'slate.900', borderColor: 'slate.700' }} fontSize="xs" fontWeight="bold">
+                <Tabs index={activeTab} onChange={(idx) => setActiveTab(idx)} colorScheme="green" variant="enclosed">
+                  <TabList borderColor="#DDE5DD">
+                    <Tab color="#505750" _selected={{ color: '#2F8D46', bg: '#F2F6F3', borderColor: '#DDE5DD', fontWeight: 'bold' }} fontSize="xs">
                       Console Output {runResult && (runResult.success ? '✓' : '✗')}
                     </Tab>
-                    <Tab color="gray.400" _selected={{ color: 'purple.300', bg: 'slate.900', borderColor: 'slate.700' }} fontSize="xs" fontWeight="bold">
+                    <Tab color="#505750" _selected={{ color: '#2F8D46', bg: '#F2F6F3', borderColor: '#DDE5DD', fontWeight: 'bold' }} fontSize="xs">
                       Test Case Results {submitResult && (submitResult.isCompleted ? '✓' : '○')}
                     </Tab>
-                    <Tab color="gray.400" _selected={{ color: 'purple.300', bg: 'slate.900', borderColor: 'slate.700' }} fontSize="xs" fontWeight="bold">
+                    <Tab color="#505750" _selected={{ color: '#2F8D46', bg: '#F2F6F3', borderColor: '#DDE5DD', fontWeight: 'bold' }} fontSize="xs">
                       Custom Stdin
                     </Tab>
                   </TabList>
@@ -548,7 +588,7 @@ const CodingWorkspace = ({
                     {/* TAB 1: Console Run Output */}
                     <TabPanel p={3}>
                       {isRunning ? (
-                        <Text color="gray.400" fontSize="sm">Executing sandboxed container...</Text>
+                        <Text color="#505750" fontSize="sm">Executing sandboxed container...</Text>
                       ) : runResult ? (
                         <VStack align="stretch" spacing={3}>
                           <Flex justify="space-between" align="center">
@@ -561,7 +601,7 @@ const CodingWorkspace = ({
                               {runResult.errorType || (runResult.success ? 'SUCCESS' : 'ERROR')}
                             </Badge>
                             {runResult.executionTime !== undefined && (
-                              <HStack color="gray.400" fontSize="xs">
+                              <HStack color="#505750" fontSize="xs">
                                 <Icon as={TimeIcon} />
                                 <Text>{runResult.executionTime} ms</Text>
                               </HStack>
@@ -571,11 +611,11 @@ const CodingWorkspace = ({
                           {/* Stdout */}
                           {runResult.output && (
                             <Box>
-                              <Text fontSize="2xs" color="gray.400" textTransform="uppercase" fontWeight="bold" mb={1}>
+                              <Text fontSize="2xs" color="#505750" textTransform="uppercase" fontWeight="bold" mb={1}>
                                 Standard Output
                               </Text>
-                              <Box p={3} bg="slate.950" borderRadius="md" border="1px solid" borderColor="slate.700">
-                                <Code colorScheme="purple" bg="transparent" color="gray.100" fontSize="xs" whiteSpace="pre-wrap" display="block">
+                              <Box p={3} bg="#171918" borderRadius="md" border="1px solid" borderColor="#3B423C">
+                                <Code bg="transparent" color="#F5F7F5" fontSize="xs" whiteSpace="pre-wrap" display="block">
                                   {runResult.output}
                                 </Code>
                               </Box>
@@ -585,11 +625,11 @@ const CodingWorkspace = ({
                           {/* Error */}
                           {runResult.error && (
                             <Box>
-                              <Text fontSize="2xs" color="red.400" textTransform="uppercase" fontWeight="bold" mb={1}>
+                              <Text fontSize="2xs" color="red.600" textTransform="uppercase" fontWeight="bold" mb={1}>
                                 Error Output
                               </Text>
-                              <Box p={3} bg="rgba(127, 29, 29, 0.2)" borderRadius="md" border="1px solid" borderColor="red.800">
-                                <Code colorScheme="red" bg="transparent" color="red.200" fontSize="xs" whiteSpace="pre-wrap" display="block">
+                              <Box p={3} bg="rgba(127, 29, 29, 0.1)" borderRadius="md" border="1px solid" borderColor="red.300">
+                                <Code bg="transparent" color="red.700" fontSize="xs" whiteSpace="pre-wrap" display="block">
                                   {runResult.error}
                                 </Code>
                               </Box>
@@ -597,8 +637,8 @@ const CodingWorkspace = ({
                           )}
                         </VStack>
                       ) : (
-                        <Text color="gray.400" fontSize="xs">
-                          Click <strong>Run Code</strong> to execute your solution with custom stdin.
+                        <Text color="#505750" fontSize="xs">
+                          Click <strong style={{ color: '#1A2024' }}>Run Code</strong> to execute your solution with custom stdin.
                         </Text>
                       )}
                     </TabPanel>
@@ -606,7 +646,7 @@ const CodingWorkspace = ({
                     {/* TAB 2: Submission Test Case Results */}
                     <TabPanel p={3}>
                       {isSubmitting ? (
-                        <Text color="gray.400" fontSize="sm">Grading solution against all test cases...</Text>
+                        <Text color="#505750" fontSize="sm">Grading solution against all test cases...</Text>
                       ) : submitResult ? (
                         <VStack align="stretch" spacing={4}>
                           <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
@@ -620,23 +660,23 @@ const CodingWorkspace = ({
                               >
                                 {submitResult.status || (submitResult.isCompleted ? 'PASSED' : 'FAILED')}
                               </Badge>
-                              <Tag colorScheme="purple" size="sm">
+                              <Tag colorScheme="green" size="sm">
                                 Score: {submitResult.score || 0} / {submitResult.totalMarks || 10}
                               </Tag>
                             </HStack>
 
-                            <Text color="gray.400" fontSize="xs">
+                            <Text color="#505750" fontSize="xs">
                               Passed: {submitResult.passedTestCases || 0} / {submitResult.totalTestCases || 0} Test Cases
                             </Text>
                           </Flex>
 
                           {/* Error block if compile error */}
                           {submitResult.error && (
-                            <Box p={3} bg="rgba(127, 29, 29, 0.2)" borderRadius="md" border="1px solid" borderColor="red.800">
-                              <Text fontSize="xs" color="red.300" fontWeight="bold" mb={1}>
+                            <Box p={3} bg="rgba(127, 29, 29, 0.1)" borderRadius="md" border="1px solid" borderColor="red.300">
+                              <Text fontSize="xs" color="red.700" fontWeight="bold" mb={1}>
                                 {submitResult.errorType || 'Evaluation Error'}
                               </Text>
-                              <Code colorScheme="red" bg="transparent" color="red.200" fontSize="xs" whiteSpace="pre-wrap">
+                              <Code bg="transparent" color="red.700" fontSize="xs" whiteSpace="pre-wrap">
                                 {submitResult.error}
                               </Code>
                             </Box>
@@ -649,18 +689,18 @@ const CodingWorkspace = ({
                                 <Box
                                   key={tc.testCaseId || idx}
                                   p={3}
-                                  bg="slate.900"
+                                  bg="#F5F7F5"
                                   borderRadius="md"
                                   border="1px solid"
-                                  borderColor={tc.passed ? 'emerald.800' : 'red.800'}
+                                  borderColor={tc.passed ? '#C8E6C9' : '#FFCDD2'}
                                 >
                                   <Flex justify="space-between" align="center">
                                     <HStack spacing={2}>
                                       <Icon
                                         as={tc.passed ? CheckCircleIcon : WarningIcon}
-                                        color={tc.passed ? 'emerald.400' : 'red.400'}
+                                        color={tc.passed ? 'green.500' : 'red.500'}
                                       />
-                                      <Text color="white" fontSize="xs" fontWeight="bold">
+                                      <Text color="#1A2024" fontSize="xs" fontWeight="bold">
                                         Test Case {idx + 1} {tc.isHidden ? '(Hidden)' : ''}
                                       </Text>
                                     </HStack>
@@ -670,7 +710,7 @@ const CodingWorkspace = ({
                                         {tc.status || (tc.passed ? 'PASSED' : 'FAILED')}
                                       </Badge>
                                       {tc.executionTime !== undefined && (
-                                        <Text color="gray.500" fontSize="2xs">
+                                        <Text color="#505750" fontSize="2xs">
                                           {tc.executionTime}ms
                                         </Text>
                                       )}
@@ -678,10 +718,10 @@ const CodingWorkspace = ({
                                   </Flex>
 
                                   {!tc.isHidden && !tc.passed && (
-                                    <Box mt={2} pt={2} borderTop="1px solid" borderColor="slate.800" fontSize="xs">
-                                      <Text color="gray.400">Input: <Code colorScheme="gray" fontSize="xs">{tc.input}</Code></Text>
-                                      <Text color="gray.400">Expected: <Code colorScheme="green" fontSize="xs">{tc.expectedOutput}</Code></Text>
-                                      <Text color="gray.400">Actual: <Code colorScheme="red" fontSize="xs">{tc.actualOutput || tc.error}</Code></Text>
+                                    <Box mt={2} pt={2} borderTop="1px solid" borderColor="#DDE5DD" fontSize="xs">
+                                      <Text color="#505750">Input: <Code colorScheme="gray" color="#1A2024" fontSize="xs">{tc.input}</Code></Text>
+                                      <Text color="#505750">Expected: <Code colorScheme="green" color="#1A2024" fontSize="xs">{tc.expectedOutput}</Code></Text>
+                                      <Text color="#505750">Actual: <Code colorScheme="red" color="red.700" fontSize="xs">{tc.actualOutput || tc.error}</Code></Text>
                                     </Box>
                                   )}
                                 </Box>
@@ -690,8 +730,8 @@ const CodingWorkspace = ({
                           )}
                         </VStack>
                       ) : (
-                        <Text color="gray.400" fontSize="xs">
-                          Click <strong>Submit</strong> to evaluate your code against all test cases.
+                        <Text color="#505750" fontSize="xs">
+                          Click <strong style={{ color: '#1A2024' }}>Submit</strong> to evaluate your code against all test cases.
                         </Text>
                       )}
                     </TabPanel>
@@ -699,19 +739,20 @@ const CodingWorkspace = ({
                     {/* TAB 3: Custom Stdin Input */}
                     <TabPanel p={3}>
                       <VStack align="stretch" spacing={2}>
-                        <Text fontSize="xs" color="gray.400" fontWeight="bold">
+                        <Text fontSize="xs" color="#1A2024" fontWeight="bold">
                           Provide custom stdin input for testing:
                         </Text>
                         <Textarea
                           value={customInput}
                           onChange={(e) => setCustomInput(e.target.value)}
                           placeholder="Type stdin input here..."
-                          bg="slate.900"
-                          borderColor="slate.700"
-                          color="white"
+                          bg="#FFFFFF"
+                          borderColor="#DDE5DD"
+                          color="#1A2024"
                           fontFamily="monospace"
                           fontSize="xs"
                           rows={4}
+                          _focus={{ borderColor: '#2F8D46', boxShadow: '0 0 0 1px #2F8D46' }}
                         />
                       </VStack>
                     </TabPanel>

@@ -2,7 +2,7 @@
 // Faculty: Lab Assessment Management Dashboard
 // ──────────────────────────────────────────────
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Box, VStack, HStack, Heading, Text, Button, Badge, Card, CardBody,
@@ -14,10 +14,9 @@ import {
   AlertDialogContent, AlertDialogOverlay, Tag, TagLabel, Icon,
   Stat, StatLabel, StatNumber, Divider,
   Checkbox, CheckboxGroup, Alert, AlertIcon, AlertDescription, Stack,
-  Progress,
+  Progress, Select, useColorModeValue,
 } from '@chakra-ui/react';
 import { AddIcon, EditIcon, DeleteIcon, ArrowForwardIcon, CheckCircleIcon, TimeIcon, WarningIcon, CloseIcon } from '@chakra-ui/icons';
-import { useRef } from 'react';
 import {
   getFacultyLabAssessmentsApi,
   getTopicsSummaryApi,
@@ -58,6 +57,14 @@ const LabAssessmentManagement = () => {
   } = useDisclosure();
   const cancelRef = useRef();
 
+  // Consistent normal theme tokens: crisp white cards, green accents, high-contrast dark text
+  const cardBg = '#FFFFFF';
+  const cardBorder = '#DDE5DD';
+  const textColor = '#1A2024';
+  const mutedColor = '#505750';
+  const surfaceBg = '#F2F6F3';
+  const activeGreenSoft = '#E8F5E9';
+
   const [labs, setLabs] = useState([]);
   const [availableTopics, setAvailableTopics] = useState([]);
   const [selectedTopicIds, setSelectedTopicIds] = useState([]);
@@ -72,6 +79,7 @@ const LabAssessmentManagement = () => {
     duration: 120,
     num_questions: 5,
     marks_per_question: 10,
+    allocation_mode: 'random',
   });
 
   const fetchLabs = useCallback(async () => {
@@ -117,11 +125,12 @@ const LabAssessmentManagement = () => {
         start_time: toUtcIsoString(form.start_time),
         end_time: toUtcIsoString(form.end_time),
         topic_ids: selectedTopicIds,
+        allocation_mode: form.allocation_mode,
       });
       const newLab = res.data?.data?.lab;
       toast({ title: 'Assessment created!', description: 'Topics configured successfully.', status: 'success', duration: 3000, isClosable: true });
       onClose();
-      setForm({ title: '', description: '', start_time: '', end_time: '', duration: 120, num_questions: 5, marks_per_question: 10 });
+      setForm({ title: '', description: '', start_time: '', end_time: '', duration: 120, num_questions: 5, marks_per_question: 10, allocation_mode: 'random' });
       setSelectedTopicIds([]);
       navigate(`/faculty/lab-assessments/${newLab.lab_id}`);
     } catch (err) {
@@ -156,27 +165,32 @@ const LabAssessmentManagement = () => {
     return (
       <Flex justify="center" align="center" minH="300px">
         <VStack>
-          <Spinner size="xl" color="purple.400" thickness="4px" />
-          <Text color="gray.400">Loading lab assessments...</Text>
+          <Spinner size="xl" color="brand.500" thickness="4px" />
+          <Text color={mutedColor}>Loading lab assessments...</Text>
         </VStack>
       </Flex>
     );
   }
 
   return (
-    <VStack spacing={8} align="stretch" w="full">
+    <VStack spacing={8} align="stretch" w="full" maxW="1440px" mx="auto" pb={16}>
       {/* Header */}
-      <Box p={8} borderRadius="2xl" bg="bg.card" border="1px solid" borderColor="border.primary" boxShadow="sm">
+      <Box p={6} borderRadius="2xl" bg={cardBg} border="1px solid" borderColor={cardBorder} boxShadow="sm">
         <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={1}>
-            <Heading size="lg" color="text.primary">🧪 Lab Assessments</Heading>
-            <Text color="text.secondary" fontSize="sm">Create and manage practical coding assessments for students</Text>
+            <Heading size="lg" color={textColor} fontWeight="800">
+              Lab Assessments
+            </Heading>
+            <Text color={mutedColor} fontSize="sm">
+              Create, manage, and monitor topic-based coding assessments for your students
+            </Text>
           </VStack>
           <HStack spacing={3}>
             <Button
               as={RouterLink}
               to="/faculty/lab-questions"
               variant="outline"
+              colorScheme="brand"
               size="sm"
             >
               Question Bank
@@ -184,6 +198,7 @@ const LabAssessmentManagement = () => {
             <Button
               leftIcon={<AddIcon />}
               colorScheme="brand"
+              size="sm"
               onClick={onOpen}
             >
               New Assessment
@@ -195,16 +210,16 @@ const LabAssessmentManagement = () => {
       {/* Stats */}
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
         {[
-          { label: 'Total', value: stats.total, color: 'purple.300' },
-          { label: 'Active Now', value: stats.active, color: 'green.400' },
-          { label: 'Drafts', value: stats.draft, color: 'gray.400' },
-          { label: 'Completed', value: stats.completed, color: 'cyan.400' },
+          { label: 'Total Assessments', value: stats.total, color: 'blue.600' },
+          { label: 'Active Now', value: stats.active, color: 'green.600' },
+          { label: 'Drafts', value: stats.draft, color: 'orange.600' },
+          { label: 'Completed', value: stats.completed, color: 'purple.600' },
         ].map(s => (
-          <Card key={s.label} bg="slate.800" borderColor="slate.700" borderWidth="1px">
-            <CardBody>
+          <Card key={s.label} bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="xs">
+            <CardBody py={4}>
               <Stat>
-                <StatLabel color="gray.400" fontSize="xs">{s.label}</StatLabel>
-                <StatNumber color={s.color} fontSize="3xl">{s.value}</StatNumber>
+                <StatLabel color={mutedColor} fontSize="xs" fontWeight="600">{s.label}</StatLabel>
+                <StatNumber color={s.color} fontSize="2xl" fontWeight="800">{s.value}</StatNumber>
               </Stat>
             </CardBody>
           </Card>
@@ -213,11 +228,11 @@ const LabAssessmentManagement = () => {
 
       {/* Assessment List */}
       {labs.length === 0 ? (
-        <Box p={12} bg="slate.800" borderRadius="2xl" textAlign="center" border="1px dashed" borderColor="slate.600">
+        <Box p={12} bg={cardBg} borderRadius="2xl" textAlign="center" border="1px dashed" borderColor={cardBorder}>
           <Text fontSize="4xl" mb={3}>🧪</Text>
-          <Heading size="md" color="white" mb={2}>No Lab Assessments Yet</Heading>
-          <Text color="gray.400" mb={6}>Create your first lab assessment to get started.</Text>
-          <Button leftIcon={<AddIcon />} colorScheme="purple" onClick={onOpen}>Create First Assessment</Button>
+          <Heading size="md" color={textColor} mb={2}>No Lab Assessments Yet</Heading>
+          <Text color={mutedColor} mb={6}>Create your first lab assessment to get started.</Text>
+          <Button leftIcon={<AddIcon />} colorScheme="brand" onClick={onOpen}>Create First Assessment</Button>
         </Box>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
@@ -226,35 +241,56 @@ const LabAssessmentManagement = () => {
             return (
               <Card
                 key={lab.lab_id}
-                bg="slate.800"
-                borderColor="slate.700"
+                bg={cardBg}
+                borderColor={cardBorder}
                 borderWidth="1px"
                 borderRadius="xl"
+                boxShadow="xs"
                 transition="all 0.2s"
-                _hover={{ transform: 'translateY(-3px)', borderColor: 'purple.500', boxShadow: 'xl' }}
+                _hover={{ transform: 'translateY(-2px)', borderColor: 'brand.500', boxShadow: 'md' }}
               >
                 <CardBody>
                   <VStack align="start" spacing={3}>
                     <Flex w="full" justify="space-between" align="start">
-                      <Badge colorScheme={STATUS_COLORS[lab.status]} px={2} py={0.5} borderRadius="md" textTransform="capitalize">
-                        <HStack spacing={1}>
-                          <Icon as={StatusIcon} boxSize={3} />
-                          <Text>{lab.status}</Text>
-                        </HStack>
-                      </Badge>
-                      <Text color="gray.500" fontSize="xs">{lab.num_questions || 5} Q • {lab.marks_per_question || 10} pts each</Text>
+                      <HStack spacing={2}>
+                        <Badge colorScheme={STATUS_COLORS[lab.status]} px={2} py={0.5} borderRadius="md" textTransform="capitalize">
+                          <HStack spacing={1}>
+                            <Icon as={StatusIcon} boxSize={3} />
+                            <Text>{lab.status}</Text>
+                          </HStack>
+                        </Badge>
+                        <Badge
+                          colorScheme={
+                            lab.allocation_mode === 'specific'
+                              ? 'cyan'
+                              : lab.allocation_mode === 'hybrid'
+                              ? 'teal'
+                              : 'purple'
+                          }
+                          px={2}
+                          py={0.5}
+                          borderRadius="md"
+                        >
+                          {lab.allocation_mode === 'specific'
+                            ? 'Mode A: Specific'
+                            : lab.allocation_mode === 'hybrid'
+                            ? 'Mode C: Hybrid'
+                            : 'Mode B: Random'}
+                        </Badge>
+                      </HStack>
+                      <Text color={mutedColor} fontSize="xs" fontWeight="600">{lab.num_questions || 5} Qs • {lab.marks_per_question || 10} pts</Text>
                     </Flex>
 
-                    <Heading size="sm" color="white" noOfLines={2}>{lab.title}</Heading>
+                    <Heading size="sm" color={textColor} noOfLines={2} fontWeight="700">{lab.title}</Heading>
 
                     {lab.description && (
-                      <Text color="gray.400" fontSize="xs" noOfLines={2}>{lab.description}</Text>
+                      <Text color={mutedColor} fontSize="xs" noOfLines={2}>{lab.description}</Text>
                     )}
 
                     {lab.topics && lab.topics.length > 0 && (
                       <HStack wrap="wrap" gap={1}>
                         {lab.topics.slice(0, 3).map(t => (
-                          <Tag key={t.topic_id} size="sm" colorScheme="purple" variant="subtle">
+                          <Tag key={t.topic_id} size="sm" colorScheme="green" variant="subtle">
                             <TagLabel fontSize="xs">{t.topic_title}</TagLabel>
                           </Tag>
                         ))}
@@ -266,26 +302,26 @@ const LabAssessmentManagement = () => {
                       </HStack>
                     )}
 
-                    <Divider borderColor="slate.700" />
+                    <Divider borderColor={cardBorder} />
 
                     <VStack align="start" spacing={1} w="full">
-                      <Text color="gray.500" fontSize="xs">
+                      <Text color={mutedColor} fontSize="xs">
                         📅 Start: {formatDateTime(lab.start_time)}
                       </Text>
-                      <Text color="gray.500" fontSize="xs">
+                      <Text color={mutedColor} fontSize="xs">
                         🏁 End: {formatDateTime(lab.end_time)}
                       </Text>
-                      <Text color="gray.500" fontSize="xs">
-                        ⏱ Duration: {lab.duration} min
+                      <Text color={mutedColor} fontSize="xs">
+                        ⏱ Duration: {lab.duration} mins
                       </Text>
                     </VStack>
 
-                    <HStack w="full" spacing={2}>
+                    <HStack w="full" spacing={2} pt={2}>
                       <Button
                         as={RouterLink}
                         to={`/faculty/lab-assessments/${lab.lab_id}`}
                         size="sm"
-                        colorScheme="purple"
+                        colorScheme="brand"
                         variant="solid"
                         flex={1}
                         rightIcon={<ArrowForwardIcon />}
@@ -315,128 +351,132 @@ const LabAssessmentManagement = () => {
       {/* Create Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px">
-          <ModalHeader color="white">Create New Lab Assessment</ModalHeader>
-          <ModalCloseButton color="gray.400" />
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl">
+          <ModalHeader color={textColor} fontWeight="800">Create New Lab Assessment</ModalHeader>
+          <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
               <FormControl isRequired>
-                <FormLabel color="gray.300" fontSize="sm">Assessment Title</FormLabel>
+                <FormLabel color={textColor} fontSize="sm" fontWeight="600">Assessment Title</FormLabel>
                 <Input
                   placeholder="e.g., DSA Lab Assessment — Unit 3"
-                  bg="dark.bg"
-                  borderColor="slate.600"
-                  color="white"
                   value={form.title}
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  _placeholder={{ color: 'gray.500' }}
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel color="gray.300" fontSize="sm">Description</FormLabel>
+                <FormLabel color={textColor} fontSize="sm" fontWeight="600">Description</FormLabel>
                 <Textarea
                   placeholder="Brief description of the assessment..."
-                  bg="dark.bg"
-                  borderColor="slate.600"
-                  color="white"
                   rows={3}
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  _placeholder={{ color: 'gray.500' }}
                 />
               </FormControl>
 
               <SimpleGrid columns={2} spacing={4} w="full">
                 <FormControl isRequired>
-                  <FormLabel color="gray.300" fontSize="sm">Start Date & Time</FormLabel>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">Start Date & Time</FormLabel>
                   <Input
                     type="datetime-local"
-                    bg="dark.bg"
-                    borderColor="slate.600"
-                    color="white"
                     value={form.start_time}
                     onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
-                    sx={{ colorScheme: 'dark' }}
                   />
                 </FormControl>
                 <FormControl isRequired>
-                  <FormLabel color="gray.300" fontSize="sm">End Date & Time</FormLabel>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">End Date & Time</FormLabel>
                   <Input
                     type="datetime-local"
-                    bg="dark.bg"
-                    borderColor="slate.600"
-                    color="white"
                     value={form.end_time}
                     onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
-                    sx={{ colorScheme: 'dark' }}
                   />
                 </FormControl>
               </SimpleGrid>
 
               <SimpleGrid columns={3} spacing={4} w="full">
                 <FormControl isRequired>
-                  <FormLabel color="gray.300" fontSize="sm">Duration (min)</FormLabel>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">Duration (min)</FormLabel>
                   <NumberInput
                     min={5}
                     max={480}
                     value={form.duration}
                     onChange={(_, v) => setForm(f => ({ ...f, duration: v || 120 }))}
                   >
-                    <NumberInputField bg="dark.bg" borderColor="slate.600" color="white" />
+                    <NumberInputField />
                     <NumberInputStepper>
-                      <NumberIncrementStepper borderColor="slate.600" color="gray.400" />
-                      <NumberDecrementStepper borderColor="slate.600" color="gray.400" />
+                      <NumberIncrementStepper />
+                      <NumberDecrementStepper />
                     </NumberInputStepper>
                   </NumberInput>
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color="gray.300" fontSize="sm">Questions / Student</FormLabel>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">Questions / Student</FormLabel>
                   <NumberInput
                     min={1}
                     max={50}
                     value={form.num_questions}
                     onChange={(_, v) => setForm(f => ({ ...f, num_questions: v || 5 }))}
                   >
-                    <NumberInputField bg="dark.bg" borderColor="slate.600" color="white" />
+                    <NumberInputField />
                     <NumberInputStepper>
-                      <NumberIncrementStepper borderColor="slate.600" color="gray.400" />
-                      <NumberDecrementStepper borderColor="slate.600" color="gray.400" />
+                      <NumberIncrementStepper />
+                      <NumberDecrementStepper />
                     </NumberInputStepper>
                   </NumberInput>
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color="gray.300" fontSize="sm">Marks / Question</FormLabel>
+                  <FormLabel color={textColor} fontSize="sm" fontWeight="600">Marks / Question</FormLabel>
                   <NumberInput
                     min={1}
                     max={100}
                     value={form.marks_per_question}
                     onChange={(_, v) => setForm(f => ({ ...f, marks_per_question: v || 10 }))}
                   >
-                    <NumberInputField bg="dark.bg" borderColor="slate.600" color="white" />
+                    <NumberInputField />
                     <NumberInputStepper>
-                      <NumberIncrementStepper borderColor="slate.600" color="gray.400" />
-                      <NumberDecrementStepper borderColor="slate.600" color="gray.400" />
+                      <NumberIncrementStepper />
+                      <NumberDecrementStepper />
                     </NumberInputStepper>
                   </NumberInput>
                 </FormControl>
               </SimpleGrid>
 
+              {/* Allocation Mode Selector */}
+              <FormControl isRequired w="full">
+                <FormLabel color={textColor} fontSize="sm" fontWeight="600">Question Allocation Mode</FormLabel>
+                <Select
+                  value={form.allocation_mode}
+                  onChange={e => setForm(f => ({ ...f, allocation_mode: e.target.value }))}
+                >
+                  <option value="random">Mode B — Automatic Random Allocation (Unique questions per student)</option>
+                  <option value="specific">Mode A — Faculty Selects Specific Questions (Identical questions for all)</option>
+                  <option value="hybrid">Mode C — Hybrid Allocation (Manual student assignment + random pool)</option>
+                </Select>
+                <Text color={mutedColor} fontSize="xs" mt={1}>
+                  {form.allocation_mode === 'specific'
+                    ? 'Mode A: You will select the exact questions in the next screen. Every student receives the exact same questions.'
+                    : form.allocation_mode === 'hybrid'
+                    ? 'Mode C: You can choose exact questions for specific students; all remaining students receive randomized questions.'
+                    : 'Mode B: The system will randomly allocate the configured number of published questions to each student.'}
+                </Text>
+              </FormControl>
+
               {/* Topic Selection Section */}
               <Box w="full" pt={1}>
                 <Flex justify="space-between" align="center" mb={2}>
-                  <Text color="gray.300" fontSize="sm" fontWeight="semibold">
-                    Select Curriculum Topics for Assessment <Text as="span" color="red.400">*</Text>
+                  <Text color={textColor} fontSize="sm" fontWeight="semibold">
+                    Select Curriculum Topics for Assessment <Text as="span" color="red.500">*</Text>
                   </Text>
-                  <Badge colorScheme={selectedTopicIds.length > 0 ? 'purple' : 'gray'} fontSize="xs">
+                  <Badge colorScheme={selectedTopicIds.length > 0 ? 'green' : 'gray'} fontSize="xs">
                     {selectedTopicIds.length} Selected
                   </Badge>
                 </Flex>
 
                 {availableTopics.length === 0 ? (
-                  <Alert status="warning" borderRadius="md" bg="orange.950" borderColor="orange.800" borderWidth="1px" fontSize="xs">
+                  <Alert status="warning" borderRadius="md" fontSize="xs">
                     <AlertIcon />
                     <AlertDescription>No curriculum topics found. Create topics first in Topic Catalog.</AlertDescription>
                   </Alert>
@@ -449,28 +489,28 @@ const LabAssessmentManagement = () => {
                           key={topic.topic_id}
                           p={2.5}
                           borderRadius="lg"
-                          bg={isChecked ? 'purple.950' : 'dark.bg'}
+                          bg={isChecked ? activeGreenSoft : 'white'}
                           border="1px solid"
-                          borderColor={isChecked ? 'purple.500' : 'slate.700'}
+                          borderColor={isChecked ? 'brand.500' : cardBorder}
                           cursor="pointer"
                           onClick={() => toggleTopicSelection(topic.topic_id)}
                           transition="all 0.15s"
-                          _hover={{ borderColor: 'purple.400' }}
+                          _hover={{ borderColor: 'brand.400' }}
                         >
                           <Flex justify="space-between" align="center">
                             <HStack spacing={3}>
                               <Checkbox
-                                colorScheme="purple"
+                                colorScheme="brand"
                                 isChecked={isChecked}
                                 onChange={() => toggleTopicSelection(topic.topic_id)}
                                 onClick={(e) => e.stopPropagation()}
                               />
                               <VStack align="start" spacing={0}>
-                                <Text fontSize="xs" fontWeight="bold" color="white">
+                                <Text fontSize="xs" fontWeight="bold" color={textColor}>
                                   {topic.title}
                                 </Text>
                                 {topic.description && (
-                                  <Text fontSize="2xs" color="gray.400" noOfLines={1}>
+                                  <Text fontSize="2xs" color={mutedColor} noOfLines={1}>
                                     {topic.description}
                                   </Text>
                                 )}
@@ -494,9 +534,9 @@ const LabAssessmentManagement = () => {
               </Box>
 
               {/* Pool Status Alert */}
-              <Box w="full" p={3} bg="slate.900" borderRadius="md" borderWidth="1px" borderColor="slate.700">
+              <Box w="full" p={3} bg={surfaceBg} borderRadius="md" borderWidth="1px" borderColor={cardBorder}>
                 <HStack justify="space-between" mb={1}>
-                  <Text color="gray.300" fontSize="xs">
+                  <Text color={textColor} fontSize="xs" fontWeight="600">
                     Available Question Pool:
                   </Text>
                   <Badge
@@ -507,51 +547,52 @@ const LabAssessmentManagement = () => {
                   </Badge>
                 </HStack>
                 <Progress
-                  value={Math.min(100, form.num_questions > 0 ? (totalPoolFromSelected / form.num_questions) * 100 : 0)}
-                  size="xs"
+                  value={Math.min(100, (totalPoolFromSelected / (form.num_questions || 5)) * 100)}
                   colorScheme={totalPoolFromSelected >= form.num_questions ? 'green' : 'orange'}
+                  size="xs"
                   borderRadius="full"
-                  mb={2}
                 />
-                <Text color="gray.400" fontSize="2xs">
-                  {totalPoolFromSelected >= form.num_questions
-                    ? '✅ Sufficient question pool. Each student will receive randomized questions from these selected topics.'
-                    : '⚠️ Pool has fewer questions than required. Please select topics with sufficient questions or add questions to the Question Bank.'}
-                </Text>
-              </Box>
-
-              <Box w="full" p={2.5} bg="purple.950" borderRadius="md" borderWidth="1px" borderColor="purple.800">
-                <Text color="purple.300" fontSize="xs">
-                  💡 Total marks = {form.num_questions} questions × {form.marks_per_question} pts = <strong>{form.num_questions * form.marks_per_question} marks</strong>
-                </Text>
               </Box>
             </VStack>
           </ModalBody>
-          <ModalFooter gap={3}>
-            <Button variant="ghost" colorScheme="gray" onClick={onClose}>Cancel</Button>
+
+          <ModalFooter borderTop="1px" borderColor={cardBorder}>
+            <Button variant="ghost" mr={3} onClick={onClose} isDisabled={isCreating}>
+              Cancel
+            </Button>
             <Button
-              colorScheme="purple"
+              colorScheme="brand"
               onClick={handleCreate}
               isLoading={isCreating}
               loadingText="Creating..."
             >
-              Create Assessment
+              Continue to Assessment Config
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      {/* Cancel Confirmation */}
-      <AlertDialog isOpen={isCancelOpen} leastDestructiveRef={cancelRef} onClose={onCancelClose}>
-        <AlertDialogOverlay backdropFilter="blur(4px)">
-          <AlertDialogContent bg="slate.800" borderColor="slate.700" borderWidth="1px">
-            <AlertDialogHeader color="white">Cancel Assessment</AlertDialogHeader>
-            <AlertDialogBody color="gray.300">
-              Are you sure you want to cancel <strong>{selectedLab?.title}</strong>? This cannot be undone and students will no longer be able to access this assessment.
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isCancelOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onCancelClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent borderRadius="2xl">
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Cancel Assessment
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure you want to cancel <strong>{selectedLab?.title}</strong>? Students will no longer be able to take this assessment.
             </AlertDialogBody>
-            <AlertDialogFooter gap={3}>
-              <Button ref={cancelRef} variant="ghost" colorScheme="gray" onClick={onCancelClose}>Keep</Button>
-              <Button colorScheme="red" onClick={handleCancel}>Cancel Assessment</Button>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onCancelClose}>
+                Keep Assessment
+              </Button>
+              <Button colorScheme="red" onClick={handleCancel} ml={3}>
+                Yes, Cancel Assessment
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

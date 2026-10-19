@@ -12,7 +12,7 @@ const StudentLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
-    <Flex direction="column" minH="100vh" bg="dark.bg">
+    <Flex direction="column" minH="100vh" bg="bg.secondary">
       <Navbar onOpenSidebar={onOpen} />
       <Flex flex={1}>
         <Sidebar isOpen={isOpen} onClose={onClose} />

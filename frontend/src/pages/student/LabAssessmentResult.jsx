@@ -218,46 +218,46 @@ const LabAssessmentResult = () => {
 
       {/* Summary Metrics */}
       <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={6}>
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
-            <Text color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
+            <Text color="#505750" fontSize="xs" textTransform="uppercase" fontWeight="bold">
               Fully Accepted
             </Text>
-            <Heading size="lg" color="green.400" mt={1}>
-              {acceptedCount} <Text as="span" fontSize="sm" color="gray.500">of {questionResults?.length || 0}</Text>
+            <Heading size="lg" color="green.600" mt={1}>
+              {acceptedCount} <Text as="span" fontSize="sm" color="#505750">of {questionResults?.length || 0}</Text>
             </Heading>
-            <Text color="gray.500" fontSize="xs" mt={1}>100% test cases passed</Text>
+            <Text color="#505750" fontSize="xs" mt={1}>100% test cases passed</Text>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
-            <Text color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
+            <Text color="#505750" fontSize="xs" textTransform="uppercase" fontWeight="bold">
               Partially Solved
             </Text>
-            <Heading size="lg" color="yellow.400" mt={1}>
-              {partiallyCorrectCount} <Text as="span" fontSize="sm" color="gray.500">questions</Text>
+            <Heading size="lg" color="orange.500" mt={1}>
+              {partiallyCorrectCount} <Text as="span" fontSize="sm" color="#505750">questions</Text>
             </Heading>
-            <Text color="gray.500" fontSize="xs" mt={1}>Partial marks credited</Text>
+            <Text color="#505750" fontSize="xs" mt={1}>Partial marks credited</Text>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
-            <Text color="gray.400" fontSize="xs" textTransform="uppercase" fontWeight="bold">
+            <Text color="#505750" fontSize="xs" textTransform="uppercase" fontWeight="bold">
               Attempt Status
             </Text>
-            <Heading size="lg" color="purple.300" mt={1} textTransform="capitalize">
+            <Heading size="lg" color="brand.500" mt={1} textTransform="capitalize">
               {attempt?.status?.replace(/_/g, ' ') || 'Submitted'}
             </Heading>
-            <Text color="gray.500" fontSize="xs" mt={1}>Locked and finalized</Text>
+            <Text color="#505750" fontSize="xs" mt={1}>Locked and finalized</Text>
           </CardBody>
         </Card>
       </SimpleGrid>
 
       {/* Question-by-Question Breakdown */}
       <VStack align="stretch" spacing={4}>
-        <Heading size="md" color="white">
+        <Heading size="md" color="#1A2024">
           Question Breakdown ({questionResults?.length || 0})
         </Heading>
 
@@ -272,20 +272,21 @@ const LabAssessmentResult = () => {
             return (
               <AccordionItem
                 key={q.lab_question_id || idx}
-                bg="slate.800"
-                borderColor="slate.700"
+                bg="#FFFFFF"
+                borderColor="#DDE5DD"
                 borderWidth="1px"
                 borderRadius="xl"
                 mb={4}
                 overflow="hidden"
+                boxShadow="sm"
               >
-                <AccordionButton p={4} _hover={{ bg: 'slate.750' }}>
+                <AccordionButton p={4} _hover={{ bg: '#F5F7F5' }}>
                   <Flex justify="space-between" align="center" w="full" mr={3}>
                     <HStack spacing={3}>
-                      <Icon as={StatusIcon} color={`${statusConfig.color}.400`} boxSize={5} />
+                      <Icon as={StatusIcon} color={`${statusConfig.color}.500`} boxSize={5} />
                       <VStack align="start" spacing={0}>
                         <HStack>
-                          <Text fontWeight="bold" color="white" fontSize="sm">
+                          <Text fontWeight="bold" color="#1A2024" fontSize="sm">
                             Q{idx + 1}. {q.title || `Question #${idx + 1}`}
                           </Text>
                           <Badge
@@ -296,7 +297,7 @@ const LabAssessmentResult = () => {
                             {q.difficulty || 'medium'}
                           </Badge>
                         </HStack>
-                        <Text fontSize="xs" color="gray.400">
+                        <Text fontSize="xs" color="#505750">
                           {sub.passed_test_cases ?? 0}/{sub.total_test_cases ?? 0} Test Cases Passed • Language: {sub.language?.toUpperCase() || 'N/A'}
                         </Text>
                       </VStack>
@@ -306,21 +307,21 @@ const LabAssessmentResult = () => {
                       <Badge colorScheme={statusConfig.color} px={2} py={0.5} borderRadius="md" fontSize="xs">
                         {statusConfig.label}
                       </Badge>
-                      <Text fontWeight="bold" color="cyan.400" fontSize="sm" minW="75px" textAlign="right">
+                      <Text fontWeight="bold" color="brand.600" fontSize="sm" minW="75px" textAlign="right">
                         {marksObtained} / {questionMarks} M
                       </Text>
                     </HStack>
                   </Flex>
-                  <AccordionIcon color="gray.400" />
+                  <AccordionIcon color="#505750" />
                 </AccordionButton>
 
-                <AccordionPanel pb={5} pt={2} px={5} borderTop="1px solid" borderColor="slate.700">
+                <AccordionPanel pb={5} pt={2} px={5} borderTop="1px solid" borderColor="#DDE5DD">
                   <VStack align="stretch" spacing={4}>
                     <Box>
-                      <Text fontWeight="semibold" color="gray.300" fontSize="xs" mb={1}>
+                      <Text fontWeight="bold" color="#2F8D46" fontSize="xs" textTransform="uppercase" letterSpacing="wider" mb={1}>
                         Problem Statement:
                       </Text>
-                      <Text color="gray.300" fontSize="xs" whiteSpace="pre-wrap">
+                      <Text color="#1A2024" fontSize="sm" lineHeight="tall" whiteSpace="pre-wrap">
                         {q.problem_statement}
                       </Text>
                     </Box>
@@ -330,7 +331,7 @@ const LabAssessmentResult = () => {
                       <Button
                         size="xs"
                         leftIcon={<ViewIcon />}
-                        colorScheme="purple"
+                        colorScheme="brand"
                         variant="outline"
                         onClick={() => handleOpenCode(q)}
                       >
@@ -348,13 +349,13 @@ const LabAssessmentResult = () => {
       {/* Code Viewer Modal */}
       <Modal isOpen={isCodeOpen} onClose={onCodeClose} size="3xl" isCentered>
         <ModalOverlay backdropFilter="blur(5px)" />
-        <ModalContent bg="slate.900" borderColor="slate.700" borderWidth="1px" color="white">
-          <ModalHeader fontSize="md">
+        <ModalContent bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" color="#1A2024" borderRadius="2xl" boxShadow="xl">
+          <ModalHeader fontSize="md" color="#1A2024" borderBottomWidth="1px" borderColor="#DDE5DD">
             Submitted Code — {activeCodeView.title}
           </ModalHeader>
           <ModalCloseButton />
-          <ModalBody pb={6}>
-            <Box h="400px" borderRadius="md" overflow="hidden" border="1px solid" borderColor="slate.800">
+          <ModalBody pb={6} pt={4}>
+            <Box h="400px" borderRadius="md" overflow="hidden" border="1px solid" borderColor="#DDE5DD">
               <Editor
                 height="100%"
                 language={activeCodeView.lang || 'cpp'}

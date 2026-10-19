@@ -15,8 +15,18 @@ export const createLabQuestion = asyncHandler(async (req, res) => {
 });
 
 export const listLabQuestions = asyncHandler(async (req, res) => {
-  const { topicId } = req.query;
-  const questions = await LabAssessmentService.listQuestions(topicId ? parseInt(topicId, 10) : null);
+  const { topicId, subtopicId, status, difficulty, search } = req.query;
+  const filters = {
+    subtopicId: subtopicId ? parseInt(subtopicId, 10) : undefined,
+    status,
+    difficulty,
+    search,
+  };
+  const questions = await LabAssessmentService.listQuestions(
+    topicId ? parseInt(topicId, 10) : null,
+    filters,
+    req.user?.role
+  );
   return successResponse(res, 200, 'Lab questions retrieved.', { questions });
 });
 
@@ -41,6 +51,53 @@ export const deleteLabQuestion = asyncHandler(async (req, res) => {
   const { questionId } = req.params;
   const result = await LabAssessmentService.deleteQuestion(req.user.user_id, parseInt(questionId, 10), req.user.role);
   return successResponse(res, 200, result.message, result);
+});
+
+export const publishLabQuestion = asyncHandler(async (req, res) => {
+  const { questionId } = req.params;
+  const question = await LabAssessmentService.setQuestionPublishStatus(
+    req.user.user_id,
+    parseInt(questionId, 10),
+    true,
+    req.user.role
+  );
+  return successResponse(res, 200, 'Question published successfully.', { question });
+});
+
+export const unpublishLabQuestion = asyncHandler(async (req, res) => {
+  const { questionId } = req.params;
+  const question = await LabAssessmentService.setQuestionPublishStatus(
+    req.user.user_id,
+    parseInt(questionId, 10),
+    false,
+    req.user.role
+  );
+  return successResponse(res, 200, 'Question unpublished and moved to draft.', { question });
+});
+
+export const archiveLabQuestion = asyncHandler(async (req, res) => {
+  const { questionId } = req.params;
+  const question = await LabAssessmentService.archiveQuestion(
+    req.user.user_id,
+    parseInt(questionId, 10),
+    req.user.role
+  );
+  return successResponse(res, 200, 'Question archived.', { question });
+});
+
+export const unarchiveLabQuestion = asyncHandler(async (req, res) => {
+  const { questionId } = req.params;
+  const question = await LabAssessmentService.unarchiveQuestion(
+    req.user.user_id,
+    parseInt(questionId, 10),
+    req.user.role
+  );
+  return successResponse(res, 200, 'Question unarchived.', { question });
+});
+
+export const getQuestionBankTopicsSummary = asyncHandler(async (req, res) => {
+  const topics = await LabAssessmentService.getQuestionBankTopicsSummary();
+  return successResponse(res, 200, 'Question bank topics summary retrieved.', { topics });
 });
 
 // ── Test Case Management ────────────────────────
