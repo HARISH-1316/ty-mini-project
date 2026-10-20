@@ -2,7 +2,7 @@
 // CodingWorkspace — Full Sandboxed Monaco Editor IDE
 // ──────────────────────────────────────────────
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import {
   Box,
@@ -139,14 +139,21 @@ const CodingWorkspace = ({
   const currentQuestion = questions[selectedQuestionIndex] || null;
   const currentQId = currentQuestion ? (currentQuestion.tca_question_id || currentQuestion.scca_id) : null;
 
+  const prevQIdRef = useRef(null);
+
   // Initialize sample input into custom input when question changes
   useEffect(() => {
-    if (currentQuestion && currentQuestion.sample_input) {
-      setCustomInput(currentQuestion.sample_input);
+    if (currentQId && currentQId !== prevQIdRef.current) {
+      prevQIdRef.current = currentQId;
+      if (currentQuestion && currentQuestion.sample_input) {
+        setCustomInput(currentQuestion.sample_input);
+      } else {
+        setCustomInput('');
+      }
+      setRunResult(null);
+      setSubmitResult(null);
     }
-    setRunResult(null);
-    setSubmitResult(null);
-  }, [selectedQuestionIndex, currentQuestion]);
+  }, [currentQId, currentQuestion]);
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;

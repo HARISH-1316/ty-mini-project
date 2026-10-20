@@ -2,7 +2,7 @@
 // Student: Lab Assessment Coding Workspace
 // ──────────────────────────────────────────────
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import {
@@ -378,15 +378,23 @@ const LabAssessmentWorkspace = () => {
     };
   }, [attempt?.effective_deadline, handleTimeExpired]);
 
-  const codingItems = (questions || [])
-    .filter((q) => q.question_type === 'coding' || (!q.mcq_id && q.lab_question_id))
-    .map((q, idx) => ({ ...q, itemType: 'coding', questionNumber: idx + 1 }));
+  const codingItems = useMemo(
+    () =>
+      (questions || [])
+        .filter((q) => q.question_type === 'coding' || (!q.mcq_id && q.lab_question_id))
+        .map((q, idx) => ({ ...q, itemType: 'coding', questionNumber: idx + 1 })),
+    [questions]
+  );
 
-  const mcqItems = (mcqs || [])
-    .filter((m) => m.question_type === 'mcq' || Boolean(m.mcq_id))
-    .map((m, idx) => ({ ...m, itemType: 'mcq', questionNumber: codingItems.length + idx + 1 }));
+  const mcqItems = useMemo(
+    () =>
+      (mcqs || [])
+        .filter((m) => m.question_type === 'mcq' || Boolean(m.mcq_id))
+        .map((m, idx) => ({ ...m, itemType: 'mcq', questionNumber: codingItems.length + idx + 1 })),
+    [mcqs, codingItems.length]
+  );
 
-  const allQuestions = [...codingItems, ...mcqItems];
+  const allQuestions = useMemo(() => [...codingItems, ...mcqItems], [codingItems, mcqItems]);
 
   const currentQuestion = allQuestions[selectedIndex] || allQuestions[0] || null;
   const isCoding = currentQuestion?.itemType === 'coding';
@@ -415,19 +423,24 @@ const LabAssessmentWorkspace = () => {
     }
   };
 
-  // Sync custom input and previous submitted language with current question
+  // Track previous question ID so we ONLY reset custom input and results when switching to a different question
+  const prevQIdRef = useRef(null);
+
   useEffect(() => {
-    if (isCoding && currentQuestion?.sample_input) {
-      setCustomInput(currentQuestion.sample_input);
-    } else {
-      setCustomInput('');
+    if (currentQId && currentQId !== prevQIdRef.current) {
+      prevQIdRef.current = currentQId;
+      if (isCoding && currentQuestion?.sample_input) {
+        setCustomInput(currentQuestion.sample_input);
+      } else {
+        setCustomInput('');
+      }
+      setRunResult(null);
+      setEvalResult(null);
+      if (submissionMap[currentQId]?.language) {
+        setLanguage(submissionMap[currentQId].language);
+      }
     }
-    setRunResult(null);
-    setEvalResult(null);
-    if (currentQId && submissionMap[currentQId]?.language) {
-      setLanguage(submissionMap[currentQId].language);
-    }
-  }, [selectedIndex, isCoding, currentQuestion, currentQId, submissionMap]);
+  }, [currentQId, isCoding, currentQuestion?.sample_input, submissionMap]);
 
   // Current editor code
   const currentCode =
@@ -1015,11 +1028,11 @@ const LabAssessmentWorkspace = () => {
                           )}
                         </HStack>
 
-                        {runResult.output && (
+                        {runResult.output !== undefined && runResult.output !== null && (
                           <Box>
                             <Text color={mutedText} mb={1}>Standard Output:</Text>
                             <Code p={3} borderRadius="md" w="full" bg={surfaceBg} color={textColor} borderColor={cardBorder} borderWidth="1px" display="block" whiteSpace="pre-wrap">
-                              {runResult.output}
+                              {runResult.output !== '' ? runResult.output : '(No output returned)'}
                             </Code>
                           </Box>
                         )}
@@ -1134,9 +1147,21 @@ const LabAssessmentWorkspace = () => {
 
                   {/* Tab 2: Custom Input */}
                   <TabPanel px={0} py={3}>
-                    <Text color={mutedText} fontSize="xs" mb={1}>
-                      Standard Input (stdin) for Run Code:
-                    </Text>
+                    <Flex justify="space-between" align="center" mb={2}>
+                      <Text color={mutedText} fontSize="xs" fontWeight="medium">
+                        Standard Input (stdin) for Run Code:
+                      </Text>
+                      {currentQuestion?.sample_input && (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          colorScheme="green"
+                          onClick={() => setCustomInput(currentQuestion.sample_input)}
+                        >
+                          Reset to Sample Input
+                        </Button>
+                      )}
+                    </Flex>
                     <Textarea
                       size="xs"
                       rows={4}
@@ -1145,7 +1170,7 @@ const LabAssessmentWorkspace = () => {
                       color={textColor}
                       value={customInput}
                       onChange={(e) => setCustomInput(e.target.value)}
-                      placeholder="Enter custom input here..."
+                      placeholder="Enter custom standard input here..."
                     />
                   </TabPanel>
                 </TabPanels>
