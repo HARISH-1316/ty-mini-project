@@ -21,10 +21,16 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install GCC, G++, OpenJDK, Python for student code execution
+RUN apk add --no-cache gcc g++ openjdk21 python3 && \
+    ln -sf /usr/bin/python3 /usr/bin/python
+
 # Set production environment variables
 ENV NODE_ENV=production
 ENV PORT=5000
 ENV HOST=0.0.0.0
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Create dedicated non-root application user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
