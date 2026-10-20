@@ -42,6 +42,8 @@ import {
   Progress,
   Card,
   CardBody,
+  Radio,
+  RadioGroup,
   useColorModeValue,
 } from '@chakra-ui/react';
 import {
@@ -61,6 +63,7 @@ import {
   labSubmitQuestionApi,
   getLabSubmissionStatusApi,
   submitLabAssessmentApi,
+  submitLabMcqApi,
 } from '../../api/labApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
@@ -138,18 +141,31 @@ const LabAssessmentWorkspace = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Consistent normal theme tokens: crisp white cards, green accents, high-contrast dark text
-  const cardBg = '#FFFFFF';
-  const cardBorder = '#DDE5DD';
-  const surfaceBg = '#F2F6F3';
-  const textColor = '#1A2024';
-  const mutedText = '#505750';
-  const accentColor = '#2F8D46';
+  // Responsive theme tokens: crisp light surfaces in light mode, sleek dark surfaces in dark mode
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#171918');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#A3B19B');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
+  const monacoTheme = useColorModeValue('vs', 'vs-dark');
+
+  const timerCriticalBg = useColorModeValue('#FEE2E2', '#3D1515');
+  const timerCriticalBorder = useColorModeValue('#FCA5A5', '#7F1D1D');
+  const timerCriticalText = useColorModeValue('#991B1B', '#FCA5A5');
+  const timerWarningBg = useColorModeValue('#FFEDD5', '#3D2510');
+  const timerWarningBorder = useColorModeValue('#FDBA74', '#7C2D12');
+  const timerWarningText = useColorModeValue('#9A3412', '#FDBA74');
+  const timerNormalBg = useColorModeValue('#E8F5E9', '#1A3323');
+  const timerNormalBorder = useColorModeValue('#A5D6A7', '#2E7D32');
+  const timerNormalText = useColorModeValue('#174723', '#A5D6A7');
 
   const [isLoading, setIsLoading] = useState(true);
   const [lab, setLab] = useState(null);
   const [attempt, setAttempt] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [mcqs, setMcqs] = useState([]);
+  const [mcqAnswers, setMcqAnswers] = useState({});
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Per-question state: codeMap[questionId][language]
@@ -229,7 +245,8 @@ const LabAssessmentWorkspace = () => {
 
         // 1. Start or resume
         const startRes = await startOrResumeLabApi(labId);
-        const { attempt: att, questions: qList, alreadySubmitted } = startRes.data?.data || {};
+        const startData = startRes.data?.data || {};
+        const { attempt: att, alreadySubmitted } = startData;
 
         if (!isMounted) return;
 
@@ -241,10 +258,31 @@ const LabAssessmentWorkspace = () => {
 
         setAttempt(att);
 
-        // Fetch detailed questions with public test cases
+        // Fetch detailed questions with public test cases and MCQs
         const qRes = await getStudentQuestionsApi(labId);
-        const fullQuestions = qRes.data?.data?.questions || qList || [];
-        setQuestions(fullQuestions);
+        const qData = qRes.data?.data || {};
+
+        // Extract ONLY coding questions
+        const codingList =
+          qData.codingQuestions ||
+          startData.codingQuestions ||
+          (qData.questions || startData.questions || []).filter(
+            (q) => q.question_type === 'coding' || (!q.mcq_id && q.lab_question_id)
+          );
+
+        // Extract ONLY MCQs
+        const mcqList =
+          qData.mcqs ||
+          startData.mcqs ||
+          (qData.questions || startData.questions || []).filter(
+            (q) => q.question_type === 'mcq' || Boolean(q.mcq_id)
+          );
+
+        const initialMcqSubs = qData.mcqSubmissions || startData.mcqSubmissions || {};
+
+        setQuestions(codingList);
+        setMcqs(mcqList);
+        setMcqAnswers(initialMcqSubs);
 
         // 2. Fetch submission status to prefill saved code
         const statusRes = await getLabSubmissionStatusApi(labId);
@@ -340,12 +378,46 @@ const LabAssessmentWorkspace = () => {
     };
   }, [attempt?.effective_deadline, handleTimeExpired]);
 
-  const currentQuestion = questions[selectedIndex] || null;
-  const currentQId = currentQuestion?.lab_question_id;
+  const codingItems = (questions || [])
+    .filter((q) => q.question_type === 'coding' || (!q.mcq_id && q.lab_question_id))
+    .map((q, idx) => ({ ...q, itemType: 'coding', questionNumber: idx + 1 }));
+
+  const mcqItems = (mcqs || [])
+    .filter((m) => m.question_type === 'mcq' || Boolean(m.mcq_id))
+    .map((m, idx) => ({ ...m, itemType: 'mcq', questionNumber: codingItems.length + idx + 1 }));
+
+  const allQuestions = [...codingItems, ...mcqItems];
+
+  const currentQuestion = allQuestions[selectedIndex] || allQuestions[0] || null;
+  const isCoding = currentQuestion?.itemType === 'coding';
+  const currentQId = isCoding ? currentQuestion?.lab_question_id : null;
+
+  const handleSaveMcqAnswer = async (mcqId, option) => {
+    setMcqAnswers((prev) => ({ ...prev, [mcqId]: option }));
+    try {
+      await submitLabMcqApi(labId, {
+        mcq_id: mcqId,
+        selected_option: option,
+      });
+      toast({
+        title: `Option ${option} Saved`,
+        status: 'success',
+        duration: 1500,
+        position: 'bottom-right',
+      });
+    } catch (err) {
+      toast({
+        title: 'Failed to save MCQ answer',
+        description: err.response?.data?.message || 'Please retry.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
 
   // Sync custom input and previous submitted language with current question
   useEffect(() => {
-    if (currentQuestion?.sample_input) {
+    if (isCoding && currentQuestion?.sample_input) {
       setCustomInput(currentQuestion.sample_input);
     } else {
       setCustomInput('');
@@ -355,7 +427,7 @@ const LabAssessmentWorkspace = () => {
     if (currentQId && submissionMap[currentQId]?.language) {
       setLanguage(submissionMap[currentQId].language);
     }
-  }, [selectedIndex, currentQuestion, currentQId, submissionMap]);
+  }, [selectedIndex, isCoding, currentQuestion, currentQId, submissionMap]);
 
   // Current editor code
   const currentCode =
@@ -515,9 +587,11 @@ const LabAssessmentWorkspace = () => {
   const isTimerCritical = remainingSeconds <= 180;
   const isTimerWarning = remainingSeconds <= 600;
 
-  const attemptedCount = Object.values(submissionMap).filter(
+  const codingAttemptedCount = Object.values(submissionMap).filter(
     (s) => s.status && s.status !== 'not_attempted'
   ).length;
+  const mcqAnsweredCount = Object.keys(mcqAnswers).length;
+  const attemptedCount = codingAttemptedCount + mcqAnsweredCount;
 
   return (
     <VStack spacing={4} align="stretch" w="full" minH="calc(100vh - 100px)">
@@ -536,48 +610,71 @@ const LabAssessmentWorkspace = () => {
                 Practical Assessment
               </Heading>
               <Badge colorScheme="green" px={2} py={0.5} borderRadius="md">
-                {questions.length} Questions
+                {allQuestions.length} Questions ({codingItems.length} Coding + {mcqItems.length} MCQs)
               </Badge>
             </HStack>
             <Text fontSize="xs" color={mutedText}>
-              Questions randomly allocated from curriculum topics • All changes saved
+              Hybrid practical assessment • All responses automatically synced
             </Text>
           </VStack>
 
           {/* Question Navigator Buttons */}
           <HStack spacing={2} wrap="wrap" justify="center">
-            {questions.map((q, idx) => {
-              const sub = submissionMap[q.lab_question_id];
+            {allQuestions.map((q, idx) => {
               const isCurrent = idx === selectedIndex;
-              const subStatus = sub?.status;
+              if (q.itemType === 'coding') {
+                const sub = submissionMap[q.lab_question_id];
+                const subStatus = sub?.status;
 
-              let btnColorScheme = 'gray';
-              if (subStatus === 'accepted') btnColorScheme = 'green';
-              else if (subStatus === 'partially_correct') btnColorScheme = 'yellow';
-              else if (
-                subStatus === 'wrong_answer' ||
-                subStatus === 'compilation_error' ||
-                subStatus === 'runtime_error'
-              )
-                btnColorScheme = 'orange';
+                let btnColorScheme = 'gray';
+                if (subStatus === 'accepted') btnColorScheme = 'green';
+                else if (subStatus === 'partially_correct') btnColorScheme = 'yellow';
+                else if (
+                  subStatus === 'wrong_answer' ||
+                  subStatus === 'compilation_error' ||
+                  subStatus === 'runtime_error'
+                )
+                  btnColorScheme = 'orange';
 
-              return (
-                <Button
-                  key={q.lab_question_id}
-                  size="sm"
-                  variant={isCurrent ? 'solid' : 'outline'}
-                  colorScheme={isCurrent ? 'green' : btnColorScheme}
-                  onClick={() => setSelectedIndex(idx)}
-                  borderRadius="lg"
-                  px={3}
-                  fontSize="xs"
-                >
-                  Q{idx + 1}
-                  {subStatus === 'accepted' && (
-                    <Icon as={CheckCircleIcon} color={isCurrent ? 'white' : 'green.500'} ml={1} boxSize={3} />
-                  )}
-                </Button>
-              );
+                return (
+                  <Button
+                    key={`c_${q.lab_question_id || idx}`}
+                    size="sm"
+                    variant={isCurrent ? 'solid' : 'outline'}
+                    colorScheme={isCurrent ? 'green' : btnColorScheme}
+                    onClick={() => setSelectedIndex(idx)}
+                    borderRadius="lg"
+                    px={3}
+                    fontSize="xs"
+                  >
+                    Q{idx + 1}
+                    {subStatus === 'accepted' && (
+                      <Icon as={CheckCircleIcon} color={isCurrent ? 'white' : 'green.500'} ml={1} boxSize={3} />
+                    )}
+                  </Button>
+                );
+              } else {
+                const hasAnswer = Boolean(mcqAnswers[q.mcq_id]);
+                return (
+                  <Button
+                    key={`m_${q.mcq_id || idx}`}
+                    size="sm"
+                    variant={isCurrent ? 'solid' : 'outline'}
+                    colorScheme={isCurrent ? 'purple' : hasAnswer ? 'green' : 'gray'}
+                    onClick={() => setSelectedIndex(idx)}
+                    borderRadius="lg"
+                    px={3}
+                    fontSize="xs"
+                  >
+                    Q{idx + 1}
+                    {hasAnswer && (
+                      <Badge ml={1} colorScheme="green" fontSize="2xs" px={1} borderRadius="sm">
+                        {mcqAnswers[q.mcq_id]}
+                      </Badge>
+                    )}
+                  </Button>
+                );
+              }
             })}
           </HStack>
 
@@ -585,9 +682,9 @@ const LabAssessmentWorkspace = () => {
           <HStack spacing={4}>
             {/* Live Timer */}
             <HStack
-              bg={isTimerCritical ? '#FEE2E2' : isTimerWarning ? '#FFEDD5' : '#E8F5E9'}
+              bg={isTimerCritical ? timerCriticalBg : isTimerWarning ? timerWarningBg : timerNormalBg}
               border="1px solid"
-              borderColor={isTimerCritical ? '#FCA5A5' : isTimerWarning ? '#FDBA74' : '#A5D6A7'}
+              borderColor={isTimerCritical ? timerCriticalBorder : isTimerWarning ? timerWarningBorder : timerNormalBorder}
               px={4}
               py={2}
               borderRadius="xl"
@@ -595,14 +692,14 @@ const LabAssessmentWorkspace = () => {
             >
               <Icon
                 as={TimeIcon}
-                color={isTimerCritical ? '#DC2626' : isTimerWarning ? '#EA580C' : '#2F8D46'}
+                color={isTimerCritical ? timerCriticalText : isTimerWarning ? timerWarningText : accentColor}
                 boxSize={4}
               />
               <Text
                 fontFamily="mono"
                 fontWeight="bold"
                 fontSize="md"
-                color={isTimerCritical ? '#991B1B' : isTimerWarning ? '#9A3412' : '#174723'}
+                color={isTimerCritical ? timerCriticalText : isTimerWarning ? timerWarningText : timerNormalText}
               >
                 {formatTimeRemaining(remainingSeconds)}
               </Text>
@@ -620,49 +717,37 @@ const LabAssessmentWorkspace = () => {
         </Flex>
       </Card>
 
-      {/* Main Workspace: 2 Columns */}
-      <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={4} flex={1}>
-        {/* Left Column: Problem Statement & Test Cases (5 Cols) */}
-        <Box gridColumn={{ lg: 'span 5' }}>
-          <Card
-            bg={cardBg}
-            borderColor={cardBorder}
-            borderWidth="1px"
-            h="calc(100vh - 210px)"
-            overflowY="auto"
-            borderRadius="xl"
-            p={5}
-            boxShadow="sm"
-          >
-            {currentQuestion ? (
-              <VStack align="stretch" spacing={5}>
-                {/* Question Header */}
-                <VStack align="start" spacing={1}>
-                  <HStack justify="space-between" w="full">
-                    <HStack>
-                      <Badge colorScheme="green" px={2} py={0.5} borderRadius="md">
-                        Question {selectedIndex + 1} of {questions.length}
-                      </Badge>
-                      <Badge
-                        colorScheme={
-                          currentQuestion.difficulty === 'easy'
-                            ? 'green'
-                            : currentQuestion.difficulty === 'hard'
-                            ? 'red'
-                            : 'yellow'
-                        }
-                        px={2}
-                        py={0.5}
-                        borderRadius="md"
-                        textTransform="capitalize"
-                      >
-                        {currentQuestion.difficulty || 'Medium'}
-                      </Badge>
+      {/* Main Workspace: 2 Columns for Coding, or Single Focused Card for MCQ */}
+      {isCoding ? (
+        <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={4} flex={1}>
+          {/* Left Column: Problem Statement & Test Cases (5 Cols) */}
+          <Box gridColumn={{ lg: 'span 5' }}>
+            <Card
+              bg={cardBg}
+              borderColor={cardBorder}
+              borderWidth="1px"
+              h="calc(100vh - 210px)"
+              overflowY="auto"
+              borderRadius="xl"
+              p={5}
+              boxShadow="sm"
+            >
+              {currentQuestion ? (
+                <VStack align="stretch" spacing={5}>
+                  {/* Question Header */}
+                  <VStack align="start" spacing={1}>
+                    <HStack justify="space-between" w="full">
+                      <HStack>
+                        <Badge colorScheme="green" px={2} py={0.5} borderRadius="md">
+                          Coding Question {selectedIndex + 1} of {allQuestions.length}
+                        </Badge>
+                        {currentQuestion.topic_title && (
+                          <Badge colorScheme="cyan" variant="subtle" px={2} py={0.5} borderRadius="md" fontSize="2xs">
+                            {currentQuestion.topic_title}
+                          </Badge>
+                        )}
+                      </HStack>
                     </HStack>
-                    <Text fontSize="sm" fontWeight="bold" color={accentColor}>
-                      {currentQuestion.marks || 10} Marks
-                    </Text>
-                  </HStack>
 
                   <Heading size="md" color={textColor} pt={1} fontWeight="800">
                     {currentQuestion.title || `Problem #${selectedIndex + 1}`}
@@ -698,7 +783,7 @@ const LabAssessmentWorkspace = () => {
                     Problem Statement
                   </Text>
                   <Text color={textColor} fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
-                    {currentQuestion.problem_statement}
+                    {currentQuestion.problem_statement || 'No detailed problem statement provided for this question.'}
                   </Text>
                 </Box>
 
@@ -875,7 +960,7 @@ const LabAssessmentWorkspace = () => {
                 <Editor
                   height="100%"
                   language={MONACO_LANG_MAP[language] || 'cpp'}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                   value={currentCode}
                   onChange={handleCodeChange}
                   onMount={handleEditorDidMount}
@@ -1069,6 +1154,98 @@ const LabAssessmentWorkspace = () => {
           </VStack>
         </Box>
       </SimpleGrid>
+      ) : (
+        /* MCQ View */
+        <Box w="full" maxW="4xl" mx="auto" py={4}>
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl" p={8} boxShadow="sm">
+            <VStack align="stretch" spacing={6}>
+              <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
+                <HStack spacing={2}>
+                  <Badge colorScheme="purple" px={3} py={1} borderRadius="md" fontSize="xs">
+                    MCQ — Question {selectedIndex + 1} of {allQuestions.length}
+                  </Badge>
+                  {currentQuestion?.topic_title && (
+                    <Badge colorScheme="cyan" variant="subtle" px={2.5} py={0.5} borderRadius="md" fontSize="xs">
+                      {currentQuestion.topic_title}
+                    </Badge>
+                  )}
+                </HStack>
+                {mcqAnswers[currentQuestion?.mcq_id] ? (
+                  <Badge colorScheme="green" px={3} py={1} borderRadius="md" fontSize="xs">
+                    ✓ Saved Answer: Option {mcqAnswers[currentQuestion?.mcq_id]}
+                  </Badge>
+                ) : (
+                  <Badge colorScheme="gray" px={3} py={1} borderRadius="md" fontSize="xs">
+                    Not Answered Yet
+                  </Badge>
+                )}
+              </Flex>
+
+              <Text fontSize="lg" fontWeight="semibold" color={textColor} lineHeight="tall">
+                {currentQuestion?.question_text}
+              </Text>
+
+              <Divider borderColor={cardBorder} />
+
+              <RadioGroup
+                value={mcqAnswers[currentQuestion?.mcq_id] || ''}
+                onChange={(val) => handleSaveMcqAnswer(currentQuestion?.mcq_id, val)}
+              >
+                <VStack spacing={3} align="stretch">
+                  {['A', 'B', 'C', 'D'].map((optKey) => {
+                    const isSelected = mcqAnswers[currentQuestion?.mcq_id] === optKey;
+                    const optText = currentQuestion?.[`option_${optKey.toLowerCase()}`];
+                    return (
+                      <Box
+                        key={optKey}
+                        p={4}
+                        borderRadius="xl"
+                        border="2px solid"
+                        borderColor={isSelected ? accentColor : cardBorder}
+                        bg={isSelected ? surfaceBg : 'transparent'}
+                        cursor="pointer"
+                        onClick={() => handleSaveMcqAnswer(currentQuestion?.mcq_id, optKey)}
+                        transition="all 0.2s"
+                        _hover={{ borderColor: accentColor }}
+                      >
+                        <HStack spacing={4} align="center">
+                          <Radio value={optKey} colorScheme="green" size="lg">
+                            <Badge colorScheme={isSelected ? 'green' : 'gray'} fontSize="sm" px={2} py={0.5} borderRadius="md">
+                              Option {optKey}
+                            </Badge>
+                          </Radio>
+                          <Text fontSize="md" color={textColor} fontWeight={isSelected ? 'bold' : 'normal'}>
+                            {optText}
+                          </Text>
+                        </HStack>
+                      </Box>
+                    );
+                  })}
+                </VStack>
+              </RadioGroup>
+
+              <Flex justify="space-between" pt={4} borderTop="1px solid" borderColor={cardBorder}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isDisabled={selectedIndex === 0}
+                  onClick={() => setSelectedIndex((prev) => Math.max(0, prev - 1))}
+                >
+                  Previous Question
+                </Button>
+                <Button
+                  size="sm"
+                  colorScheme="brand"
+                  isDisabled={selectedIndex === allQuestions.length - 1}
+                  onClick={() => setSelectedIndex((prev) => Math.min(allQuestions.length - 1, prev + 1))}
+                >
+                  Next Question
+                </Button>
+              </Flex>
+            </VStack>
+          </Card>
+        </Box>
+      )}
 
       {/* Finish Assessment Confirmation Modal */}
       <Modal isOpen={isFinishOpen} onClose={onFinishClose} isCentered size="md">
@@ -1085,9 +1262,21 @@ const LabAssessmentWorkspace = () => {
               <Box bg={surfaceBg} p={4} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
                 <VStack align="stretch" spacing={2} fontSize="sm">
                   <HStack justify="space-between">
-                    <Text color={mutedText}>Questions Attempted:</Text>
+                    <Text color={mutedText}>Coding Problems Attempted:</Text>
                     <Text fontWeight="bold" color={accentColor}>
-                      {attemptedCount} of {questions.length}
+                      {codingAttemptedCount} of {questions.length}
+                    </Text>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text color={mutedText}>MCQs Answered:</Text>
+                    <Text fontWeight="bold" color="purple.500">
+                      {mcqAnsweredCount} of {mcqs.length}
+                    </Text>
+                  </HStack>
+                  <HStack justify="space-between" pt={1} borderTop="1px solid" borderColor={cardBorder}>
+                    <Text color={mutedText}>Total Attempted:</Text>
+                    <Text fontWeight="bold" color={accentColor}>
+                      {attemptedCount} of {allQuestions.length}
                     </Text>
                   </HStack>
                   <HStack justify="space-between">
@@ -1099,11 +1288,11 @@ const LabAssessmentWorkspace = () => {
                 </VStack>
               </Box>
 
-              {attemptedCount < questions.length && (
+              {attemptedCount < allQuestions.length && (
                 <Alert status="warning" borderRadius="md" fontSize="xs">
                   <AlertIcon />
                   <AlertDescription>
-                    You have {questions.length - attemptedCount} unsubmitted question(s). Unsubmitted questions will receive 0 marks.
+                    You have {allQuestions.length - attemptedCount} unsubmitted question(s). Unsubmitted questions will receive 0 marks.
                   </AlertDescription>
                 </Alert>
               )}

@@ -69,3 +69,17 @@ export const getRoomStudents = asyncHandler(async (req, res) => {
   const students = await RoomService.getRoomStudents(roomId, req.user.user_id, req.user.role);
   return successResponse(res, 200, 'Enrolled students retrieved.', { students });
 });
+
+export const getRoomLabAssessments = asyncHandler(async (req, res) => {
+  const { roomId } = req.params;
+  const parsedRoomId = parseInt(roomId, 10);
+  let labs = [];
+  if (req.user.role === 'student') {
+    const LabAssessmentService = (await import('../services/labAssessment.service.js')).default;
+    labs = await LabAssessmentService.getStudentAvailableLabs(req.user.user_id, parsedRoomId);
+  } else {
+    const LabAssessmentService = (await import('../services/labAssessment.service.js')).default;
+    labs = await LabAssessmentService.getFacultyAssessments(req.user.user_id, req.user.role, parsedRoomId);
+  }
+  return successResponse(res, 200, 'Room lab assessments retrieved.', { labs, assessments: labs });
+});

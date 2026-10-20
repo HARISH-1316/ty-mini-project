@@ -118,3 +118,37 @@ export const submitLabAssessmentApi = (labId) =>
 
 export const getLabResultApi = (labId) =>
   api.get(`/lab-assessments/student/${labId}/result`);
+
+export const submitLabMcqApi = (labId, data) =>
+  api.post(`/lab-assessments/student/${labId}/submit-mcq`, data);
+
+export const getRoomLabAssessmentsApi = (roomId) =>
+  api.get(`/rooms/${roomId}/lab-assessments`);
+
+// =========================================================
+// FACULTY — MCQ Question Bank
+// =========================================================
+
+export const listLabMcqsApi = (params = {}) =>
+  api.get('/lab-mcqs', { params });
+
+export const getLabMcqApi = (mcqId) =>
+  api.get(`/lab-mcqs/${mcqId}`);
+
+export const createLabMcqApi = (data) =>
+  api.post('/lab-mcqs', data);
+
+export const updateLabMcqApi = (mcqId, data) =>
+  api.put(`/lab-mcqs/${mcqId}`, data);
+
+export const deleteLabMcqApi = (mcqId) =>
+  api.delete(`/lab-mcqs/${mcqId}`);
+
+export const publishLabMcqApi = (mcqId) =>
+  api.patch(`/lab-mcqs/${mcqId}/publish`);
+
+export const unpublishLabMcqApi = (mcqId) =>
+  api.patch(`/lab-mcqs/${mcqId}/unpublish`);
+
+export const getLabMcqTopicsSummaryApi = () =>
+  api.get('/lab-mcqs/topics-summary');

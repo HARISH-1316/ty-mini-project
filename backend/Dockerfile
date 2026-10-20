@@ -4,29 +4,44 @@
 # Multi-stage secure Node.js LTS environment
 # ──────────────────────────────────────────────
 
-FROM node:20-alpine AS base
-
-# Install Docker CLI inside container for host daemon communication (via socket mount)
-RUN apk add --no-cache docker-cli
+# Stage 1: Build Dependencies (with native compilation tools for bcrypt)
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
+# Install native build tools required for bcrypt compilation on Alpine
+RUN apk add --no-cache python3 make g++
+
+# Install production dependencies only
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
-# Copy application source
-COPY . .
+# Stage 2: Minimal Production Runtime
+FROM node:20-alpine AS runner
 
-# Ensure tmp execution directory exists with proper permissions
-RUN mkdir -p /app/tmp && chmod 777 /app/tmp
+WORKDIR /app
+
+# Set production environment variables
+ENV NODE_ENV=production
+ENV PORT=5000
+ENV HOST=0.0.0.0
+
+# Create dedicated non-root application user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy compiled production node_modules from builder
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --chown=appuser:appgroup package*.json ./
+COPY --chown=appuser:appgroup . .
+
+# Ensure isolated workspace tmp directory exists with write permissions for appuser
+RUN mkdir -p /app/tmp && chown -R appuser:appgroup /app/tmp
+
+# Drop root privileges
+USER appuser
 
 # Expose backend port
 EXPOSE 5000
-
-# Environment defaults
-ENV PORT=5000
-ENV NODE_ENV=production
 
 # Start Express server
 CMD ["node", "server.js"]

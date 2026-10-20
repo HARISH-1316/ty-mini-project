@@ -1,11 +1,9 @@
 // ──────────────────────────────────────────────
-// Student Registration Page
-// ──────────────────────────────────────────────
-// NO role selector — all public registrations create STUDENT accounts.
+// Registration Page — Student & Faculty Options
 // ──────────────────────────────────────────────
 
 import { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -26,35 +24,70 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
+  AlertTitle,
+  Tabs,
+  TabList,
+  Tab,
+  useColorModeValue,
+  Divider,
 } from '@chakra-ui/react';
 import { EmailIcon, LockIcon, ViewIcon, ViewOffIcon, AtSignIcon, PhoneIcon } from '@chakra-ui/icons';
-import useAuth from '../../hooks/useAuth';
+import { signupStudentApi, signupFacultyApi } from '../../api/authApi';
 
 const Signup = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const { signup } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const roleParam = searchParams.get('role');
+  const [role, setRole] = useState(roleParam === 'faculty' ? 'faculty' : 'student');
+
+  // Theme styling
+  const bg = useColorModeValue('#F2F6F3', '#121413');
+  const cardBg = useColorModeValue('#FFFFFF', '#1E211F');
+  const cardBorder = useColorModeValue('#DDE5DD', '#333A35');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#555E57', '#A3B0A5');
+  const inputBg = useColorModeValue('#FFFFFF', '#292D2A');
+  const inputBorder = useColorModeValue('#CFD9D1', '#424944');
+  const accentColor = useColorModeValue('#2F8D46', '#86EFAC');
+
+  // Form fields
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    // Student fields
     roll_number: '',
     course: '',
     year: '',
+    // Faculty fields
+    department: '',
+    designation: '',
+    specialization: '',
+    // Shared
     phone: '',
   });
 
   const [errors, setErrors] = useState([]);
   const [serverError, setServerError] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const handleRoleChange = (newRole) => {
+    setRole(newRole);
+    setSearchParams({ role: newRole });
+    setErrors([]);
+    setServerError('');
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => prev.filter((err) => err.field !== name));
     setServerError('');
   };
@@ -70,22 +103,43 @@ const Signup = () => {
     setErrors([]);
     setServerError('');
 
-    const payload = {
-      ...formData,
-      year: formData.year ? parseInt(formData.year, 10) : null,
-    };
-
     try {
-      await signup(payload);
+      if (role === 'student') {
+        const payload = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          roll_number: formData.roll_number,
+          course: formData.course,
+          year: formData.year ? parseInt(formData.year, 10) : null,
+          phone: formData.phone,
+        };
+        const res = await signupStudentApi(payload);
+        setSuccessMessage(res.message || 'Student registration submitted successfully.');
+      } else {
+        const payload = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          department: formData.department,
+          designation: formData.designation,
+          specialization: formData.specialization,
+          phone: formData.phone,
+        };
+        const res = await signupFacultyApi(payload);
+        setSuccessMessage(res.message || 'Faculty registration submitted successfully.');
+      }
+
+      setIsSuccess(true);
       toast({
-        title: 'Registration Successful!',
-        description: 'Your student account has been created. Please sign in.',
-        status: 'success',
-        duration: 4000,
+        title: 'Registration Submitted',
+        description: 'Your registration is awaiting administrator approval.',
+        status: 'info',
+        duration: 5000,
         isClosable: true,
-        position: 'top',
       });
-      navigate('/login', { replace: true });
     } catch (err) {
       const res = err.response?.data;
       if (res?.errors) {
@@ -98,286 +152,397 @@ const Signup = () => {
     }
   };
 
+  if (isSuccess) {
+    return (
+      <Flex minH="100vh" align="center" justify="center" bg={bg} px={4} py={12}>
+        <Box
+          w="full"
+          maxW="lg"
+          bg={cardBg}
+          borderRadius="2xl"
+          boxShadow="md"
+          border="1px solid"
+          borderColor={cardBorder}
+          p={{ base: 6, md: 8 }}
+          textAlign="center"
+        >
+          <VStack spacing={5}>
+            <Alert
+              status="success"
+              variant="subtle"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              textAlign="center"
+              borderRadius="xl"
+              p={6}
+            >
+              <AlertIcon boxSize="40px" mr={0} />
+              <AlertTitle mt={4} mb={2} fontSize="lg" fontWeight="800">
+                Registration Awaiting Approval!
+              </AlertTitle>
+              <AlertDescription fontSize="sm" color={mutedText}>
+                {successMessage}
+              </AlertDescription>
+            </Alert>
+
+            <Text fontSize="sm" color={mutedText}>
+              In accordance with institutional security guidelines, new student and faculty accounts must be reviewed and approved by an administrator before access to virtual labs is granted.
+            </Text>
+
+            <Button
+              as={RouterLink}
+              to={`/login?role=${role}`}
+              colorScheme="brand"
+              size="md"
+              fontWeight="700"
+              w="full"
+            >
+              Return to Sign In
+            </Button>
+          </VStack>
+        </Box>
+      </Flex>
+    );
+  }
+
   return (
-    <Flex minH="100vh" align="center" justify="center" bg="dark.bg" px={4} py={8}>
+    <Flex minH="100vh" align="center" justify="center" bg={bg} px={4} py={12}>
       <Box
         w="full"
-        maxW="lg"
-        bg="dark.card"
+        maxW="2xl"
+        bg={cardBg}
         borderRadius="2xl"
-        boxShadow="0 0 40px rgba(128, 90, 213, 0.15)"
+        boxShadow="md"
         border="1px solid"
-        borderColor="dark.border"
-        p={8}
+        borderColor={cardBorder}
+        p={{ base: 6, md: 8 }}
       >
         {/* Header */}
-        <VStack spacing={2} mb={8}>
-          <Heading
-            as="h1"
-            size="xl"
-            color="accent.primary"
-            fontWeight="extrabold"
-            letterSpacing="tight"
-          >
-            WCE Virtual Lab
+        <VStack spacing={2} mb={6} textAlign="center">
+          <Heading as="h1" size="lg" color={textColor} fontWeight="800">
+            Create an Account
           </Heading>
-          <Text color="gray.400" fontSize="md">
-            Student Registration
+          <Text color={mutedText} fontSize="sm">
+            Join WCE Virtual Lab for interactive learning and laboratory practicals
           </Text>
         </VStack>
 
+        {/* Role Selection Tabs */}
+        <Tabs
+          isFitted
+          variant="enclosed"
+          colorScheme="green"
+          index={role === 'faculty' ? 1 : 0}
+          onChange={(index) => handleRoleChange(index === 1 ? 'faculty' : 'student')}
+          mb={6}
+        >
+          <TabList borderColor={cardBorder}>
+            <Tab
+              fontWeight="700"
+              fontSize="sm"
+              color={mutedText}
+              _selected={{ color: accentColor, borderColor: cardBorder, borderBottomColor: cardBg, fontWeight: '800' }}
+            >
+              Student Registration
+            </Tab>
+            <Tab
+              fontWeight="700"
+              fontSize="sm"
+              color={mutedText}
+              _selected={{ color: accentColor, borderColor: cardBorder, borderBottomColor: cardBg, fontWeight: '800' }}
+            >
+              Faculty Registration
+            </Tab>
+          </TabList>
+        </Tabs>
+
         {/* Server Error Alert */}
         {serverError && (
-          <Alert status="error" borderRadius="lg" mb={4} bg="red.900" color="red.200">
-            <AlertIcon color="red.300" />
+          <Alert status="error" borderRadius="xl" mb={5} fontSize="sm">
+            <AlertIcon />
             <AlertDescription>{serverError}</AlertDescription>
           </Alert>
         )}
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          <VStack spacing={4}>
-            {/* Full Name */}
-            <FormControl isInvalid={!!getFieldError('name')} isRequired>
-              <FormLabel color="gray.300">Full Name</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none">
-                  <AtSignIcon color="gray.500" />
-                </InputLeftElement>
+          <VStack spacing={4} align="stretch">
+            {/* Full Name & Email */}
+            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+              <FormControl isInvalid={!!getFieldError('name')} isRequired>
+                <FormLabel fontSize="sm" color={textColor} fontWeight="600">Full Name</FormLabel>
                 <Input
                   id="signup-name"
                   name="name"
-                  type="text"
-                  placeholder="John Doe"
+                  placeholder={role === 'faculty' ? 'Dr. John Doe' : 'Jane Doe'}
                   value={formData.name}
                   onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
+                  bg={inputBg}
+                  borderColor={inputBorder}
+                  color={textColor}
+                  _placeholder={{ color: mutedText }}
+                  _focus={{ borderColor: accentColor }}
                 />
-              </InputGroup>
-              <FormErrorMessage>{getFieldError('name')}</FormErrorMessage>
-            </FormControl>
-
-            {/* Email */}
-            <FormControl isInvalid={!!getFieldError('email')} isRequired>
-              <FormLabel color="gray.300">Email Address</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none">
-                  <EmailIcon color="gray.500" />
-                </InputLeftElement>
-                <Input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  placeholder="student@wcelab.ac.in"
-                  value={formData.email}
-                  onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
-                />
-              </InputGroup>
-              <FormErrorMessage>{getFieldError('email')}</FormErrorMessage>
-            </FormControl>
-
-            {/* Roll Number & Phone in a Grid */}
-            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4} w="full">
-              <FormControl isInvalid={!!getFieldError('roll_number')} isRequired>
-                <FormLabel color="gray.300">Roll Number</FormLabel>
-                <Input
-                  id="signup-roll"
-                  name="roll_number"
-                  type="text"
-                  placeholder="2026CS101"
-                  value={formData.roll_number}
-                  onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
-                />
-                <FormErrorMessage>{getFieldError('roll_number')}</FormErrorMessage>
+                <FormErrorMessage fontSize="xs">{getFieldError('name')}</FormErrorMessage>
               </FormControl>
 
-              <FormControl isInvalid={!!getFieldError('phone')}>
-                <FormLabel color="gray.300">Phone</FormLabel>
+              <FormControl isInvalid={!!getFieldError('email')} isRequired>
+                <FormLabel fontSize="sm" color={textColor} fontWeight="600">Institutional Email</FormLabel>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
-                    <PhoneIcon color="gray.500" />
+                    <EmailIcon color={mutedText} />
                   </InputLeftElement>
                   <Input
-                    id="signup-phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="9876543210"
-                    value={formData.phone}
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    placeholder={role === 'faculty' ? 'faculty@wcelab.ac.in' : 'student@wcelab.ac.in'}
+                    value={formData.email}
                     onChange={handleChange}
-                    bg="slate.900"
-                    border="1px solid"
-                    borderColor="slate.700"
-                    color="white"
-                    _placeholder={{ color: 'gray.500' }}
-                    _hover={{ borderColor: 'purple.400' }}
-                    _focus={{ borderColor: 'purple.400' }}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
                   />
                 </InputGroup>
-                <FormErrorMessage>{getFieldError('phone')}</FormErrorMessage>
+                <FormErrorMessage fontSize="xs">{getFieldError('email')}</FormErrorMessage>
               </FormControl>
             </SimpleGrid>
 
-            {/* Course & Year */}
-            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4} w="full">
-              <FormControl isInvalid={!!getFieldError('course')}>
-                <FormLabel color="gray.300">Course / Branch</FormLabel>
-                <Input
-                  id="signup-course"
-                  name="course"
-                  type="text"
-                  placeholder="Computer Science"
-                  value={formData.course}
-                  onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
-                />
-                <FormErrorMessage>{getFieldError('course')}</FormErrorMessage>
+            {/* Password & Confirm Password */}
+            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+              <FormControl isInvalid={!!getFieldError('password')} isRequired>
+                <FormLabel fontSize="sm" color={textColor} fontWeight="600">Password</FormLabel>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <LockIcon color={mutedText} />
+                  </InputLeftElement>
+                  <Input
+                    id="signup-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Min. 8 chars, 1 uppercase, 1 symbol"
+                    value={formData.password}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      size="sm"
+                      variant="ghost"
+                      aria-label="Toggle password"
+                      icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                      onClick={() => setShowPassword(!showPassword)}
+                      color={mutedText}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+                <FormErrorMessage fontSize="xs">{getFieldError('password')}</FormErrorMessage>
               </FormControl>
 
-              <FormControl isInvalid={!!getFieldError('year')}>
-                <FormLabel color="gray.300">Year</FormLabel>
-                <Input
-                  id="signup-year"
-                  name="year"
-                  type="number"
-                  min="1"
-                  max="6"
-                  placeholder="3"
-                  value={formData.year}
-                  onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
-                />
-                <FormErrorMessage>{getFieldError('year')}</FormErrorMessage>
+              <FormControl isInvalid={!!getFieldError('confirmPassword')} isRequired>
+                <FormLabel fontSize="sm" color={textColor} fontWeight="600">Confirm Password</FormLabel>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <LockIcon color={mutedText} />
+                  </InputLeftElement>
+                  <Input
+                    id="signup-confirm-password"
+                    name="confirmPassword"
+                    type={showConfirm ? 'text' : 'password'}
+                    placeholder="Re-enter password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      size="sm"
+                      variant="ghost"
+                      aria-label="Toggle confirm password"
+                      icon={showConfirm ? <ViewOffIcon /> : <ViewIcon />}
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      color={mutedText}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+                <FormErrorMessage fontSize="xs">{getFieldError('confirmPassword')}</FormErrorMessage>
               </FormControl>
             </SimpleGrid>
 
-            {/* Password */}
-            <FormControl isInvalid={!!getFieldError('password')} isRequired>
-              <FormLabel color="gray.300">Password</FormLabel>
+            {/* Role-Specific Fields */}
+            {role === 'student' ? (
+              <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
+                <FormControl isInvalid={!!getFieldError('roll_number')} isRequired>
+                  <FormLabel fontSize="sm" color={textColor} fontWeight="600">Roll Number</FormLabel>
+                  <Input
+                    id="signup-roll"
+                    name="roll_number"
+                    placeholder="e.g. 2024BTECS00001"
+                    value={formData.roll_number}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                  <FormErrorMessage fontSize="xs">{getFieldError('roll_number')}</FormErrorMessage>
+                </FormControl>
+
+                <FormControl isInvalid={!!getFieldError('course')}>
+                  <FormLabel fontSize="sm" color={textColor} fontWeight="600">Course / Branch</FormLabel>
+                  <Input
+                    id="signup-course"
+                    name="course"
+                    placeholder="e.g. Computer Science"
+                    value={formData.course}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                </FormControl>
+
+                <FormControl isInvalid={!!getFieldError('year')}>
+                  <FormLabel fontSize="sm" color={textColor} fontWeight="600">Year (1-4)</FormLabel>
+                  <Input
+                    id="signup-year"
+                    name="year"
+                    type="number"
+                    min="1"
+                    max="6"
+                    placeholder="3"
+                    value={formData.year}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                </FormControl>
+              </SimpleGrid>
+            ) : (
+              <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
+                <FormControl isInvalid={!!getFieldError('department')} isRequired>
+                  <FormLabel fontSize="sm" color={textColor} fontWeight="600">Department</FormLabel>
+                  <Input
+                    id="signup-dept"
+                    name="department"
+                    placeholder="Computer Science & Engg."
+                    value={formData.department}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                  <FormErrorMessage fontSize="xs">{getFieldError('department')}</FormErrorMessage>
+                </FormControl>
+
+                <FormControl isInvalid={!!getFieldError('designation')}>
+                  <FormLabel fontSize="sm" color={textColor} fontWeight="600">Designation</FormLabel>
+                  <Input
+                    id="signup-designation"
+                    name="designation"
+                    placeholder="Assistant Professor"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                </FormControl>
+
+                <FormControl isInvalid={!!getFieldError('specialization')}>
+                  <FormLabel fontSize="sm" color={textColor} fontWeight="600">Specialization</FormLabel>
+                  <Input
+                    id="signup-spec"
+                    name="specialization"
+                    placeholder="Algorithms, Systems"
+                    value={formData.specialization}
+                    onChange={handleChange}
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    color={textColor}
+                    _placeholder={{ color: mutedText }}
+                    _focus={{ borderColor: accentColor }}
+                  />
+                </FormControl>
+              </SimpleGrid>
+            )}
+
+            {/* Phone */}
+            <FormControl isInvalid={!!getFieldError('phone')}>
+              <FormLabel fontSize="sm" color={textColor} fontWeight="600">Contact Number (Optional)</FormLabel>
               <InputGroup>
                 <InputLeftElement pointerEvents="none">
-                  <LockIcon color="gray.500" />
+                  <PhoneIcon color={mutedText} />
                 </InputLeftElement>
                 <Input
-                  id="signup-password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Min 8 chars (1 upper, 1 lower, 1 digit, 1 special)"
-                  value={formData.password}
+                  id="signup-phone"
+                  name="phone"
+                  placeholder="+91 9876543210"
+                  value={formData.phone}
                   onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
+                  bg={inputBg}
+                  borderColor={inputBorder}
+                  color={textColor}
+                  _placeholder={{ color: mutedText }}
+                  _focus={{ borderColor: accentColor }}
                 />
-                <InputRightElement>
-                  <IconButton
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    onClick={() => setShowPassword(!showPassword)}
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'purple.300' }}
-                    size="sm"
-                  />
-                </InputRightElement>
               </InputGroup>
-              <FormErrorMessage>{getFieldError('password')}</FormErrorMessage>
             </FormControl>
 
-            {/* Confirm Password */}
-            <FormControl isInvalid={!!getFieldError('confirmPassword')} isRequired>
-              <FormLabel color="gray.300">Confirm Password</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none">
-                  <LockIcon color="gray.500" />
-                </InputLeftElement>
-                <Input
-                  id="signup-confirm"
-                  name="confirmPassword"
-                  type={showConfirm ? 'text' : 'password'}
-                  placeholder="Re-enter password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  bg="slate.900"
-                  border="1px solid"
-                  borderColor="slate.700"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400' }}
-                />
-                <InputRightElement>
-                  <IconButton
-                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
-                    icon={showConfirm ? <ViewOffIcon /> : <ViewIcon />}
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'purple.300' }}
-                    size="sm"
-                  />
-                </InputRightElement>
-              </InputGroup>
-              <FormErrorMessage>{getFieldError('confirmPassword')}</FormErrorMessage>
-            </FormControl>
+            {/* Notice regarding approval */}
+            <Box p={3} bg={useColorModeValue('#E8F5E9', '#243026')} borderRadius="lg">
+              <Text fontSize="xs" color={useColorModeValue('#1B5E20', '#A3E635')} fontWeight="500">
+                ℹ️ Note: After registering, your account status will be marked as <strong>Pending</strong>. An administrator will review your account before activation.
+              </Text>
+            </Box>
 
-            {/* Submit */}
+            {/* Submit Button */}
             <Button
-              id="signup-submit"
               type="submit"
-              w="full"
-              size="lg"
-              mt={2}
               colorScheme="brand"
+              size="lg"
+              fontSize="md"
+              fontWeight="700"
+              w="full"
+              mt={2}
               isLoading={isLoading}
-              loadingText="Registering..."
+              loadingText="Submitting Registration..."
             >
-              Register Account
+              Register {role === 'faculty' ? 'Faculty' : 'Student'} Account
             </Button>
           </VStack>
         </form>
 
-        {/* Footer */}
-        <Text mt={6} textAlign="center" color="text.secondary" fontSize="sm">
+        <Divider my={6} borderColor={cardBorder} />
+
+        <Text color={mutedText} fontSize="sm" textAlign="center">
           Already registered?{' '}
-          <Text as={RouterLink} to="/login" color="accent.primary" _hover={{ textDecoration: 'underline' }}>
-            Sign in
-          </Text>
+          <RouterLink to={`/login?role=${role}`}>
+            <Text as="span" color={accentColor} fontWeight="700" _hover={{ textDecoration: 'underline' }}>
+              Sign In
+            </Text>
+          </RouterLink>
         </Text>
       </Box>
     </Flex>

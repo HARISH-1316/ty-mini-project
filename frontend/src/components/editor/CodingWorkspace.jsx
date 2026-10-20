@@ -29,6 +29,7 @@ import {
   useToast,
   Code,
   Tooltip,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   ArrowForwardIcon,
@@ -122,6 +123,18 @@ const CodingWorkspace = ({
   const [runResult, setRunResult] = useState(null);
   const [submitResult, setSubmitResult] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#171918');
+  const codeBoxBg = useColorModeValue('#F5F7F5', '#171918');
+  const codeBoxBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
+  const accentColor = useColorModeValue('#2F8D46', '#A3E635');
+  const tcBorderSuccess = useColorModeValue('#C8E6C9', '#2E7D32');
+  const tcBorderFail = useColorModeValue('#FFCDD2', '#C62828');
+  const monacoTheme = useColorModeValue('vs', 'vs-dark');
 
   const currentQuestion = questions[selectedQuestionIndex] || null;
   const currentQId = currentQuestion ? (currentQuestion.tca_question_id || currentQuestion.scca_id) : null;
@@ -334,11 +347,11 @@ const CodingWorkspace = ({
 
   if (!questions || questions.length === 0) {
     return (
-      <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
         <CardBody p={8} textAlign="center">
-          <Icon as={TimeIcon} w={8} h={8} color="green.500" mb={3} />
-          <Heading size="md" color="#1A2024">No Coding Problems Available</Heading>
-          <Text color="#505750" fontSize="sm" mt={2}>
+          <Icon as={TimeIcon} w={8} h={8} color={accentColor} mb={3} />
+          <Heading size="md" color={textColor}>No Coding Problems Available</Heading>
+          <Text color={mutedText} fontSize="sm" mt={2}>
             Your instructor has not configured coding questions for this assessment yet.
           </Text>
         </CardBody>
@@ -349,11 +362,11 @@ const CodingWorkspace = ({
   return (
     <VStack spacing={4} align="stretch" w="full">
       {/* ── Top Bar: Title & Question Selector ────────── */}
-      <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
         <CardBody p={4}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
             <HStack spacing={3}>
-              <Heading size="md" color="#1A2024">
+              <Heading size="md" color={textColor}>
                 {assessmentTitle}
               </Heading>
               <Badge colorScheme="green" px={2.5} py={0.5} borderRadius="full">
@@ -364,14 +377,14 @@ const CodingWorkspace = ({
             {/* Question Selector tabs if multiple */}
             {questions.length > 1 && (
               <HStack spacing={2}>
-                <Text fontSize="xs" color="#505750" fontWeight="bold">Question:</Text>
+                <Text fontSize="xs" color={mutedText} fontWeight="bold">Question:</Text>
                 {questions.map((q, idx) => (
                   <Button
                     key={q.tca_question_id || q.scca_id || idx}
                     size="sm"
                     variant={selectedQuestionIndex === idx ? 'solid' : 'outline'}
                     colorScheme="green"
-                    borderColor="#DDE5DD"
+                    borderColor={cardBorder}
                     onClick={() => setSelectedQuestionIndex(idx)}
                   >
                     Q{idx + 1}
@@ -387,7 +400,7 @@ const CodingWorkspace = ({
       <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={4} alignItems="start">
         {/* LEFT COLUMN: Problem Description (5 cols) */}
         <Box gridColumn={{ base: 'span 12', lg: 'span 5' }}>
-          <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm" h="full">
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm" h="full">
             <CardBody p={5}>
               <VStack align="stretch" spacing={5}>
                 {/* Problem Header */}
@@ -400,19 +413,19 @@ const CodingWorkspace = ({
                       {currentQuestion?.marks || 10} Marks
                     </Badge>
                   </Flex>
-                  <Heading size="md" color="#1A2024" mt={2}>
+                  <Heading size="md" color={textColor} mt={2}>
                     {currentQuestion?.title || `Problem ${selectedQuestionIndex + 1}`}
                   </Heading>
                 </Box>
 
-                <Divider borderColor="#DDE5DD" />
+                <Divider borderColor={cardBorder} />
 
                 {/* Problem Statement */}
                 <Box>
-                  <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={2}>
+                  <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={2}>
                     Problem Statement
                   </Text>
-                  <Text color="#1A2024" fontSize="sm" lineHeight="tall" whiteSpace="pre-line" fontWeight="400">
+                  <Text color={textColor} fontSize="sm" lineHeight="tall" whiteSpace="pre-line" fontWeight="400">
                     {currentQuestion?.problem_statement}
                   </Text>
                 </Box>
@@ -420,11 +433,11 @@ const CodingWorkspace = ({
                 {/* Constraints */}
                 {currentQuestion?.constraints && (
                   <Box>
-                    <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={2}>
+                    <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={2}>
                       Constraints
                     </Text>
-                    <Box p={3} bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
-                      <Code bg="transparent" color="#1A2024" fontSize="xs" whiteSpace="pre-line">
+                    <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
+                      <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre-line">
                         {currentQuestion.constraints}
                       </Code>
                     </Box>
@@ -434,11 +447,11 @@ const CodingWorkspace = ({
                 {/* Sample Input / Output */}
                 {currentQuestion?.sample_input && (
                   <Box>
-                    <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
+                    <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Sample Input
                     </Text>
-                    <Box p={3} bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
-                      <Code bg="transparent" color="#1A2024" fontSize="xs" whiteSpace="pre">
+                    <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
+                      <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre">
                         {currentQuestion.sample_input}
                       </Code>
                     </Box>
@@ -447,11 +460,11 @@ const CodingWorkspace = ({
 
                 {currentQuestion?.sample_output && (
                   <Box>
-                    <Text fontSize="xs" fontWeight="bold" color="#2F8D46" textTransform="uppercase" letterSpacing="wider" mb={1.5}>
+                    <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={1.5}>
                       Sample Output
                     </Text>
-                    <Box p={3} bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
-                      <Code bg="transparent" color="#1A2024" fontSize="xs" whiteSpace="pre">
+                    <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
+                      <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre">
                         {currentQuestion.sample_output}
                       </Code>
                     </Box>
@@ -466,17 +479,17 @@ const CodingWorkspace = ({
         <Box gridColumn={{ base: 'span 12', lg: 'span 7' }}>
           <VStack spacing={4} align="stretch">
             {/* Editor Toolbar */}
-            <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={3}>
                 <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
                   <HStack spacing={2}>
-                    <Text fontSize="xs" color="#1A2024" fontWeight="bold">Language:</Text>
+                    <Text fontSize="xs" color={textColor} fontWeight="bold">Language:</Text>
                     <Select
                       size="sm"
                       w="130px"
-                      bg="#FFFFFF"
-                      borderColor="#DDE5DD"
-                      color="#1A2024"
+                      bg={cardBg}
+                      borderColor={cardBorder}
+                      color={textColor}
                       value={language}
                       onChange={handleLanguageChange}
                     >
@@ -526,7 +539,7 @@ const CodingWorkspace = ({
             </Card>
 
             {/* Monaco Editor Container with strict Anti-Cheat / No Copy-Paste */}
-            <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" overflow="hidden" borderRadius="xl" boxShadow="sm">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" overflow="hidden" borderRadius="xl" boxShadow="sm">
               <Box
                 h="380px"
                 w="full"
@@ -550,7 +563,7 @@ const CodingWorkspace = ({
                   height="100%"
                   language={language === 'c' || language === 'cpp' ? 'cpp' : language}
                   value={codeMap[language]}
-                  theme="vs-dark"
+                  theme={monacoTheme}
                   onChange={handleCodeChange}
                   onMount={handleEditorDidMount}
                   options={{
@@ -569,17 +582,17 @@ const CodingWorkspace = ({
             </Card>
 
             {/* Execution / Results Panel */}
-            <Card bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
+            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={4}>
                 <Tabs index={activeTab} onChange={(idx) => setActiveTab(idx)} colorScheme="green" variant="enclosed">
-                  <TabList borderColor="#DDE5DD">
-                    <Tab color="#505750" _selected={{ color: '#2F8D46', bg: '#F2F6F3', borderColor: '#DDE5DD', fontWeight: 'bold' }} fontSize="xs">
+                  <TabList borderColor={cardBorder}>
+                    <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs">
                       Console Output {runResult && (runResult.success ? '✓' : '✗')}
                     </Tab>
-                    <Tab color="#505750" _selected={{ color: '#2F8D46', bg: '#F2F6F3', borderColor: '#DDE5DD', fontWeight: 'bold' }} fontSize="xs">
+                    <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs">
                       Test Case Results {submitResult && (submitResult.isCompleted ? '✓' : '○')}
                     </Tab>
-                    <Tab color="#505750" _selected={{ color: '#2F8D46', bg: '#F2F6F3', borderColor: '#DDE5DD', fontWeight: 'bold' }} fontSize="xs">
+                    <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs">
                       Custom Stdin
                     </Tab>
                   </TabList>
@@ -588,7 +601,7 @@ const CodingWorkspace = ({
                     {/* TAB 1: Console Run Output */}
                     <TabPanel p={3}>
                       {isRunning ? (
-                        <Text color="#505750" fontSize="sm">Executing sandboxed container...</Text>
+                        <Text color={mutedText} fontSize="sm">Executing sandboxed container...</Text>
                       ) : runResult ? (
                         <VStack align="stretch" spacing={3}>
                           <Flex justify="space-between" align="center">
@@ -601,7 +614,7 @@ const CodingWorkspace = ({
                               {runResult.errorType || (runResult.success ? 'SUCCESS' : 'ERROR')}
                             </Badge>
                             {runResult.executionTime !== undefined && (
-                              <HStack color="#505750" fontSize="xs">
+                              <HStack color={mutedText} fontSize="xs">
                                 <Icon as={TimeIcon} />
                                 <Text>{runResult.executionTime} ms</Text>
                               </HStack>
@@ -611,11 +624,11 @@ const CodingWorkspace = ({
                           {/* Stdout */}
                           {runResult.output && (
                             <Box>
-                              <Text fontSize="2xs" color="#505750" textTransform="uppercase" fontWeight="bold" mb={1}>
+                              <Text fontSize="2xs" color={mutedText} textTransform="uppercase" fontWeight="bold" mb={1}>
                                 Standard Output
                               </Text>
-                              <Box p={3} bg="#171918" borderRadius="md" border="1px solid" borderColor="#3B423C">
-                                <Code bg="transparent" color="#F5F7F5" fontSize="xs" whiteSpace="pre-wrap" display="block">
+                              <Box p={3} bg={codeBoxBg} borderRadius="md" border="1px solid" borderColor={codeBoxBorder}>
+                                <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre-wrap" display="block">
                                   {runResult.output}
                                 </Code>
                               </Box>
@@ -637,8 +650,8 @@ const CodingWorkspace = ({
                           )}
                         </VStack>
                       ) : (
-                        <Text color="#505750" fontSize="xs">
-                          Click <strong style={{ color: '#1A2024' }}>Run Code</strong> to execute your solution with custom stdin.
+                        <Text color={mutedText} fontSize="xs">
+                          Click <strong style={{ color: textColor }}>Run Code</strong> to execute your solution with custom stdin.
                         </Text>
                       )}
                     </TabPanel>
@@ -646,7 +659,7 @@ const CodingWorkspace = ({
                     {/* TAB 2: Submission Test Case Results */}
                     <TabPanel p={3}>
                       {isSubmitting ? (
-                        <Text color="#505750" fontSize="sm">Grading solution against all test cases...</Text>
+                        <Text color={mutedText} fontSize="sm">Grading solution against all test cases...</Text>
                       ) : submitResult ? (
                         <VStack align="stretch" spacing={4}>
                           <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
@@ -665,7 +678,7 @@ const CodingWorkspace = ({
                               </Tag>
                             </HStack>
 
-                            <Text color="#505750" fontSize="xs">
+                            <Text color={mutedText} fontSize="xs">
                               Passed: {submitResult.passedTestCases || 0} / {submitResult.totalTestCases || 0} Test Cases
                             </Text>
                           </Flex>
@@ -689,10 +702,10 @@ const CodingWorkspace = ({
                                 <Box
                                   key={tc.testCaseId || idx}
                                   p={3}
-                                  bg="#F5F7F5"
+                                  bg={codeBoxBg}
                                   borderRadius="md"
                                   border="1px solid"
-                                  borderColor={tc.passed ? '#C8E6C9' : '#FFCDD2'}
+                                  borderColor={tc.passed ? tcBorderSuccess : tcBorderFail}
                                 >
                                   <Flex justify="space-between" align="center">
                                     <HStack spacing={2}>
@@ -700,7 +713,7 @@ const CodingWorkspace = ({
                                         as={tc.passed ? CheckCircleIcon : WarningIcon}
                                         color={tc.passed ? 'green.500' : 'red.500'}
                                       />
-                                      <Text color="#1A2024" fontSize="xs" fontWeight="bold">
+                                      <Text color={textColor} fontSize="xs" fontWeight="bold">
                                         Test Case {idx + 1} {tc.isHidden ? '(Hidden)' : ''}
                                       </Text>
                                     </HStack>
@@ -710,7 +723,7 @@ const CodingWorkspace = ({
                                         {tc.status || (tc.passed ? 'PASSED' : 'FAILED')}
                                       </Badge>
                                       {tc.executionTime !== undefined && (
-                                        <Text color="#505750" fontSize="2xs">
+                                        <Text color={mutedText} fontSize="2xs">
                                           {tc.executionTime}ms
                                         </Text>
                                       )}
@@ -718,10 +731,10 @@ const CodingWorkspace = ({
                                   </Flex>
 
                                   {!tc.isHidden && !tc.passed && (
-                                    <Box mt={2} pt={2} borderTop="1px solid" borderColor="#DDE5DD" fontSize="xs">
-                                      <Text color="#505750">Input: <Code colorScheme="gray" color="#1A2024" fontSize="xs">{tc.input}</Code></Text>
-                                      <Text color="#505750">Expected: <Code colorScheme="green" color="#1A2024" fontSize="xs">{tc.expectedOutput}</Code></Text>
-                                      <Text color="#505750">Actual: <Code colorScheme="red" color="red.700" fontSize="xs">{tc.actualOutput || tc.error}</Code></Text>
+                                    <Box mt={2} pt={2} borderTop="1px solid" borderColor={cardBorder} fontSize="xs">
+                                      <Text color={mutedText}>Input: <Code colorScheme="gray" color={textColor} bg={cardBg} fontSize="xs">{tc.input}</Code></Text>
+                                      <Text color={mutedText}>Expected: <Code colorScheme="green" color={textColor} bg={cardBg} fontSize="xs">{tc.expectedOutput}</Code></Text>
+                                      <Text color={mutedText}>Actual: <Code colorScheme="red" color="red.700" bg={cardBg} fontSize="xs">{tc.actualOutput || tc.error}</Code></Text>
                                     </Box>
                                   )}
                                 </Box>
@@ -730,8 +743,8 @@ const CodingWorkspace = ({
                           )}
                         </VStack>
                       ) : (
-                        <Text color="#505750" fontSize="xs">
-                          Click <strong style={{ color: '#1A2024' }}>Submit</strong> to evaluate your code against all test cases.
+                        <Text color={mutedText} fontSize="xs">
+                          Click <strong style={{ color: textColor }}>Submit</strong> to evaluate your code against all test cases.
                         </Text>
                       )}
                     </TabPanel>
@@ -739,20 +752,20 @@ const CodingWorkspace = ({
                     {/* TAB 3: Custom Stdin Input */}
                     <TabPanel p={3}>
                       <VStack align="stretch" spacing={2}>
-                        <Text fontSize="xs" color="#1A2024" fontWeight="bold">
+                        <Text fontSize="xs" color={textColor} fontWeight="bold">
                           Provide custom stdin input for testing:
                         </Text>
                         <Textarea
                           value={customInput}
                           onChange={(e) => setCustomInput(e.target.value)}
                           placeholder="Type stdin input here..."
-                          bg="#FFFFFF"
-                          borderColor="#DDE5DD"
-                          color="#1A2024"
+                          bg={cardBg}
+                          borderColor={cardBorder}
+                          color={textColor}
                           fontFamily="monospace"
                           fontSize="xs"
                           rows={4}
-                          _focus={{ borderColor: '#2F8D46', boxShadow: '0 0 0 1px #2F8D46' }}
+                          _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
                         />
                       </VStack>
                     </TabPanel>

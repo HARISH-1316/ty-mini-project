@@ -15,6 +15,7 @@ import {
   addTopicToRoom,
   removeTopicFromRoom,
   getRoomStudents,
+  getRoomLabAssessments,
 } from '../controllers/room.controller.js';
 import { isAuthenticated, isFaculty, isStudent, isFacultyOrAdmin } from '../middlewares/auth.middleware.js';
 import validate from '../middlewares/validation.middleware.js';
@@ -59,5 +60,8 @@ router.delete('/:roomId/topics/:topicId', isAuthenticated, isFacultyOrAdmin, rem
 
 // GET /api/rooms/:roomId/students — Get enrolled students (Faculty owner or Admin)
 router.get('/:roomId/students', isAuthenticated, isFacultyOrAdmin, getRoomStudents);
+
+// GET /api/rooms/:roomId/lab-assessments — Get room lab assessments (Faculty or enrolled Student)
+router.get('/:roomId/lab-assessments', isAuthenticated, getRoomLabAssessments);
 
 export default router;

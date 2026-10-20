@@ -1,5 +1,12 @@
 // ──────────────────────────────────────────────
-// Topic Catalog & Content Management — Faculty/Admin
+// Theory & Content Management — Faculty Workspace
+// ──────────────────────────────────────────────
+// Comprehensive curriculum content management:
+// - Topic and subtopic search & filter
+// - Structured educational content editor with Markdown support
+// - Preview mode rendering formatted content with high-contrast theme styling
+// - Save Draft vs Live Publish controls
+// - Topic-level YouTube Video Reference Manager (CRUD + Watch Video preview)
 // ──────────────────────────────────────────────
 
 import { useState, useEffect } from 'react';
@@ -35,15 +42,30 @@ import {
   Icon,
   Link,
   Tooltip,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
 } from '@chakra-ui/react';
 import {
   AddIcon,
   DeleteIcon,
   EditIcon,
-  CheckCircleIcon,
-  WarningIcon,
   ExternalLinkIcon,
   ChevronRightIcon,
+  SearchIcon,
+  ViewIcon,
 } from '@chakra-ui/icons';
 import {
   getAllTopicsApi,
@@ -55,14 +77,65 @@ import {
   upsertSubtopicContentApi,
   publishSubtopicContentApi,
   unpublishSubtopicContentApi,
+  getTopicVideosApi,
+  addTopicVideoApi,
+  updateTopicVideoApi,
+  deleteTopicVideoApi,
 } from '../../api/topicApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
+import MarkdownRenderer from '../../components/common/MarkdownRenderer';
+
+const STRUCTURED_TEMPLATE = `## 1. Topic Overview
+Brief summary of the concepts and fundamental purpose of this topic.
+
+## 2. Learning Objectives
+- Understand the core principles
+- Analyze time and space efficiency
+- Apply relevant algorithms to standard problems
+
+## 3. Prerequisites
+- Basic familiarity with programming syntax and control flow.
+
+## 4. Core Concepts
+Detailed theoretical explanation of data structures and underlying mechanics.
+
+## 5. Algorithms and Explanations
+Step-by-step description of relevant procedures and manipulations.
+
+## 6. Pseudocode & Code Examples
+\`\`\`cpp
+// Example C++ implementation
+void exampleSolution() {
+    // algorithm implementation
+}
+\`\`\`
+
+## 7. Time & Space Complexity
+- **Time Complexity:** O(N) average case, O(1) best case.
+- **Auxiliary Space:** O(1) in-place auxiliary storage.
+
+## 8. Worked Examples
+Walkthrough of a concrete test case tracing variable mutations.
+
+## 9. Common Pitfalls & Mistakes
+- Off-by-one errors in bounds checking.
+- Null pointer / boundary condition handling.
+
+## 10. Practical Applications
+Real-world systems, databases, operating systems, and network protocols using this topic.
+
+## 11. Summary
+Key takeaways and revision notes.
+
+## 12. References
+- Standard DSA textbooks & accredited lecture materials.
+`;
 
 const TopicManagement = () => {
   const toast = useToast();
 
-  // Color tokens aligned with normal light green theme
+  // Color tokens aligned with normal light/dark theme rules
   const cardBg = useColorModeValue('#FFFFFF', '#202321');
   const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
   const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
@@ -74,15 +147,23 @@ const TopicManagement = () => {
 
   const { isOpen: isTopicOpen, onOpen: onTopicOpen, onClose: onTopicClose } = useDisclosure();
   const { isOpen: isSubtopicOpen, onOpen: onSubtopicOpen, onClose: onSubtopicClose } = useDisclosure();
+  const { isOpen: isVideoModalOpen, onOpen: onVideoModalOpen, onClose: onVideoModalClose } = useDisclosure();
 
   const [topics, setTopics] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [subtopics, setSubtopics] = useState([]);
   const [selectedSubtopic, setSelectedSubtopic] = useState(null);
+  const [topicVideos, setTopicVideos] = useState([]);
 
+  // Search & Filters
+  const [topicSearch, setTopicSearch] = useState('');
+  const [subtopicSearch, setSubtopicSearch] = useState('');
+
+  // Loading states
   const [isLoadingTopics, setIsLoadingTopics] = useState(true);
   const [isLoadingSubtopics, setIsLoadingSubtopics] = useState(false);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
 
   // New Topic Form State
   const [newTopic, setNewTopic] = useState({ title: '', description: '' });
@@ -101,8 +182,20 @@ const TopicManagement = () => {
   });
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isTogglingPublish, setIsTogglingPublish] = useState(false);
+  const [activeEditorTab, setActiveEditorTab] = useState(0); // 0 = Edit, 1 = Preview
 
-  // Load all topics on mount
+  // Video Reference Form State
+  const [editingVideo, setEditingVideo] = useState(null);
+  const [videoForm, setVideoForm] = useState({
+    title: '',
+    channel_name: '',
+    url: '',
+    description: '',
+    order_index: 0,
+  });
+  const [isSavingVideo, setIsSavingVideo] = useState(false);
+
+  // Fetch topics
   const fetchTopics = async () => {
     try {
       setIsLoadingTopics(true);
@@ -110,7 +203,6 @@ const TopicManagement = () => {
       const topicList = res.data?.topics || [];
       setTopics(topicList);
 
-      // Auto-select first topic if available and none selected
       if (topicList.length > 0 && !selectedTopic) {
         handleSelectTopic(topicList[0]);
       }
@@ -130,6 +222,19 @@ const TopicManagement = () => {
     fetchTopics();
   }, []);
 
+  // Fetch Videos for Selected Topic
+  const fetchVideosForTopic = async (topicId) => {
+    try {
+      setIsLoadingVideos(true);
+      const res = await getTopicVideosApi(topicId);
+      setTopicVideos(res.data?.videos || []);
+    } catch {
+      setTopicVideos([]);
+    } finally {
+      setIsLoadingVideos(false);
+    }
+  };
+
   // Handle Topic Selection
   const handleSelectTopic = async (topic) => {
     setSelectedTopic(topic);
@@ -138,11 +243,13 @@ const TopicManagement = () => {
 
     try {
       setIsLoadingSubtopics(true);
-      const res = await getTopicByIdApi(topic.topic_id);
-      const subList = res.data?.topic?.subtopics || [];
+      const [topicRes] = await Promise.all([
+        getTopicByIdApi(topic.topic_id),
+        fetchVideosForTopic(topic.topic_id),
+      ]);
+      const subList = topicRes.data?.topic?.subtopics || [];
       setSubtopics(subList);
 
-      // Auto-select first subtopic if present
       if (subList.length > 0) {
         handleSelectSubtopic(subList[0]);
       }
@@ -171,12 +278,6 @@ const TopicManagement = () => {
         video_explanation_url: content.video_explanation_url || '',
       });
     } catch {
-      toast({
-        title: 'Content Loading Notice',
-        description: 'No content found yet for this subtopic. You can write and save content below.',
-        status: 'info',
-        duration: 2500,
-      });
       setContentForm({ aim: '', theory: '', video_explanation_url: '' });
     } finally {
       setIsLoadingContent(false);
@@ -215,22 +316,6 @@ const TopicManagement = () => {
     }
   };
 
-  // Delete Topic
-  const handleDeleteTopic = async (topicId) => {
-    if (!window.confirm('Are you sure you want to delete this topic and all its subtopics?')) return;
-    try {
-      await deleteTopicApi(topicId);
-      toast({ title: 'Topic Deleted', status: 'info', duration: 2000 });
-      if (selectedTopic?.topic_id === topicId) {
-        setSelectedTopic(null);
-        setSelectedSubtopic(null);
-      }
-      fetchTopics();
-    } catch {
-      toast({ title: 'Error deleting topic', status: 'error', duration: 2000 });
-    }
-  };
-
   // Create Subtopic
   const handleCreateSubtopic = async (e) => {
     e.preventDefault();
@@ -260,8 +345,7 @@ const TopicManagement = () => {
   };
 
   // Save Content Changes
-  const handleSaveContent = async (e) => {
-    e.preventDefault();
+  const handleSaveContent = async (asPublished = null) => {
     if (!selectedSubtopic) return;
 
     if (!contentForm.aim.trim() || !contentForm.theory.trim()) {
@@ -283,15 +367,26 @@ const TopicManagement = () => {
         video_explanation_url: contentForm.video_explanation_url.trim() || null,
       });
 
+      if (asPublished === true && !selectedSubtopic.is_published) {
+        await publishSubtopicContentApi(selectedSubtopic.subtopic_id);
+        setSelectedSubtopic((prev) => ({ ...prev, is_published: true }));
+        setSubtopics((prev) =>
+          prev.map((s) => (s.subtopic_id === selectedSubtopic.subtopic_id ? { ...s, is_published: true } : s))
+        );
+      } else if (asPublished === false && selectedSubtopic.is_published) {
+        await unpublishSubtopicContentApi(selectedSubtopic.subtopic_id);
+        setSelectedSubtopic((prev) => ({ ...prev, is_published: false }));
+        setSubtopics((prev) =>
+          prev.map((s) => (s.subtopic_id === selectedSubtopic.subtopic_id ? { ...s, is_published: false } : s))
+        );
+      }
+
       toast({
-        title: 'Content Saved Successfully! 💾',
-        description: `Updated content for "${selectedSubtopic.title}".`,
+        title: asPublished === true ? 'Published Live! 🚀' : 'Draft Saved 💾',
+        description: `Content for "${selectedSubtopic.title}" updated successfully.`,
         status: 'success',
         duration: 3000,
       });
-
-      // Refresh current subtopic content
-      handleSelectSubtopic(selectedSubtopic);
     } catch (err) {
       toast({
         title: 'Error Saving Content',
@@ -304,7 +399,7 @@ const TopicManagement = () => {
     }
   };
 
-  // Publish / Unpublish Toggle
+  // Toggle Publish
   const handleTogglePublish = async () => {
     if (!selectedSubtopic) return;
     setIsTogglingPublish(true);
@@ -312,9 +407,8 @@ const TopicManagement = () => {
     const isCurrentlyPublished = selectedSubtopic.is_published;
 
     try {
-      let res;
       if (isCurrentlyPublished) {
-        res = await unpublishSubtopicContentApi(selectedSubtopic.subtopic_id);
+        await unpublishSubtopicContentApi(selectedSubtopic.subtopic_id);
         toast({
           title: 'Subtopic Unpublished 🔒',
           description: `"${selectedSubtopic.title}" is now hidden from students.`,
@@ -322,7 +416,7 @@ const TopicManagement = () => {
           duration: 3000,
         });
       } else {
-        res = await publishSubtopicContentApi(selectedSubtopic.subtopic_id);
+        await publishSubtopicContentApi(selectedSubtopic.subtopic_id);
         toast({
           title: 'Subtopic Published 🚀',
           description: `"${selectedSubtopic.title}" is now visible to students.`,
@@ -337,8 +431,6 @@ const TopicManagement = () => {
       };
 
       setSelectedSubtopic(updatedSubtopic);
-
-      // Update subtopics list in state
       setSubtopics((prev) =>
         prev.map((s) => (s.subtopic_id === selectedSubtopic.subtopic_id ? updatedSubtopic : s))
       );
@@ -354,8 +446,84 @@ const TopicManagement = () => {
     }
   };
 
+  // Video Management Handlers
+  const handleOpenAddVideo = () => {
+    setEditingVideo(null);
+    setVideoForm({
+      title: '',
+      channel_name: '',
+      url: '',
+      description: '',
+      order_index: topicVideos.length,
+    });
+    onVideoModalOpen();
+  };
+
+  const handleOpenEditVideo = (video) => {
+    setEditingVideo(video);
+    setVideoForm({
+      title: video.title,
+      channel_name: video.channel_name || '',
+      url: video.url,
+      description: video.description || '',
+      order_index: video.order_index || 0,
+    });
+    onVideoModalOpen();
+  };
+
+  const handleSaveVideo = async (e) => {
+    e.preventDefault();
+    if (!selectedTopic || !videoForm.title.trim() || !videoForm.url.trim()) return;
+
+    setIsSavingVideo(true);
+    try {
+      if (editingVideo) {
+        await updateTopicVideoApi(selectedTopic.topic_id, editingVideo.video_id, videoForm);
+        toast({ title: 'Video Reference Updated', status: 'success', duration: 2000 });
+      } else {
+        await addTopicVideoApi(selectedTopic.topic_id, videoForm);
+        toast({ title: 'Video Reference Added 🎥', status: 'success', duration: 2000 });
+      }
+      onVideoModalClose();
+      fetchVideosForTopic(selectedTopic.topic_id);
+    } catch (err) {
+      toast({
+        title: 'Error Saving Video',
+        description: err.response?.data?.message || 'Failed to save video reference.',
+        status: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setIsSavingVideo(false);
+    }
+  };
+
+  const handleDeleteVideo = async (videoId) => {
+    if (!window.confirm('Delete this YouTube video reference from this topic?')) return;
+    try {
+      await deleteTopicVideoApi(selectedTopic.topic_id, videoId);
+      toast({ title: 'Video Reference Removed', status: 'info', duration: 2000 });
+      fetchVideosForTopic(selectedTopic.topic_id);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err.response?.data?.message || 'Failed to delete video.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  // Filtered topics and subtopics
+  const filteredTopics = topics.filter((t) =>
+    t.title.toLowerCase().includes(topicSearch.toLowerCase())
+  );
+  const filteredSubtopics = subtopics.filter((s) =>
+    s.title.toLowerCase().includes(subtopicSearch.toLowerCase())
+  );
+
   if (isLoadingTopics) {
-    return <LoadingSpinner label="Loading topic catalog..." />;
+    return <LoadingSpinner label="Loading topic catalog & theory content..." />;
   }
 
   return (
@@ -363,9 +531,11 @@ const TopicManagement = () => {
       {/* Top Header */}
       <Flex justify="space-between" align="center" direction={{ base: 'column', md: 'row' }} gap={4}>
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color={textColor} fontWeight="800">Faculty Content Management</Heading>
+          <Heading size="lg" color={textColor} fontWeight="800">
+            Theory &amp; Content Management
+          </Heading>
           <Text color={mutedText} fontSize="sm">
-            Select a topic, navigate subtopics, update educational aim & theory content, and control student publication status.
+            Manage structured curriculum theory, Markdown formatting, publication draft states, and verified YouTube references per topic.
           </Text>
         </VStack>
 
@@ -377,7 +547,7 @@ const TopicManagement = () => {
               variant="outline"
               colorScheme="green"
             >
-              Manage Quizzes ({selectedTopic.title})
+              Topic Quizzes ({selectedTopic.title})
             </Button>
           )}
           <Button onClick={onTopicOpen} leftIcon={<AddIcon />} colorScheme="green">
@@ -403,7 +573,7 @@ const TopicManagement = () => {
                 <VStack align="stretch" spacing={3}>
                   <Flex justify="space-between" align="center">
                     <Text fontWeight="bold" color={accentColor} textTransform="uppercase" fontSize="xs" letterSpacing="wider">
-                      1. Topics ({topics.length})
+                      1. Topics ({filteredTopics.length})
                     </Text>
                     <IconButton
                       aria-label="Add topic"
@@ -414,10 +584,24 @@ const TopicManagement = () => {
                       onClick={onTopicOpen}
                     />
                   </Flex>
+
+                  {/* Topic Search Input */}
+                  <HStack bg={surfaceBg} px={2} py={1} borderRadius="md" borderWidth="1px" borderColor={cardBorder}>
+                    <SearchIcon color={mutedText} boxSize={3} />
+                    <Input
+                      placeholder="Search topics..."
+                      size="xs"
+                      variant="unstyled"
+                      value={topicSearch}
+                      onChange={(e) => setTopicSearch(e.target.value)}
+                      color={textColor}
+                    />
+                  </HStack>
+
                   <Divider borderColor={cardBorder} />
 
-                  <VStack align="stretch" spacing={2} maxH="500px" overflowY="auto">
-                    {topics.map((t) => {
+                  <VStack align="stretch" spacing={2} maxH="550px" overflowY="auto">
+                    {filteredTopics.map((t) => {
                       const isSelected = selectedTopic?.topic_id === t.topic_id;
                       return (
                         <Box
@@ -434,10 +618,10 @@ const TopicManagement = () => {
                         >
                           <Flex justify="space-between" align="center">
                             <VStack align="start" spacing={0} pr={2}>
-                              <Text color={isSelected ? '#174723' : textColor} fontWeight="semibold" fontSize="sm">
+                              <Text color={isSelected ? accentColor : textColor} fontWeight="semibold" fontSize="sm">
                                 {t.title}
                               </Text>
-                              <Text color={isSelected ? '#26753A' : mutedText} fontSize="xs" noOfLines={1}>
+                              <Text color={mutedText} fontSize="xs" noOfLines={1}>
                                 {t.description || 'No description'}
                               </Text>
                             </VStack>
@@ -453,18 +637,18 @@ const TopicManagement = () => {
           </Box>
 
           {/* Column 2: Subtopics Selector Card */}
-          <Box gridColumn={{ base: 'span 1', lg: 'span 4' }}>
+          <Box gridColumn={{ base: 'span 1', lg: 'span 3' }}>
             <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
               <CardBody p={4}>
                 <VStack align="stretch" spacing={3}>
                   <Flex justify="space-between" align="center">
                     <VStack align="start" spacing={0}>
                       <Text fontWeight="bold" color={accentColor} textTransform="uppercase" fontSize="xs" letterSpacing="wider">
-                        2. Subtopics ({subtopics.length})
+                        2. Subtopics ({filteredSubtopics.length})
                       </Text>
                       {selectedTopic && (
                         <Text color={mutedText} fontSize="xs" fontWeight="medium" noOfLines={1}>
-                          Topic: {selectedTopic.title}
+                          {selectedTopic.title}
                         </Text>
                       )}
                     </VStack>
@@ -479,21 +663,35 @@ const TopicManagement = () => {
                           onSubtopicOpen();
                         }}
                       >
-                        Add Subtopic
+                        Add
                       </Button>
                     )}
                   </Flex>
+
+                  {/* Subtopic Search Input */}
+                  <HStack bg={surfaceBg} px={2} py={1} borderRadius="md" borderWidth="1px" borderColor={cardBorder}>
+                    <SearchIcon color={mutedText} boxSize={3} />
+                    <Input
+                      placeholder="Search subtopics..."
+                      size="xs"
+                      variant="unstyled"
+                      value={subtopicSearch}
+                      onChange={(e) => setSubtopicSearch(e.target.value)}
+                      color={textColor}
+                    />
+                  </HStack>
+
                   <Divider borderColor={cardBorder} />
 
                   {isLoadingSubtopics ? (
                     <LoadingSpinner label="Loading subtopics..." />
-                  ) : subtopics.length === 0 ? (
-                    <Text color={mutedText} fontSize="sm" py={4} textAlign="center">
-                      No subtopics created for this topic yet. Click "Add Subtopic" above.
+                  ) : filteredSubtopics.length === 0 ? (
+                    <Text color={mutedText} fontSize="xs" py={4} textAlign="center">
+                      No subtopics found for this topic.
                     </Text>
                   ) : (
-                    <VStack align="stretch" spacing={2} maxH="500px" overflowY="auto">
-                      {subtopics.map((sub) => {
+                    <VStack align="stretch" spacing={2} maxH="550px" overflowY="auto">
+                      {filteredSubtopics.map((sub) => {
                         const isSelected = selectedSubtopic?.subtopic_id === sub.subtopic_id;
                         return (
                           <Box
@@ -509,17 +707,22 @@ const TopicManagement = () => {
                             onClick={() => handleSelectSubtopic(sub)}
                           >
                             <Flex justify="space-between" align="center">
-                              <HStack spacing={2}>
-                                <Text color={accentColor} fontWeight="bold" fontSize="xs" minW="20px">
+                              <HStack spacing={2} maxW="70%">
+                                <Text color={accentColor} fontWeight="bold" fontSize="xs" minW="18px">
                                   #{sub.order_index || '-'}
                                 </Text>
-                                <Text color={isSelected ? '#174723' : textColor} fontWeight="medium" fontSize="sm">
+                                <Text color={isSelected ? accentColor : textColor} fontWeight="medium" fontSize="xs" noOfLines={1}>
                                   {sub.title}
                                 </Text>
                               </HStack>
 
-                              <Badge colorScheme={sub.is_published ? 'green' : 'orange'} fontSize="10px" px={2} borderRadius="full">
-                                {sub.is_published ? 'Published' : 'Draft'}
+                              <Badge
+                                colorScheme={sub.is_published ? 'green' : 'orange'}
+                                fontSize="9px"
+                                px={1.5}
+                                borderRadius="full"
+                              >
+                                {sub.is_published ? 'Live' : 'Draft'}
                               </Badge>
                             </Flex>
                           </Box>
@@ -532,153 +735,315 @@ const TopicManagement = () => {
             </Card>
           </Box>
 
-          {/* Column 3: Content Editor Panel */}
-          <Box gridColumn={{ base: 'span 1', lg: 'span 5' }}>
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
-              <CardBody p={5}>
-                {!selectedSubtopic ? (
-                  <VStack py={12} spacing={3} align="center">
-                    <Icon as={EditIcon} w={8} h={8} color={accentColor} />
-                    <Text color={mutedText} fontSize="sm" textAlign="center">
-                      Select a topic and subtopic from the left panels to edit educational aim, theory, and video explanation URL.
-                    </Text>
-                  </VStack>
-                ) : isLoadingContent ? (
-                  <LoadingSpinner label="Loading subtopic content..." />
-                ) : (
-                  <form onSubmit={handleSaveContent}>
-                    <VStack align="stretch" spacing={4}>
-                      {/* Context Breadcrumb & Status */}
-                      <Flex justify="space-between" align="start">
-                        <VStack align="start" spacing={1}>
-                          <HStack spacing={2}>
-                            <Badge colorScheme="green" variant="subtle" fontSize="xs">
-                              {selectedTopic?.title}
-                            </Badge>
-                            <Text color={mutedText} fontSize="xs">/</Text>
-                            <Text color={accentColor} fontWeight="bold" fontSize="sm">
-                              {selectedSubtopic.title}
-                            </Text>
-                          </HStack>
-                          <Text color={mutedText} fontSize="xs">
-                            Order Index: {selectedSubtopic.order_index}
+          {/* Column 3: Theory Content & Video Reference Panels */}
+          <Box gridColumn={{ base: 'span 1', lg: 'span 6' }}>
+            <Tabs colorScheme="green" isLazy>
+              <TabList borderColor={cardBorder} mb={3}>
+                <Tab color={textColor} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }}>
+                  📖 Theory Editor {selectedSubtopic ? `(${selectedSubtopic.title})` : ''}
+                </Tab>
+                <Tab color={textColor} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }}>
+                  🎥 YouTube References ({topicVideos.length})
+                </Tab>
+              </TabList>
+
+              <TabPanels>
+                {/* Panel 1: Subtopic Theory Editor & Live Preview */}
+                <TabPanel p={0}>
+                  <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
+                    <CardBody p={5}>
+                      {!selectedSubtopic ? (
+                        <VStack py={12} spacing={3} align="center">
+                          <Icon as={EditIcon} w={8} h={8} color={accentColor} />
+                          <Text color={mutedText} fontSize="sm" textAlign="center">
+                            Select a subtopic from the middle panel to edit its learning objectives, Markdown theory, and draft/published status.
                           </Text>
                         </VStack>
+                      ) : isLoadingContent ? (
+                        <LoadingSpinner label="Loading subtopic content..." />
+                      ) : (
+                        <VStack align="stretch" spacing={4}>
+                          {/* Header / Meta Bar */}
+                          <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+                            <VStack align="start" spacing={0}>
+                              <HStack spacing={2}>
+                                <Badge colorScheme="green" variant="subtle" fontSize="xs">
+                                  {selectedTopic?.title}
+                                </Badge>
+                                <Text color={mutedText} fontSize="xs">/</Text>
+                                <Text color={accentColor} fontWeight="bold" fontSize="sm">
+                                  {selectedSubtopic.title}
+                                </Text>
+                              </HStack>
+                              <Text color={mutedText} fontSize="xs">
+                                Publication Status: {selectedSubtopic.is_published ? 'Published to Students' : 'Draft (Faculty Only)'}
+                              </Text>
+                            </VStack>
 
-                        <HStack spacing={2}>
-                          <Badge
-                            colorScheme={selectedSubtopic.is_published ? 'green' : 'orange'}
-                            px={2.5}
-                            py={1}
-                            borderRadius="md"
-                            fontSize="xs"
-                          >
-                            {selectedSubtopic.is_published ? 'LIVE PUBLISHED' : 'UNPUBLISHED DRAFT'}
-                          </Badge>
+                            <HStack spacing={2}>
+                              <Button
+                                size="xs"
+                                colorScheme={selectedSubtopic.is_published ? 'orange' : 'green'}
+                                variant="outline"
+                                isLoading={isTogglingPublish}
+                                onClick={handleTogglePublish}
+                              >
+                                {selectedSubtopic.is_published ? 'Unpublish' : 'Publish Live'}
+                              </Button>
 
-                          <Button
-                            size="xs"
-                            colorScheme={selectedSubtopic.is_published ? 'orange' : 'green'}
-                            variant="outline"
-                            isLoading={isTogglingPublish}
-                            onClick={handleTogglePublish}
-                          >
-                            {selectedSubtopic.is_published ? 'Unpublish' : 'Publish'}
-                          </Button>
-                        </HStack>
-                      </Flex>
+                              <Button
+                                size="xs"
+                                colorScheme="purple"
+                                variant="ghost"
+                                onClick={() =>
+                                  setContentForm((prev) => ({
+                                    ...prev,
+                                    theory: prev.theory ? prev.theory + '\n\n' + STRUCTURED_TEMPLATE : STRUCTURED_TEMPLATE,
+                                  }))
+                                }
+                              >
+                                + Insert Structure Template
+                              </Button>
+                            </HStack>
+                          </Flex>
 
-                      <Divider borderColor={cardBorder} />
+                          <Divider borderColor={cardBorder} />
 
-                      {/* Aim Field */}
-                      <FormControl isRequired>
-                        <FormLabel color={textColor} fontSize="sm" fontWeight="bold">
-                          Aim / Learning Objective
-                        </FormLabel>
-                        <Textarea
-                          placeholder="State the academic aim and key learning objectives of this subtopic..."
-                          value={contentForm.aim}
-                          onChange={(e) => setContentForm({ ...contentForm, aim: e.target.value })}
-                          bg={surfaceBg}
-                          borderColor={cardBorder}
-                          color={textColor}
-                          fontSize="sm"
-                          rows={3}
-                          _focus={{ borderColor: accentColor }}
-                        />
-                      </FormControl>
+                          {/* Aim / Learning Objective */}
+                          <FormControl isRequired>
+                            <FormLabel color={textColor} fontSize="xs" fontWeight="bold">
+                              Aim &amp; Learning Objectives
+                            </FormLabel>
+                            <Textarea
+                              placeholder="State academic aim and key learning outcomes..."
+                              value={contentForm.aim}
+                              onChange={(e) => setContentForm({ ...contentForm, aim: e.target.value })}
+                              bg={surfaceBg}
+                              borderColor={cardBorder}
+                              color={textColor}
+                              fontSize="xs"
+                              rows={2}
+                              _focus={{ borderColor: accentColor }}
+                            />
+                          </FormControl>
 
-                      {/* Theory Area */}
-                      <FormControl isRequired>
-                        <FormLabel color={textColor} fontSize="sm" fontWeight="bold">
-                          Theory & Comprehensive Content (Markdown supported)
-                        </FormLabel>
-                        <Textarea
-                          placeholder="Write detailed educational material including definition, core concepts, working principles, algorithm pseudocode/code examples, time & space complexities..."
-                          value={contentForm.theory}
-                          onChange={(e) => setContentForm({ ...contentForm, theory: e.target.value })}
-                          bg={surfaceBg}
-                          borderColor={cardBorder}
-                          color={textColor}
-                          fontSize="sm"
-                          rows={14}
-                          fontFamily="mono"
-                          _focus={{ borderColor: accentColor }}
-                        />
-                      </FormControl>
+                          {/* Theory Markdown Area with Edit / Preview Switch */}
+                          <Box>
+                            <Flex justify="space-between" align="center" mb={1}>
+                              <FormLabel color={textColor} fontSize="xs" fontWeight="bold" m={0}>
+                                Theory Content (Markdown, Tables &amp; Code Supported)
+                              </FormLabel>
+                              <HStack spacing={1}>
+                                <Button
+                                  size="xs"
+                                  variant={activeEditorTab === 0 ? 'solid' : 'ghost'}
+                                  colorScheme="green"
+                                  onClick={() => setActiveEditorTab(0)}
+                                >
+                                  Edit Markdown
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant={activeEditorTab === 1 ? 'solid' : 'ghost'}
+                                  colorScheme="green"
+                                  leftIcon={<ViewIcon />}
+                                  onClick={() => setActiveEditorTab(1)}
+                                >
+                                  Preview
+                                </Button>
+                              </HStack>
+                            </Flex>
 
-                      {/* Video URL Input */}
-                      <FormControl>
-                        <FormLabel color={textColor} fontSize="sm" fontWeight="bold">
-                          Video Explanation URL (Optional)
-                        </FormLabel>
-                        <Input
-                          placeholder="https://www.youtube.com/watch?v=..."
-                          value={contentForm.video_explanation_url}
-                          onChange={(e) => setContentForm({ ...contentForm, video_explanation_url: e.target.value })}
-                          bg={surfaceBg}
-                          borderColor={cardBorder}
-                          color={textColor}
-                          fontSize="sm"
-                          _focus={{ borderColor: accentColor }}
-                        />
-                        {contentForm.video_explanation_url && (
-                          <HStack pt={1} spacing={1}>
-                            <ExternalLinkIcon color={accentColor} w={3} h={3} />
-                            <Link href={contentForm.video_explanation_url} isExternal color={accentColor} fontSize="xs">
-                              Open Video Link
-                            </Link>
-                          </HStack>
+                            {activeEditorTab === 0 ? (
+                              <Textarea
+                                placeholder="Write detailed educational theory, code blocks, algorithm complexity..."
+                                value={contentForm.theory}
+                                onChange={(e) => setContentForm({ ...contentForm, theory: e.target.value })}
+                                bg={surfaceBg}
+                                borderColor={cardBorder}
+                                color={textColor}
+                                fontSize="xs"
+                                rows={14}
+                                fontFamily="'Fira Code', 'Consolas', monospace"
+                                _focus={{ borderColor: accentColor }}
+                              />
+                            ) : (
+                              <Box
+                                p={4}
+                                bg={surfaceBg}
+                                borderColor={cardBorder}
+                                borderWidth="1px"
+                                borderRadius="md"
+                                minH="300px"
+                                maxH="500px"
+                                overflowY="auto"
+                              >
+                                {contentForm.theory ? (
+                                  <MarkdownRenderer content={contentForm.theory} />
+                                ) : (
+                                  <Text color={mutedText} fontSize="xs" fontStyle="italic">
+                                    No theory content written yet. Switch to "Edit Markdown" to write content.
+                                  </Text>
+                                )}
+                              </Box>
+                            )}
+                          </Box>
+
+                          {/* Subtopic Optional Video URL */}
+                          <FormControl>
+                            <FormLabel color={textColor} fontSize="xs" fontWeight="bold">
+                              Subtopic Video Link (Optional)
+                            </FormLabel>
+                            <Input
+                              placeholder="https://www.youtube.com/watch?v=..."
+                              value={contentForm.video_explanation_url}
+                              onChange={(e) =>
+                                setContentForm({ ...contentForm, video_explanation_url: e.target.value })
+                              }
+                              bg={surfaceBg}
+                              borderColor={cardBorder}
+                              color={textColor}
+                              fontSize="xs"
+                              _focus={{ borderColor: accentColor }}
+                            />
+                          </FormControl>
+
+                          {/* Save & Draft Buttons */}
+                          <Flex justify="space-between" align="center" pt={2}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorScheme="gray"
+                              isLoading={isSavingContent}
+                              onClick={() => handleSaveContent(false)}
+                            >
+                              Save Draft (Hidden)
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              colorScheme="green"
+                              isLoading={isSavingContent}
+                              onClick={() => handleSaveContent(true)}
+                              px={6}
+                            >
+                              Save &amp; Publish Live
+                            </Button>
+                          </Flex>
+                        </VStack>
+                      )}
+                    </CardBody>
+                  </Card>
+                </TabPanel>
+
+                {/* Panel 2: Topic YouTube Video References Manager */}
+                <TabPanel p={0}>
+                  <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
+                    <CardBody p={5}>
+                      <VStack align="stretch" spacing={4}>
+                        <Flex justify="space-between" align="center">
+                          <VStack align="start" spacing={0}>
+                            <Heading size="sm" color={textColor}>
+                              Verified Video References
+                            </Heading>
+                            <Text color={mutedText} fontSize="xs">
+                              Topic: {selectedTopic?.title || 'None Selected'}
+                            </Text>
+                          </VStack>
+
+                          {selectedTopic && (
+                            <Button
+                              size="xs"
+                              colorScheme="green"
+                              leftIcon={<AddIcon />}
+                              onClick={handleOpenAddVideo}
+                            >
+                              Add Video Reference
+                            </Button>
+                          )}
+                        </Flex>
+
+                        <Divider borderColor={cardBorder} />
+
+                        {isLoadingVideos ? (
+                          <LoadingSpinner label="Loading video references..." />
+                        ) : topicVideos.length === 0 ? (
+                          <VStack py={8} spacing={2} align="center">
+                            <Text color={mutedText} fontSize="xs">
+                              No video references associated with this topic yet.
+                            </Text>
+                            <Button size="xs" colorScheme="green" onClick={handleOpenAddVideo}>
+                              Add First Video
+                            </Button>
+                          </VStack>
+                        ) : (
+                          <VStack align="stretch" spacing={3} maxH="500px" overflowY="auto">
+                            {topicVideos.map((vid) => (
+                              <Box
+                                key={vid.video_id}
+                                p={3}
+                                bg={surfaceBg}
+                                borderWidth="1px"
+                                borderColor={cardBorder}
+                                borderRadius="lg"
+                              >
+                                <Flex justify="space-between" align="start">
+                                  <VStack align="start" spacing={1} maxW="70%">
+                                    <Text fontWeight="bold" fontSize="xs" color={textColor}>
+                                      {vid.title}
+                                    </Text>
+                                    <HStack spacing={2}>
+                                      <Badge colorScheme="purple" fontSize="10px">
+                                        {vid.channel_name || 'YouTube'}
+                                      </Badge>
+                                      <Link
+                                        href={vid.url}
+                                        isExternal
+                                        color={accentColor}
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        Watch Video <ExternalLinkIcon boxSize={3} />
+                                      </Link>
+                                    </HStack>
+                                    {vid.description && (
+                                      <Text color={mutedText} fontSize="xs" noOfLines={2}>
+                                        {vid.description}
+                                      </Text>
+                                    )}
+                                  </VStack>
+
+                                  <HStack spacing={1}>
+                                    <IconButton
+                                      aria-label="Edit video"
+                                      icon={<EditIcon />}
+                                      size="xs"
+                                      variant="ghost"
+                                      colorScheme="blue"
+                                      onClick={() => handleOpenEditVideo(vid)}
+                                    />
+                                    <IconButton
+                                      aria-label="Delete video"
+                                      icon={<DeleteIcon />}
+                                      size="xs"
+                                      variant="ghost"
+                                      colorScheme="red"
+                                      onClick={() => handleDeleteVideo(vid.video_id)}
+                                    />
+                                  </HStack>
+                                </Flex>
+                              </Box>
+                            ))}
+                          </VStack>
                         )}
-                      </FormControl>
-
-                      {/* Save & Action Controls */}
-                      <Flex justify="space-between" align="center" pt={2}>
-                        <Button
-                          colorScheme={selectedSubtopic.is_published ? 'orange' : 'green'}
-                          variant="ghost"
-                          size="sm"
-                          isLoading={isTogglingPublish}
-                          onClick={handleTogglePublish}
-                        >
-                          {selectedSubtopic.is_published ? 'Unpublish Content' : 'Publish Content'}
-                        </Button>
-
-                        <Button
-                          type="submit"
-                          colorScheme="green"
-                          size="md"
-                          isLoading={isSavingContent}
-                          px={6}
-                        >
-                          Save Changes
-                        </Button>
-                      </Flex>
-                    </VStack>
-                  </form>
-                )}
-              </CardBody>
-            </Card>
+                      </VStack>
+                    </CardBody>
+                  </Card>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
           </Box>
         </SimpleGrid>
       )}
@@ -693,7 +1058,7 @@ const TopicManagement = () => {
             <ModalBody pb={6}>
               <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel color={textColor}>Topic Title</FormLabel>
+                  <FormLabel color={textColor} fontSize="xs">Topic Title</FormLabel>
                   <Input
                     placeholder="e.g. Data Structures and Algorithms"
                     value={newTopic.title}
@@ -701,11 +1066,12 @@ const TopicManagement = () => {
                     bg={surfaceBg}
                     borderColor={cardBorder}
                     color={textColor}
+                    fontSize="sm"
                   />
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel color={textColor}>Description</FormLabel>
+                  <FormLabel color={textColor} fontSize="xs">Description</FormLabel>
                   <Textarea
                     placeholder="Brief summary of overall module..."
                     value={newTopic.description}
@@ -714,13 +1080,14 @@ const TopicManagement = () => {
                     borderColor={cardBorder}
                     color={textColor}
                     rows={3}
+                    fontSize="sm"
                   />
                 </FormControl>
               </VStack>
             </ModalBody>
             <ModalFooter gap={3}>
-              <Button variant="ghost" onClick={onTopicClose}>Cancel</Button>
-              <Button type="submit" colorScheme="green" isLoading={isCreatingTopic}>Create Topic</Button>
+              <Button variant="ghost" onClick={onTopicClose} size="sm">Cancel</Button>
+              <Button type="submit" colorScheme="green" isLoading={isCreatingTopic} size="sm">Create Topic</Button>
             </ModalFooter>
           </form>
         </ModalContent>
@@ -736,19 +1103,20 @@ const TopicManagement = () => {
             <ModalBody pb={6}>
               <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel color={textColor}>Subtopic Title</FormLabel>
+                  <FormLabel color={textColor} fontSize="xs">Subtopic Title</FormLabel>
                   <Input
-                    placeholder="e.g. Dynamic Programming"
+                    placeholder="e.g. Dynamic Programming Memoization"
                     value={subtopicTitle}
                     onChange={(e) => setSubtopicTitle(e.target.value)}
                     bg={surfaceBg}
                     borderColor={cardBorder}
                     color={textColor}
+                    fontSize="sm"
                   />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel color={textColor}>Order Index</FormLabel>
+                  <FormLabel color={textColor} fontSize="xs">Order Index</FormLabel>
                   <Input
                     type="number"
                     value={subtopicOrder}
@@ -756,13 +1124,89 @@ const TopicManagement = () => {
                     bg={surfaceBg}
                     borderColor={cardBorder}
                     color={textColor}
+                    fontSize="sm"
                   />
                 </FormControl>
               </VStack>
             </ModalBody>
             <ModalFooter gap={3}>
-              <Button variant="ghost" onClick={onSubtopicClose}>Cancel</Button>
-              <Button type="submit" colorScheme="green" isLoading={isCreatingSubtopic}>Add Subtopic</Button>
+              <Button variant="ghost" onClick={onSubtopicClose} size="sm">Cancel</Button>
+              <Button type="submit" colorScheme="green" isLoading={isCreatingSubtopic} size="sm">Add Subtopic</Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
+
+      {/* Add / Edit Video Modal */}
+      <Modal isOpen={isVideoModalOpen} onClose={onVideoModalClose} isCentered size="lg">
+        <ModalOverlay backdropFilter="blur(4px)" />
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} borderRadius="2xl">
+          <ModalHeader color={textColor}>
+            {editingVideo ? 'Edit Video Reference' : `Add YouTube Reference (${selectedTopic?.title})`}
+          </ModalHeader>
+          <ModalCloseButton />
+          <form onSubmit={handleSaveVideo}>
+            <ModalBody pb={6}>
+              <VStack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel color={textColor} fontSize="xs">Video Title</FormLabel>
+                  <Input
+                    placeholder="e.g. Complete Dynamic Programming Roadmap"
+                    value={videoForm.title}
+                    onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })}
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
+                    fontSize="sm"
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel color={textColor} fontSize="xs">Channel / Educator Name</FormLabel>
+                  <Input
+                    placeholder="e.g. Striver (take U forward) / Apna College"
+                    value={videoForm.channel_name}
+                    onChange={(e) => setVideoForm({ ...videoForm, channel_name: e.target.value })}
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
+                    fontSize="sm"
+                  />
+                </FormControl>
+
+                <FormControl isRequired>
+                  <FormLabel color={textColor} fontSize="xs">YouTube URL</FormLabel>
+                  <Input
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={videoForm.url}
+                    onChange={(e) => setVideoForm({ ...videoForm, url: e.target.value })}
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
+                    fontSize="sm"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel color={textColor} fontSize="xs">Description / Coverage</FormLabel>
+                  <Textarea
+                    placeholder="Brief description of what this video lecture covers..."
+                    value={videoForm.description}
+                    onChange={(e) => setVideoForm({ ...videoForm, description: e.target.value })}
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
+                    rows={2}
+                    fontSize="sm"
+                  />
+                </FormControl>
+              </VStack>
+            </ModalBody>
+            <ModalFooter gap={3}>
+              <Button variant="ghost" onClick={onVideoModalClose} size="sm">Cancel</Button>
+              <Button type="submit" colorScheme="green" isLoading={isSavingVideo} size="sm">
+                {editingVideo ? 'Update Video' : 'Add Video'}
+              </Button>
             </ModalFooter>
           </form>
         </ModalContent>

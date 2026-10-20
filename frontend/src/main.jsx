@@ -11,8 +11,8 @@ import theme from './theme';
 import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
-// Ensure standard light theme is default across all workspaces
-if (localStorage.getItem('chakra-ui-color-mode') === 'dark') {
+// Ensure standard light theme is default if no preference is set yet
+if (!localStorage.getItem('chakra-ui-color-mode')) {
   localStorage.setItem('chakra-ui-color-mode', 'light');
 }
 

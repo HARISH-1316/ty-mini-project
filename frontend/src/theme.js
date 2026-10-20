@@ -90,9 +90,6 @@ const theme = extendTheme({
       'disabled.bg': { default: '#F1EFED', _dark: '#292D2A' },
       'disabled.text': { default: '#859086', _dark: '#606860' },
 
-      // Adaptive text color for components using color="white" on light cards
-      white: { default: '#202124', _dark: '#F5F7F5' },
-
       // Legacy token compatibility mapped to new palette
       'dark.bg': { default: '#F2F6F3', _dark: '#171918' },
       'dark.card': { default: '#FFFFFF', _dark: '#202321' },
@@ -107,24 +104,24 @@ const theme = extendTheme({
       'slate.800': { default: '#FFFFFF', _dark: '#202321' },
       'slate.700': { default: '#E8F5E9', _dark: '#292D2A' },
       'slate.600': { default: '#DDE5DD', _dark: '#3B423C' },
-      'slate.500': { default: '#4A5568', _dark: '#CBD5E0' },
-      'slate.400': { default: '#4A5568', _dark: '#CBD5E0' },
-      'slate.300': { default: '#2D3748', _dark: '#E2E8F0' },
-      'slate.200': { default: '#1A2024', _dark: '#F5F7F5' },
-      'slate.100': { default: '#F5F7F5', _dark: '#292D2A' },
+      'slate.500': { default: '#505750', _dark: '#A0AEC0' },
+      'slate.400': { default: '#404640', _dark: '#CBD5E0' },
+      'slate.300': { default: '#2B302C', _dark: '#E2E8F0' },
+      'slate.200': { default: '#DDE5DD', _dark: '#292D2A' },
+      'slate.100': { default: '#F5F7F5', _dark: '#202321' },
       'slate.50': { default: '#FFFFFF', _dark: '#171918' },
 
-      // Grays mapped to normal visible font colors (never faint/invisible)
-      'gray.900': { default: '#1A2024', _dark: '#F5F7F5' },
+      // Grays: In light mode text is dark; in dark mode text is light
+      'gray.900': { default: '#171918', _dark: '#FFFFFF' },
       'gray.800': { default: '#202124', _dark: '#F5F7F5' },
       'gray.700': { default: '#2D3748', _dark: '#E2E8F0' },
-      'gray.600': { default: '#2D3748', _dark: '#CBD5E0' },
-      'gray.500': { default: '#4A5568', _dark: '#A0AEC0' },
-      'gray.400': { default: '#4A5568', _dark: '#CBD5E0' },
-      'gray.300': { default: '#2D3748', _dark: '#E2E8F0' },
-      'gray.200': { default: '#1A2024', _dark: '#F5F7F5' },
-      'gray.100': { default: '#1A2024', _dark: '#F5F7F5' },
-      'gray.50': { default: '#F5F7F5', _dark: '#202321' },
+      'gray.600': { default: '#3B423C', _dark: '#CBD5E0' },
+      'gray.500': { default: '#505750', _dark: '#A0AEC0' },
+      'gray.400': { default: '#404640', _dark: '#CBD5E0' },
+      'gray.300': { default: '#2B302C', _dark: '#E2E8F0' },
+      'gray.200': { default: '#DDE5DD', _dark: '#343B35' },
+      'gray.100': { default: '#F2F6F3', _dark: '#292D2A' },
+      'gray.50': { default: '#F9FAF9', _dark: '#202321' },
 
       // Brand / Purple / Cyan / Orange aliases mapped to theme
       'brand.50': { default: '#E8F5E9', _dark: '#303B22' },
@@ -171,10 +168,14 @@ const theme = extendTheme({
   styles: {
     global: (props) => ({
       body: {
-        bg: props.colorMode === 'dark' ? '#171918' : '#FFFFFF',
+        bg: props.colorMode === 'dark' ? '#171918' : '#F2F6F3',
         color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
         minH: '100vh',
         transition: 'background-color 0.2s ease, color 0.2s ease',
+      },
+      'select, option, optgroup': {
+        bg: props.colorMode === 'dark' ? '#202321 !important' : '#FFFFFF !important',
+        color: props.colorMode === 'dark' ? '#F5F7F5 !important' : '#202124 !important',
       },
       '*::placeholder': {
         color: props.colorMode === 'dark' ? '#859086' : '#859086',
@@ -216,7 +217,9 @@ const theme = extendTheme({
               },
             };
           }
-          return {};
+          return {
+            color: '#FFFFFF',
+          };
         },
         outline: (props) => {
           const isBrand =
@@ -332,6 +335,10 @@ const theme = extendTheme({
               borderColor: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
               boxShadow: `0 0 0 1px ${props.colorMode === 'dark' ? '#A3E635' : '#2F8D46'}`,
             },
+            '> option, > optgroup': {
+              bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+              color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+            },
           },
         }),
       },
@@ -418,9 +425,70 @@ const theme = extendTheme({
               color: props.colorMode === 'dark' ? '#A3E635' : '#2F8D46',
             };
           }
+          if (props.colorScheme === 'gray') {
+            return {
+              bg: props.colorMode === 'dark' ? '#292D2A' : '#F2F6F3',
+              color: props.colorMode === 'dark' ? '#CBD5E0' : '#374151',
+            };
+          }
           return {};
         },
       },
+    },
+    Popover: {
+      baseStyle: (props) => ({
+        content: {
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+          borderWidth: '1px',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+          boxShadow: props.colorMode === 'dark' ? 'dark-lg' : 'lg',
+          borderRadius: 'xl',
+        },
+        header: {
+          borderBottomWidth: '1px',
+          borderColor: props.colorMode === 'dark' ? '#3B423C' : '#DDE5DD',
+        },
+      }),
+    },
+    Code: {
+      baseStyle: (props) => ({
+        bg: props.colorMode === 'dark' ? '#292D2A' : '#F2F6F3',
+        color: props.colorMode === 'dark' ? '#A3E635' : '#202124',
+        borderRadius: 'md',
+      }),
+    },
+    Tooltip: {
+      baseStyle: (props) => ({
+        bg: props.colorMode === 'dark' ? '#292D2A' : '#202124',
+        color: props.colorMode === 'dark' ? '#F5F7F5' : '#FFFFFF',
+        borderRadius: 'md',
+      }),
+    },
+    Heading: {
+      baseStyle: (props) => ({
+        color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+      }),
+    },
+    Text: {
+      baseStyle: (props) => ({
+        color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+      }),
+    },
+    FormLabel: {
+      baseStyle: (props) => ({
+        color: props.colorMode === 'dark' ? '#E2E8F0' : '#202124',
+        fontWeight: '600',
+        mb: 2,
+      }),
+    },
+    Drawer: {
+      baseStyle: (props) => ({
+        dialog: {
+          bg: props.colorMode === 'dark' ? '#202321' : '#FFFFFF',
+          color: props.colorMode === 'dark' ? '#F5F7F5' : '#202124',
+        },
+      }),
     },
   },
 });

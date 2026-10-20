@@ -102,14 +102,25 @@ const RoomModel = {
   },
 
   /**
-   * Delete a room by room_id.
+   * Check if student is a member of the room.
    */
-  deleteById: async (roomId) => {
+  isStudentMember: async (studentId, roomId) => {
     const result = await query(
-      'DELETE FROM rooms WHERE room_id = $1 RETURNING room_id',
-      [roomId]
+      'SELECT 1 FROM student_rooms WHERE student_id = $1 AND room_id = $2',
+      [studentId, roomId]
     );
-    return result.rows[0] || null;
+    return result.rows.length > 0;
+  },
+
+  /**
+   * Check if faculty is the owner of the room.
+   */
+  isFacultyOwner: async (facultyId, roomId) => {
+    const result = await query(
+      'SELECT 1 FROM rooms WHERE faculty_id = $1 AND room_id = $2',
+      [facultyId, roomId]
+    );
+    return result.rows.length > 0;
   },
 };
 

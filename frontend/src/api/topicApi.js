@@ -123,3 +123,25 @@ export const getTopicPrerequisitesApi = async (topicId) => {
   const response = await api.get(`/topics/${topicId}/prerequisites`);
   return response.data;
 };
+
+// Topic Video References
+export const getTopicVideosApi = async (topicId) => {
+  const response = await api.get(`/topics/${topicId}/videos`);
+  return response.data;
+};
+
+export const addTopicVideoApi = async (topicId, data) => {
+  const response = await api.post(`/topics/${topicId}/videos`, data);
+  return response.data;
+};
+
+export const updateTopicVideoApi = async (topicId, videoId, data) => {
+  const response = await api.put(`/topics/${topicId}/videos/${videoId}`, data);
+  return response.data;
+};
+
+export const deleteTopicVideoApi = async (topicId, videoId) => {
+  const response = await api.delete(`/topics/${topicId}/videos/${videoId}`);
+  return response.data;
+};
+

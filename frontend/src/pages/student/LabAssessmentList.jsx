@@ -96,8 +96,13 @@ const LabAssessmentList = () => {
   const fetchLabs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await getStudentAvailableLabsApi();
-      setLabs(res.data?.data?.labs || []);
+      const rawLabs =
+        res.data?.data?.labs ||
+        res.data?.data?.assessments ||
+        res.data?.labs ||
+        res.data?.assessments ||
+        [];
+      setLabs(Array.isArray(rawLabs) ? rawLabs : []);
     } catch (err) {
       toast({
         title: 'Failed to load assessments',
@@ -223,16 +228,16 @@ const LabAssessmentList = () => {
       {/* Assessment Tabs */}
       <Tabs variant="soft-rounded" colorScheme="green">
         <TabList bg={cardBg} p={2} borderRadius="xl" border="1px solid" borderColor={cardBorder} overflowX="auto" boxShadow="sm">
-          <Tab color={mutedText} _selected={{ color: 'white', bg: 'green.600', fontWeight: 'bold' }}>
+          <Tab color={mutedText} _selected={{ color: 'pureWhite', bg: 'green.600', fontWeight: 'bold' }}>
             All Assessments ({labs.length})
           </Tab>
-          <Tab color={mutedText} _selected={{ color: 'white', bg: 'green.600', fontWeight: 'bold' }}>
+          <Tab color={mutedText} _selected={{ color: 'pureWhite', bg: 'green.600', fontWeight: 'bold' }}>
             Active ({activeAndInProgress.length})
           </Tab>
-          <Tab color={mutedText} _selected={{ color: 'white', bg: 'blue.600', fontWeight: 'bold' }}>
+          <Tab color={mutedText} _selected={{ color: 'pureWhite', bg: 'blue.600', fontWeight: 'bold' }}>
             Upcoming ({upcomingLabs.length})
           </Tab>
-          <Tab color={mutedText} _selected={{ color: 'white', bg: 'purple.600', fontWeight: 'bold' }}>
+          <Tab color={mutedText} _selected={{ color: 'pureWhite', bg: 'purple.600', fontWeight: 'bold' }}>
             Past / Completed ({completedOrSubmitted.length})
           </Tab>
         </TabList>
@@ -376,6 +381,7 @@ const AssessmentCard = ({ lab, onStart }) => {
   const isExpired = now >= endTime;
   const hasAttempt = Boolean(lab.attempt);
   const attemptStatus = lab.attempt?.status;
+  const totalMarks = lab.total_marks || (lab.num_questions * (lab.marks_per_question || 10)) || (lab.attempt?.total_marks) || 50;
 
   const cardBg = useColorModeValue('#FFFFFF', '#202321');
   const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');

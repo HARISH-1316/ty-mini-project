@@ -2,6 +2,7 @@
 // Passport.js Configuration
 // ──────────────────────────────────────────────
 // Local Strategy: authenticates via email + password.
+// Enforces approval status: pending/rejected accounts cannot log in.
 // Session serialisation stores user_id; deserialisation
 // fetches the full user record from the database.
 // ──────────────────────────────────────────────
@@ -19,13 +20,17 @@ const configurePassport = () => {
   passport.use(
     new LocalStrategy(
       {
-        usernameField: 'email',   // Authenticate using email, not username
+        usernameField: 'email',
         passwordField: 'password',
+        passReqToCallback: true,
       },
-      async (email, password, done) => {
+      async (req, email, password, done) => {
         try {
+          // Normalize email consistently
+          const normalizedEmail = (email || '').toLowerCase().trim();
+
           // 1. Find user by email (includes password_hash for comparison)
-          const user = await UserModel.findByEmail(email);
+          const user = await UserModel.findByEmail(normalizedEmail);
 
           if (!user) {
             return done(null, false, { message: 'Invalid email or password.' });
@@ -38,10 +43,25 @@ const configurePassport = () => {
             return done(null, false, { message: 'Invalid email or password.' });
           }
 
-          // 3. Update last_login timestamp
+          // 3. Enforce Approval Status
+          if (user.approval_status === 'pending') {
+            return done(null, false, {
+              status: 'pending',
+              message: 'Your account is awaiting administrator approval. Please wait until your registration is approved.',
+            });
+          }
+
+          if (user.approval_status === 'rejected') {
+            return done(null, false, {
+              status: 'rejected',
+              message: `Your account registration was rejected. Reason: ${user.rejection_reason || 'Please contact administration.'}`,
+            });
+          }
+
+          // 4. Update last_login timestamp
           await UserModel.updateLastLogin(user.user_id);
 
-          // 4. Authentication successful — strip password_hash before passing on
+          // 5. Strip password_hash before passing on
           const { password_hash, ...userWithoutPassword } = user;
           return done(null, userWithoutPassword);
         } catch (err) {
@@ -62,6 +82,11 @@ const configurePassport = () => {
       const user = await UserModel.findById(userId);
 
       if (!user) {
+        return done(null, false);
+      }
+
+      // Check if user account was subsequently rejected or revoked
+      if (user.approval_status === 'rejected') {
         return done(null, false);
       }
 

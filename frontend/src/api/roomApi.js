@@ -58,3 +58,8 @@ export const getRoomStudentsApi = async (roomId) => {
   const response = await api.get(`/rooms/${roomId}/students`);
   return response.data;
 };
+
+export const getRoomLabAssessmentsApi = async (roomId) => {
+  const response = await api.get(`/rooms/${roomId}/lab-assessments`);
+  return response.data;
+};

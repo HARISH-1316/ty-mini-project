@@ -147,15 +147,15 @@ const QuizAttempt = ({
       </Card>
 
       {/* Main Question Card */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" boxShadow="lg">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" boxShadow="lg">
         <CardBody p={{ base: 4, md: 6 }}>
           <VStack align="stretch" spacing={6}>
             {/* Question Text */}
             <Box>
-              <Text fontSize="xs" fontWeight="bold" color="purple.300" textTransform="uppercase" letterSpacing="wider" mb={2}>
+              <Text fontSize="xs" fontWeight="bold" color="accent.primary" textTransform="uppercase" letterSpacing="wider" mb={2}>
                 Question {currentIndex + 1}
               </Text>
-              <Text fontSize={{ base: 'md', md: 'lg' }} color="white" fontWeight="medium" lineHeight="tall">
+              <Text fontSize={{ base: 'md', md: 'lg' }} color="text.primary" fontWeight="medium" lineHeight="tall">
                 {currentQuestion.question_text}
               </Text>
             </Box>
@@ -176,18 +176,18 @@ const QuizAttempt = ({
                       p={4}
                       borderRadius="xl"
                       border="1px solid"
-                      borderColor={isSelected ? 'purple.400' : 'slate.700'}
-                      bg={isSelected ? 'rgba(168, 85, 247, 0.15)' : 'slate.900'}
+                      borderColor={isSelected ? 'accent.primary' : 'border.primary'}
+                      bg={isSelected ? 'accent.soft' : 'bg.secondary'}
                       cursor="pointer"
                       transition="all 0.2s"
-                      _hover={{ borderColor: 'purple.400', bg: 'slate.800' }}
+                      _hover={{ borderColor: 'accent.primary', bg: isSelected ? 'accent.soft' : 'bg.primary' }}
                       onClick={() => handleOptionSelect(opt.key)}
                     >
                       <HStack spacing={4} align="center">
-                        <Radio value={opt.key} colorScheme="purple" size="lg" />
+                        <Radio value={opt.key} colorScheme="brand" size="lg" />
                         <HStack spacing={2} flex={1}>
                           <Badge
-                            colorScheme={isSelected ? 'purple' : 'gray'}
+                            colorScheme={isSelected ? 'brand' : 'gray'}
                             fontSize="sm"
                             px={2}
                             py={0.5}
@@ -195,7 +195,7 @@ const QuizAttempt = ({
                           >
                             {opt.key}
                           </Badge>
-                          <Text color={isSelected ? 'white' : 'gray.200'} fontSize="md">
+                          <Text color="text.primary" fontSize="md">
                             {opt.text}
                           </Text>
                         </HStack>

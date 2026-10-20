@@ -27,6 +27,7 @@ import {
   getSubmissionStatus,
   submitLabAssessment,
   getLabResult,
+  studentSubmitMcq,
 } from '../controllers/labAssessment.controller.js';
 
 import {
@@ -54,6 +55,7 @@ import {
   labTestCaseValidation,
   laRunCodeValidation,
   laSubmitQuestionValidation,
+  laSubmitMcqValidation,
 } from '../validations/labAssessment.validation.js';
 
 const router = Router();
@@ -69,6 +71,7 @@ router.post('/student/:labId/start', isAuthenticated, isStudent, startOrResumeLa
 router.get('/student/:labId/questions', isAuthenticated, isStudent, getStudentQuestions);
 router.post('/student/:labId/run', isAuthenticated, isStudent, validate(laRunCodeValidation), studentRunCode);
 router.post('/student/:labId/submit-question', isAuthenticated, isStudent, validate(laSubmitQuestionValidation), studentSubmitQuestion);
+router.post('/student/:labId/submit-mcq', isAuthenticated, isStudent, validate(laSubmitMcqValidation), studentSubmitMcq);
 router.get('/student/:labId/submission-status', isAuthenticated, isStudent, getSubmissionStatus);
 router.post('/student/:labId/submit', isAuthenticated, isStudent, submitLabAssessment);
 router.get('/student/:labId/result', isAuthenticated, isStudent, getLabResult);
@@ -86,6 +89,7 @@ router.get('/topics-summary', isAuthenticated, isFacultyOrAdmin, getTopicsSummar
 router.get('/:labId', isAuthenticated, isFacultyOrAdmin, getLabAssessmentDetail);
 router.put('/:labId', isAuthenticated, isFacultyOrAdmin, validate(updateLabAssessmentValidation), updateLabAssessment);
 router.put('/:labId/publish', isAuthenticated, isFacultyOrAdmin, publishLabAssessment);
+router.patch('/:labId/publish', isAuthenticated, isFacultyOrAdmin, publishLabAssessment);
 router.put('/:labId/cancel', isAuthenticated, isFacultyOrAdmin, cancelLabAssessment);
 router.get('/:labId/question-pool', isAuthenticated, isFacultyOrAdmin, getQuestionPool);
 router.get('/:labId/results', isAuthenticated, isFacultyOrAdmin, getLabResults);

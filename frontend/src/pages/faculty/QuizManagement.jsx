@@ -322,13 +322,13 @@ const QuizManagement = () => {
       {/* Tabs for Quiz Categories */}
       <Tabs variant="soft-rounded" colorScheme="purple" index={activeTab} onChange={setActiveTab}>
         <TabList bg="slate.800" p={1.5} borderRadius="xl" border="1px solid" borderColor="slate.700">
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'purple.600' }}>
+          <Tab color="text.secondary" _selected={{ color: 'pureWhite', bg: 'purple.600' }}>
             1. Prerequisite Quiz ({prereqQuizData?.questions?.length || 0})
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'purple.600' }}>
+          <Tab color="text.secondary" _selected={{ color: 'pureWhite', bg: 'purple.600' }}>
             2. Subtopic Quizzes ({subtopicQuizData?.questions?.length || 0})
           </Tab>
-          <Tab color="gray.400" _selected={{ color: 'white', bg: 'purple.600' }}>
+          <Tab color="text.secondary" _selected={{ color: 'pureWhite', bg: 'purple.600' }}>
             3. Final Quiz ({finalQuizData?.questions?.length || 0})
           </Tab>
         </TabList>

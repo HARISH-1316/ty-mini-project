@@ -139,3 +139,29 @@ export const getTopicPrerequisites = asyncHandler(async (req, res) => {
   const prerequisites = await TopicService.getTopicPrerequisites(topicId);
   return successResponse(res, 200, 'Prerequisites retrieved.', { prerequisites });
 });
+
+// ── Topic Video References ─────────────────────
+export const getTopicVideos = asyncHandler(async (req, res) => {
+  const { topicId } = req.params;
+  const videos = await TopicService.getTopicVideos(topicId);
+  return successResponse(res, 200, 'Topic video references retrieved.', { videos });
+});
+
+export const addTopicVideo = asyncHandler(async (req, res) => {
+  const { topicId } = req.params;
+  const video = await TopicService.addTopicVideo(topicId, req.body);
+  return successResponse(res, 201, 'Topic video reference added.', { video });
+});
+
+export const updateTopicVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const video = await TopicService.updateTopicVideo(videoId, req.body);
+  return successResponse(res, 200, 'Topic video reference updated.', { video });
+});
+
+export const deleteTopicVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  await TopicService.deleteTopicVideo(videoId);
+  return successResponse(res, 200, 'Topic video reference deleted.');
+});
+

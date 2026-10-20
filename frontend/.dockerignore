@@ -1,0 +1,25 @@
+# Dependencies & Environment
+node_modules
+dist
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+!.env.example
+
+# Git & CI/CD
+.git
+.gitignore
+.github
+
+# Docker files
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# IDE & OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db

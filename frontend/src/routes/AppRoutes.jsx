@@ -59,11 +59,16 @@ import LabAssessmentManagement from '../pages/faculty/LabAssessmentManagement';
 import CreateLabAssessment from '../pages/faculty/CreateLabAssessment';
 import LabAssessmentResults from '../pages/faculty/LabAssessmentResults';
 import LabQuestionBank from '../pages/faculty/LabQuestionBank';
+import McqQuestionBank from '../pages/faculty/McqQuestionBank';
+
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagement from '../pages/admin/UserManagement';
 import RoleManagement from '../pages/admin/RoleManagement';
+import AccountApprovals from '../pages/admin/AccountApprovals';
 import AdminProgress from '../pages/admin/AdminProgress';
 
 // Shared Progress Inspector
@@ -79,6 +84,8 @@ const AppRoutes = () => {
       {/* Public Auth Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected Workspaces */}
       <Route element={<ProtectedRoute />}>
@@ -137,6 +144,7 @@ const AppRoutes = () => {
             <Route path="/faculty/lab-assessments/:labId" element={<CreateLabAssessment />} />
             <Route path="/faculty/lab-assessments/:labId/results" element={<LabAssessmentResults />} />
             <Route path="/faculty/lab-questions" element={<LabQuestionBank />} />
+            <Route path="/faculty/mcq-bank" element={<McqQuestionBank />} />
           </Route>
         </Route>
 
@@ -144,14 +152,16 @@ const AppRoutes = () => {
         <Route element={<AdminRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/approvals" element={<AccountApprovals />} />
             <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/roles" element={<RoleManagement />} />
+            <Route path="/admin/roles" element={<AccountApprovals />} />
             <Route path="/admin/progress" element={<AdminProgress />} />
             <Route path="/admin/students/:studentId/progress" element={<StudentProgressDetail />} />
             <Route path="/admin/lab-assessments" element={<LabAssessmentManagement />} />
             <Route path="/admin/lab-assessments/:labId" element={<CreateLabAssessment />} />
             <Route path="/admin/lab-assessments/:labId/results" element={<LabAssessmentResults />} />
             <Route path="/admin/lab-questions" element={<LabQuestionBank />} />
+            <Route path="/admin/mcq-bank" element={<McqQuestionBank />} />
           </Route>
         </Route>
       </Route>

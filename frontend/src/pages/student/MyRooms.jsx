@@ -68,8 +68,8 @@ const MyRooms = () => {
       {/* Header */}
       <Flex justify="space-between" align={{ base: 'start', sm: 'center' }} direction={{ base: 'column', sm: 'row' }} gap={4}>
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color="white">My Lab Rooms</Heading>
-          <Text color="gray.400" fontSize="sm">
+          <Heading size="lg" color="text.primary">My Lab Rooms</Heading>
+          <Text color="text.secondary" fontSize="sm">
             View all virtual laboratories you have joined
           </Text>
         </VStack>
@@ -86,17 +86,17 @@ const MyRooms = () => {
       {/* Search Input */}
       <InputGroup maxW="md">
         <InputLeftElement pointerEvents="none">
-          <SearchIcon color="gray.500" />
+          <SearchIcon color="text.secondary" />
         </InputLeftElement>
         <Input
           placeholder="Search by room name or code..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          bg="slate.800"
-          borderColor="slate.700"
-          color="white"
-          _placeholder={{ color: 'gray.500' }}
-          _focus={{ borderColor: 'purple.400' }}
+          bg="bg.card"
+          borderColor="border.primary"
+          color="text.primary"
+          _placeholder={{ color: 'text.secondary' }}
+          _focus={{ borderColor: 'accent.primary' }}
         />
       </InputGroup>
 
@@ -115,37 +115,37 @@ const MyRooms = () => {
               key={room.room_id}
               as={RouterLink}
               to={`/student/rooms/${room.room_id}`}
-              bg="slate.800"
-              borderColor="slate.700"
+              bg="bg.card"
+              borderColor="border.primary"
               borderWidth="1px"
               borderRadius="xl"
               transition="all 0.2s"
-              _hover={{ transform: 'translateY(-4px)', borderColor: 'purple.400', boxShadow: 'xl' }}
+              _hover={{ transform: 'translateY(-4px)', borderColor: 'accent.primary', boxShadow: 'xl' }}
             >
               <CardBody>
                 <VStack align="start" spacing={4}>
                   <Flex justify="space-between" w="full" align="center">
-                    <Badge colorScheme="purple" fontSize="xs" px={2} py={1} borderRadius="md">
+                    <Badge colorScheme="brand" fontSize="xs" px={2} py={1} borderRadius="md">
                       CODE: {room.room_code}
                     </Badge>
-                    <Text color="gray.500" fontSize="xs">
+                    <Text color="text.secondary" fontSize="xs">
                       Joined {room.joined_at ? new Date(room.joined_at).toLocaleDateString() : ''}
                     </Text>
                   </Flex>
 
-                  <Heading size="md" color="white">
+                  <Heading size="md" color="text.primary">
                     {room.room_name}
                   </Heading>
 
-                  <Text color="gray.400" fontSize="sm" noOfLines={3}>
+                  <Text color="text.secondary" fontSize="sm" noOfLines={3}>
                     {room.description || 'No description provided.'}
                   </Text>
 
-                  <HStack justify="space-between" w="full" pt={3} borderTop="1px solid" borderColor="slate.700">
-                    <Text color="gray.400" fontSize="xs" fontWeight="medium">
+                  <HStack justify="space-between" w="full" pt={3} borderTop="1px solid" borderColor="border.primary">
+                    <Text color="text.secondary" fontSize="xs" fontWeight="medium">
                       Faculty: {room.faculty_name || 'Faculty Member'}
                     </Text>
-                    <HStack spacing={1} color="purple.300">
+                    <HStack spacing={1} color="accent.primary">
                       <Text fontSize="xs" fontWeight="bold">Open Lab</Text>
                       <ArrowForwardIcon />
                     </HStack>

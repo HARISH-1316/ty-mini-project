@@ -78,8 +78,8 @@ const StudentProgress = () => {
     return (
       <VStack spacing={6} align="stretch" w="full">
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color="white">My Progress</Heading>
-          <Text color="gray.400" fontSize="sm">Track your completed topics, quizzes, and coding assessments</Text>
+          <Heading size="lg" color="text.primary">My Progress</Heading>
+          <Text color="text.secondary" fontSize="sm">Track your completed topics, quizzes, and coding assessments</Text>
         </VStack>
         <EmptyState
           title="No Progress Recorded"
@@ -179,8 +179,8 @@ const StudentProgress = () => {
     <VStack spacing={8} align="stretch" w="full" pb={12}>
       {/* Header */}
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">My Progress</Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Heading size="lg" color="text.primary">My Progress</Heading>
+        <Text color="text.secondary" fontSize="sm">
           Comprehensive, real-time analytics across all your enrolled topics, quizzes, and coding assessments
         </Text>
       </VStack>
@@ -194,7 +194,7 @@ const StudentProgress = () => {
                 <Icon as={StarIcon} color="accent.primary" w={5} h={5} />
                 <Heading size="md" color="text.primary">Overall Completion</Heading>
               </HStack>
-              <Text color="gray.300" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 Calculated dynamically from topic prerequisite quizzes, subtopic learning & quizzes, topic final quiz, and coding assessments.
               </Text>
               <Box w="full" pt={3}>
@@ -311,19 +311,19 @@ const StudentProgress = () => {
       {/* Recent Activity Timeline */}
       {recentActivity && recentActivity.length > 0 && (
         <VStack align="stretch" spacing={3}>
-          <Heading size="md" color="white">Recent Activity</Heading>
-          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <Heading size="md" color="text.primary">Recent Activity</Heading>
+          <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
             <CardBody p={4}>
-              <VStack spacing={3} align="stretch" divider={<Divider borderColor="slate.700" />}>
+              <VStack spacing={3} align="stretch" divider={<Divider borderColor="border.primary" />}>
                 {recentActivity.map((act) => (
                   <HStack key={act.attempt_id} justify="space-between" flexWrap="wrap">
                     <HStack spacing={3}>
                       <Icon as={CheckCircleIcon} color={act.passed ? 'green.400' : 'purple.400'} />
                       <VStack align="start" spacing={0}>
-                        <Text color="white" fontWeight="semibold" fontSize="sm">
+                        <Text color="text.primary" fontWeight="semibold" fontSize="sm">
                           {act.activity_title}
                         </Text>
-                        <Text color="gray.400" fontSize="xs">
+                        <Text color="text.secondary" fontSize="xs">
                           {new Date(act.submitted_at).toLocaleDateString()} at {new Date(act.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Text>
                       </VStack>
@@ -347,8 +347,8 @@ const StudentProgress = () => {
       {/* Topic-Wise Detailed Progress Breakdown */}
       <VStack align="stretch" spacing={4}>
         <HStack justify="space-between">
-          <Heading size="md" color="white">Topic Progress Details</Heading>
-          <Text fontSize="xs" color="gray.400">Click any topic to view subtopics, quiz & coding assessment breakdown</Text>
+          <Heading size="md" color="text.primary">Topic Progress Details</Heading>
+          <Text fontSize="xs" color="text.secondary">Click any topic to view subtopics, quiz & coding assessment breakdown</Text>
         </HStack>
 
         <Accordion allowMultiple defaultIndex={[0]}>
@@ -356,23 +356,23 @@ const StudentProgress = () => {
             <AccordionItem
               key={tp.topic_id}
               border="1px solid"
-              borderColor="slate.700"
-              bg="slate.800"
+              borderColor="border.primary"
+              bg="bg.card"
               borderRadius="xl"
               mb={4}
               overflow="hidden"
             >
-              <AccordionButton p={5} _hover={{ bg: 'slate.750' }}>
+              <AccordionButton p={5} _hover={{ bg: 'accent.soft' }}>
                 <Box flex="1" textAlign="left">
                   <HStack justify="space-between" pr={4} flexWrap="wrap" spacing={3}>
                     <VStack align="start" spacing={1}>
                       <HStack spacing={2}>
-                        <Text color="white" fontWeight="bold" fontSize="md">
+                        <Text color="text.primary" fontWeight="bold" fontSize="md">
                           {tp.title}
                         </Text>
                         {getStatusBadge(tp.status)}
                       </HStack>
-                      <Text color="gray.400" fontSize="xs">
+                      <Text color="text.secondary" fontSize="xs">
                         {tp.subtopicsCompleted} of {tp.subtopicsCount} subtopics completed
                       </Text>
                     </VStack>
@@ -451,17 +451,17 @@ const StudentProgress = () => {
                           <Box
                             key={st.subtopic_id}
                             p={3.5}
-                            bg="slate.900"
+                            bg="bg.secondary"
                             borderRadius="lg"
                             border="1px solid"
-                            borderColor="slate.750"
+                            borderColor="border.primary"
                           >
                             <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
                               <HStack spacing={3}>
                                 <Tag size="sm" colorScheme="gray">
                                   {sIdx + 1}
                                 </Tag>
-                                <Text color="white" fontSize="sm" fontWeight="medium">
+                                <Text color="text.primary" fontSize="sm" fontWeight="medium">
                                   {st.title}
                                 </Text>
                                 <Badge

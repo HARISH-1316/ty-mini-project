@@ -21,7 +21,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, ArrowForwardIcon } from '@chakra-ui/icons';
-import { getRoomByIdApi, getRoomTopicsApi, leaveRoomApi } from '../../api/roomApi';
+import { getRoomByIdApi, getRoomTopicsApi, leaveRoomApi, getRoomLabAssessmentsApi } from '../../api/roomApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -32,6 +32,7 @@ const RoomDetails = () => {
   const toast = useToast();
   const [room, setRoom] = useState(null);
   const [topics, setTopics] = useState([]);
+  const [assessments, setAssessments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -49,12 +50,20 @@ const RoomDetails = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [roomRes, topicsRes] = await Promise.all([
+        const [roomRes, topicsRes, assessmentsRes] = await Promise.all([
           getRoomByIdApi(roomId),
           getRoomTopicsApi(roomId).catch(() => ({ data: { topics: [] } })),
+          getRoomLabAssessmentsApi(roomId).catch(() => ({ data: { assessments: [] } })),
         ]);
         setRoom(roomRes.data?.room || null);
         setTopics(topicsRes.data?.topics || []);
+        const rawAssessments =
+          assessmentsRes.data?.assessments ||
+          assessmentsRes.data?.labs ||
+          assessmentsRes.assessments ||
+          assessmentsRes.labs ||
+          [];
+        setAssessments(Array.isArray(rawAssessments) ? rawAssessments : []);
       } catch {
         toast({
           title: 'Error loading room',
@@ -151,6 +160,136 @@ const RoomDetails = () => {
           </VStack>
         </CardBody>
       </Card>
+
+      {/* Room Lab Assessments Section */}
+      <VStack align="stretch" spacing={4}>
+        <Flex justify="space-between" align="center" wrap="wrap">
+          <VStack align="start" spacing={0}>
+            <Heading size="md" color={headingColor}>
+              Room Practical Lab Assessments ({assessments.length})
+            </Heading>
+            <Text color={secondaryColor} fontSize="xs">
+              Timed coding and MCQ assessments available exclusively to members of this room
+            </Text>
+          </VStack>
+        </Flex>
+
+        {assessments.length === 0 ? (
+          <EmptyState
+            title="No Lab Assessments Assigned"
+            description="Your instructor has not scheduled any lab assessments in this room yet."
+          />
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+            {assessments.map((la) => {
+              const hasAttempt = Boolean(la.attempt);
+              const attemptStatus = la.attempt?.status;
+              const isSubmitted = attemptStatus === 'submitted' || attemptStatus === 'timed_out' || attemptStatus === 'expired';
+              const isInProgress = attemptStatus === 'in_progress';
+              const now = new Date();
+              const isAvailable = new Date(la.start_time) <= now && now < new Date(la.end_time);
+
+              return (
+                <Card
+                  key={la.lab_id}
+                  bg={cardBg}
+                  borderColor={isInProgress ? 'green.500' : isSubmitted ? 'green.600' : cardBorder}
+                  borderWidth="1px"
+                  borderRadius="xl"
+                  boxShadow="sm"
+                  transition="all 0.2s"
+                  _hover={{ borderColor: accentColor }}
+                >
+                  <CardBody p={5}>
+                    <VStack align="stretch" spacing={3}>
+                      <Flex justify="space-between" align="start">
+                        <Heading size="sm" color={headingColor} noOfLines={1}>
+                          {la.title}
+                        </Heading>
+                        <Badge
+                          colorScheme={
+                            isInProgress
+                              ? 'teal'
+                              : isSubmitted
+                              ? 'green'
+                              : isAvailable
+                              ? 'blue'
+                              : 'gray'
+                          }
+                        >
+                          {isInProgress
+                            ? 'In Progress'
+                            : isSubmitted
+                            ? 'Submitted'
+                            : isAvailable
+                            ? 'Active Now'
+                            : 'Scheduled'}
+                        </Badge>
+                      </Flex>
+
+                      <Text color={secondaryColor} fontSize="xs" noOfLines={2}>
+                        {la.description || 'Practical assessment assigned for this lab room.'}
+                      </Text>
+
+                      <HStack spacing={2} wrap="wrap">
+                        <Badge colorScheme="blue" variant="subtle">
+                          {la.num_coding_questions ?? la.num_questions ?? 0} Coding
+                        </Badge>
+                        <Badge colorScheme="purple" variant="subtle">
+                          {la.num_mcq_questions ?? 0} MCQs
+                        </Badge>
+                        <Badge colorScheme="teal" variant="subtle">
+                          {la.duration} mins
+                        </Badge>
+                      </HStack>
+
+                      <Divider borderColor={dividerColor} />
+
+                      <Flex justify="flex-end">
+                        {isSubmitted ? (
+                          <Button
+                            as={RouterLink}
+                            to={`/student/lab-assessments/${la.lab_id}/result`}
+                            size="sm"
+                            colorScheme="brand"
+                            variant="outline"
+                          >
+                            View Result
+                          </Button>
+                        ) : isInProgress ? (
+                          <Button
+                            as={RouterLink}
+                            to={`/student/lab-assessments/${la.lab_id}`}
+                            size="sm"
+                            colorScheme="teal"
+                          >
+                            Resume Assessment
+                          </Button>
+                        ) : isAvailable ? (
+                          <Button
+                            as={RouterLink}
+                            to={`/student/lab-assessments/${la.lab_id}`}
+                            size="sm"
+                            colorScheme="brand"
+                          >
+                            Start Assessment
+                          </Button>
+                        ) : (
+                          <Button size="sm" isDisabled variant="ghost">
+                            Upcoming
+                          </Button>
+                        )}
+                      </Flex>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </SimpleGrid>
+        )}
+      </VStack>
+
+      <Divider borderColor={dividerColor} />
 
       {/* Assigned Topics List */}
       <VStack align="stretch" spacing={4}>

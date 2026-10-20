@@ -73,60 +73,60 @@ const UserManagement = () => {
   return (
     <VStack spacing={6} align="stretch" w="full">
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">User Directory</Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Heading size="lg" color="text.primary">User Directory</Heading>
+        <Text color="text.secondary" fontSize="sm">
           Complete list of registered accounts across all roles
         </Text>
       </VStack>
 
       <InputGroup maxW="md">
         <InputLeftElement pointerEvents="none">
-          <SearchIcon color="gray.500" />
+          <SearchIcon color="text.secondary" />
         </InputLeftElement>
         <Input
           placeholder="Search by name, email, or role..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          bg="slate.800"
-          borderColor="slate.700"
-          color="white"
-          _placeholder={{ color: 'gray.500' }}
-          _focus={{ borderColor: 'purple.400' }}
+          bg="bg.card"
+          borderColor="border.primary"
+          color="text.primary"
+          _placeholder={{ color: 'text.secondary' }}
+          _focus={{ borderColor: 'accent.primary' }}
         />
       </InputGroup>
 
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" overflow="hidden">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" overflow="hidden">
         <CardBody p={0}>
           {filteredUsers.length === 0 ? (
             <EmptyState title="No Users Found" description="No accounts match your search filter." />
           ) : (
             <Box overflowX="auto">
               <Table variant="simple" size="sm">
-                <Thead bg="slate.900">
+                <Thead bg="bg.secondary">
                   <Tr>
-                    <Th color="gray.400">ID</Th>
-                    <Th color="gray.400">Full Name</Th>
-                    <Th color="gray.400">Email Address</Th>
-                    <Th color="gray.400">Role</Th>
-                    <Th color="gray.400">Registration Date</Th>
-                    <Th color="gray.400">Last Login</Th>
+                    <Th color="text.secondary">ID</Th>
+                    <Th color="text.secondary">Full Name</Th>
+                    <Th color="text.secondary">Email Address</Th>
+                    <Th color="text.secondary">Role</Th>
+                    <Th color="text.secondary">Registration Date</Th>
+                    <Th color="text.secondary">Last Login</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {filteredUsers.map((u) => (
-                    <Tr key={u.user_id} _hover={{ bg: 'slate.700' }}>
-                      <Td color="gray.400" fontWeight="bold">#{u.user_id}</Td>
-                      <Td color="white" fontWeight="medium">{u.name}</Td>
-                      <Td color="gray.300">{u.email}</Td>
+                    <Tr key={u.user_id} _hover={{ bg: 'accent.soft' }}>
+                      <Td color="text.secondary" fontWeight="bold">#{u.user_id}</Td>
+                      <Td color="text.primary" fontWeight="medium">{u.name}</Td>
+                      <Td color="text.secondary">{u.email}</Td>
                       <Td>
                         <Badge colorScheme={roleBadgeColor[u.role] || 'gray'} textTransform="uppercase">
                           {u.role}
                         </Badge>
                       </Td>
-                      <Td color="gray.400">
+                      <Td color="text.secondary">
                         {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
                       </Td>
-                      <Td color="gray.400">
+                      <Td color="text.secondary">
                         {u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}
                       </Td>
                     </Tr>

@@ -21,6 +21,11 @@ import LaQuestionSubmissionModel from '../models/laQuestionSubmission.model.js';
 import FacultyModel from '../models/faculty.model.js';
 import StudentModel from '../models/student.model.js';
 import LaSelectedQuestionModel from '../models/laSelectedQuestion.model.js';
+import LabMcqQuestionModel from '../models/labMcqQuestion.model.js';
+import LaSelectedMcqModel from '../models/laSelectedMcq.model.js';
+import LaMcqAllocationModel from '../models/laMcqAllocation.model.js';
+import LaMcqSubmissionModel from '../models/laMcqSubmission.model.js';
+import RoomModel from '../models/room.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,36 +105,76 @@ const getMarksForDifficulty = (difficulty) => {
 const LabAssessmentService = {
   /**
    * Create a new lab assessment (draft).
-   * Automatically associates selected topics if provided.
+   * Strictly requires room_id and validates room ownership.
    */
   createAssessment: async (userId, data, role = 'faculty') => {
     const faculty = await ensureFaculty(userId, role);
     if (!faculty) {
       const e = new Error('Faculty profile not found.'); e.statusCode = 404; throw e;
     }
-    const { topic_ids, selected_question_ids, manual_allocations, ...labData } = data;
+    const {
+      room_id,
+      topic_ids,
+      selected_question_ids,
+      selected_mcq_ids,
+      manual_allocations,
+      ...labData
+    } = data;
+
+    if (!room_id) {
+      const e = new Error('Every Lab Assessment must be created inside a valid room.');
+      e.statusCode = 400; throw e;
+    }
+
+    const room = await RoomModel.findById(room_id);
+    if (!room) {
+      const e = new Error('Room not found.');
+      e.statusCode = 404; throw e;
+    }
+
+    if (role !== 'admin' && room.faculty_id !== faculty.faculty_id) {
+      const e = new Error('Access denied: You do not manage this room.');
+      e.statusCode = 403; throw e;
+    }
+
     const lab = await LabAssessmentModel.create({
       faculty_id: faculty.faculty_id,
+      room_id,
       ...labData,
     });
+
     // Link topics if provided
     if (Array.isArray(topic_ids) && topic_ids.length > 0) {
       for (const tId of topic_ids) {
         await LaAssessmentTopicModel.create({ lab_id: lab.lab_id, topic_id: tId });
       }
     }
-    // Link selected questions for Mode A
+
+    // Link selected coding questions (for specific question mode)
     if (Array.isArray(selected_question_ids) && selected_question_ids.length > 0) {
       await LaSelectedQuestionModel.bulkSet(lab.lab_id, selected_question_ids);
     }
-    // Set manual allocations for Mode C (hybrid)
+
+    // Link selected MCQs (for specific question mode)
+    if (Array.isArray(selected_mcq_ids) && selected_mcq_ids.length > 0) {
+      await LaSelectedMcqModel.bulkSet(lab.lab_id, selected_mcq_ids);
+    }
+
+    // Set manual allocations for Mode C (hybrid) or Mode B (manual)
     if (Array.isArray(manual_allocations) && manual_allocations.length > 0) {
       const client = await getClient();
       try {
         await client.query('BEGIN');
         for (const ma of manual_allocations) {
-          const qItems = ma.question_ids.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
-          await LaAllocationModel.bulkCreate(client, ma.student_id, lab.lab_id, qItems, true);
+          const codingIds = ma.coding_question_ids || ma.question_ids;
+          if (Array.isArray(codingIds) && codingIds.length > 0) {
+            const qItems = codingIds.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
+            await LaAllocationModel.bulkCreate(client, ma.student_id, lab.lab_id, qItems, true);
+          }
+          if (Array.isArray(ma.mcq_ids) && ma.mcq_ids.length > 0) {
+            const mItems = ma.mcq_ids.map((mid, idx) => ({ mcq_id: mid, question_order: idx + 1 }));
+            await LaMcqAllocationModel.bulkCreate(client, ma.student_id, lab.lab_id, mItems, true);
+          }
         }
         await client.query('COMMIT');
       } catch (err) {
@@ -139,27 +184,49 @@ const LabAssessmentService = {
         client.release();
       }
     }
+
     lab.topics = await LaAssessmentTopicModel.findByLabId(lab.lab_id);
     lab.selectedQuestions = await LaSelectedQuestionModel.findByLabId(lab.lab_id);
+    lab.selectedMcqs = await LaSelectedMcqModel.findByLabId(lab.lab_id);
+
+    if (data.publish_immediately) {
+      try {
+        const publishedLab = await LabAssessmentService.publishAssessment(userId, lab.lab_id, role);
+        return publishedLab;
+      } catch (pubErr) {
+        // If immediate publishing fails validation, return draft lab with warning
+        lab.publish_warning = pubErr.message;
+      }
+    }
+
     return lab;
   },
 
   /**
-   * Get all assessments for the authenticated faculty (or all assessments for admin).
+   * Get all assessments for the authenticated faculty (or admin).
+   * Supports filtering by roomId.
    */
-  getFacultyAssessments: async (userId, role = 'faculty') => {
+  getFacultyAssessments: async (userId, role = 'faculty', roomId = null) => {
     let labs = [];
     if (role === 'admin') {
-      labs = await LabAssessmentModel.findAll();
+      labs = await LabAssessmentModel.findAll(roomId);
     } else {
       const faculty = await FacultyModel.findByUserId(userId);
       if (!faculty) return [];
-      labs = await LabAssessmentModel.findByFacultyId(faculty.faculty_id);
+      if (roomId) {
+        const isOwner = await RoomModel.isFacultyOwner(faculty.faculty_id, roomId);
+        if (!isOwner) {
+          const e = new Error('Access denied: You do not manage this room.');
+          e.statusCode = 403; throw e;
+        }
+      }
+      labs = await LabAssessmentModel.findByFacultyId(faculty.faculty_id, roomId);
     }
-    // Attach topic list to each lab
+    // Attach details to each lab
     for (const lab of labs) {
       lab.topics = await LaAssessmentTopicModel.findByLabId(lab.lab_id);
       lab.selectedQuestions = await LaSelectedQuestionModel.findByLabId(lab.lab_id);
+      lab.selectedMcqs = await LaSelectedMcqModel.findByLabId(lab.lab_id);
     }
     return labs;
   },
@@ -172,8 +239,7 @@ const LabAssessmentService = {
   },
 
   /**
-   * Get a specific assessment with topics, question pool stats, and selected questions.
-   * Faculty can only access their own assessments, Admin can access all.
+   * Get a specific assessment with topics, question pool stats, selected questions, and MCQs.
    */
   getAssessmentDetail: async (userId, labId, role = 'faculty') => {
     await LabAssessmentModel.syncStatuses();
@@ -191,13 +257,14 @@ const LabAssessmentService = {
     lab.questionPoolStats = await LaAssessmentTopicModel.getQuestionPoolStats(labId);
     lab.totalEligibleQuestions = await LaAssessmentTopicModel.getTotalEligibleQuestions(labId);
     lab.selectedQuestions = await LaSelectedQuestionModel.findByLabId(labId);
+    lab.selectedMcqs = await LaSelectedMcqModel.findByLabId(labId);
     lab.allocations = await LaAllocationModel.findAllocationsByLab(labId);
+    lab.mcqAllocations = await LaMcqAllocationModel.findAllocationsByLab(labId);
     return lab;
   },
 
   /**
    * Update assessment (only allowed in draft status).
-   * Also synchronizes topics, selected questions, and manual allocations.
    */
   updateAssessment: async (userId, labId, data, role = 'faculty') => {
     const lab = await LabAssessmentModel.findById(labId);
@@ -209,7 +276,14 @@ const LabAssessmentService = {
     if (lab.status !== 'draft') {
       const e = new Error('Only draft assessments can be edited.'); e.statusCode = 400; throw e;
     }
-    const { topic_ids, selected_question_ids, manual_allocations, ...updateData } = data;
+    const {
+      topic_ids,
+      selected_question_ids,
+      selected_mcq_ids,
+      manual_allocations,
+      ...updateData
+    } = data;
+
     const updated = await LabAssessmentModel.update(labId, updateData);
     if (Array.isArray(topic_ids)) {
       await LaAssessmentTopicModel.deleteByLabId(labId);
@@ -220,14 +294,25 @@ const LabAssessmentService = {
     if (Array.isArray(selected_question_ids)) {
       await LaSelectedQuestionModel.bulkSet(labId, selected_question_ids);
     }
+    if (Array.isArray(selected_mcq_ids)) {
+      await LaSelectedMcqModel.bulkSet(labId, selected_mcq_ids);
+    }
     if (Array.isArray(manual_allocations)) {
       const client = await getClient();
       try {
         await client.query('BEGIN');
         await client.query('DELETE FROM la_student_allocations WHERE lab_id = $1 AND is_manual = TRUE', [labId]);
+        await client.query('DELETE FROM la_student_mcq_allocations WHERE lab_id = $1 AND is_manual = TRUE', [labId]);
         for (const ma of manual_allocations) {
-          const qItems = ma.question_ids.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
-          await LaAllocationModel.bulkCreate(client, ma.student_id, labId, qItems, true);
+          const codingIds = ma.coding_question_ids || ma.question_ids;
+          if (Array.isArray(codingIds) && codingIds.length > 0) {
+            const qItems = codingIds.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
+            await LaAllocationModel.bulkCreate(client, ma.student_id, labId, qItems, true);
+          }
+          if (Array.isArray(ma.mcq_ids) && ma.mcq_ids.length > 0) {
+            const mItems = ma.mcq_ids.map((mid, idx) => ({ mcq_id: mid, question_order: idx + 1 }));
+            await LaMcqAllocationModel.bulkCreate(client, ma.student_id, labId, mItems, true);
+          }
         }
         await client.query('COMMIT');
       } catch (err) {
@@ -240,13 +325,14 @@ const LabAssessmentService = {
     if (updated) {
       updated.topics = await LaAssessmentTopicModel.findByLabId(labId);
       updated.selectedQuestions = await LaSelectedQuestionModel.findByLabId(labId);
+      updated.selectedMcqs = await LaSelectedMcqModel.findByLabId(labId);
     }
     return updated;
   },
 
   /**
    * Publish an assessment.
-   * Validates: start/end time set, topic selected, and sufficient published questions according to allocation mode.
+   * Validates: start/end time set, topic selected, and sufficient published questions/MCQs.
    */
   publishAssessment: async (userId, labId, role = 'faculty') => {
     const lab = await LabAssessmentModel.findById(labId);
@@ -267,32 +353,62 @@ const LabAssessmentService = {
       const e = new Error('At least one topic must be selected before publishing.'); e.statusCode = 400; throw e;
     }
 
-    if (lab.allocation_mode === 'specific') {
-      const selected = await LaSelectedQuestionModel.findByLabId(labId);
-      if (selected.length < lab.num_questions) {
-        const e = new Error(
-          `In 'Faculty Selects Specific Questions' mode, you must select at least ${lab.num_questions} questions. Currently selected: ${selected.length}.`
-        );
-        e.statusCode = 400;
-        throw e;
+    const numCoding = lab.num_coding_questions !== undefined ? lab.num_coding_questions : lab.num_questions;
+    const numMcqs = lab.num_mcq_questions || 0;
+
+    if (numCoding + numMcqs === 0) {
+      const e = new Error('Assessment must contain at least one coding question or MCQ.'); e.statusCode = 400; throw e;
+    }
+
+    // Coding question pool validation
+    if (numCoding > 0) {
+      if (lab.allocation_mode === 'specific') {
+        const selected = await LaSelectedQuestionModel.findByLabId(labId);
+        if (selected.length < numCoding) {
+          const e = new Error(
+            `In 'Specific Questions' mode, you must select at least ${numCoding} coding questions. Currently selected: ${selected.length}.`
+          );
+          e.statusCode = 400; throw e;
+        }
+        const unpub = selected.filter(q => !q.is_published || q.status !== 'published');
+        if (unpub.length > 0) {
+          const e = new Error(`Selected coding question "${unpub[0].title}" is unpublished. All selected questions must be published.`);
+          e.statusCode = 400; throw e;
+        }
+      } else {
+        const totalEligible = await LaAssessmentTopicModel.getTotalEligibleQuestions(labId);
+        if (totalEligible < numCoding) {
+          const e = new Error(
+            `Insufficient published coding questions in the pool. Need ${numCoding} but only ${totalEligible} available.`
+          );
+          e.statusCode = 400; throw e;
+        }
       }
-      const unpub = selected.filter(q => !q.is_published || q.status !== 'published');
-      if (unpub.length > 0) {
-        const e = new Error(
-          `Selected question "${unpub[0].title}" is unpublished or draft. All selected questions must be published.`
-        );
-        e.statusCode = 400;
-        throw e;
-      }
-    } else {
-      const totalEligible = await LaAssessmentTopicModel.getTotalEligibleQuestions(labId);
-      if (totalEligible < lab.num_questions) {
-        const e = new Error(
-          `Insufficient published questions in the pool. Need ${lab.num_questions} but only ${totalEligible} available. ` +
-          `Please add and publish more questions for the selected topics or reduce the number of questions.`
-        );
-        e.statusCode = 400;
-        throw e;
+    }
+
+    // MCQ pool validation
+    if (numMcqs > 0) {
+      if (lab.allocation_mode === 'specific') {
+        const selectedM = await LaSelectedMcqModel.findByLabId(labId);
+        if (selectedM.length < numMcqs) {
+          const e = new Error(
+            `In 'Specific Questions' mode, you must select at least ${numMcqs} MCQs. Currently selected: ${selectedM.length}.`
+          );
+          e.statusCode = 400; throw e;
+        }
+        const unpubM = selectedM.filter(q => !q.is_published || q.status !== 'published');
+        if (unpubM.length > 0) {
+          const e = new Error(`Selected MCQ is unpublished. All selected MCQs must be published.`);
+          e.statusCode = 400; throw e;
+        }
+      } else {
+        const poolMcqs = await LaMcqAllocationModel.getEligiblePool(labId);
+        if (poolMcqs.length < numMcqs) {
+          const e = new Error(
+            `Insufficient published MCQs in the pool. Need ${numMcqs} but only ${poolMcqs.length} available.`
+          );
+          e.statusCode = 400; throw e;
+        }
       }
     }
 
@@ -369,12 +485,15 @@ const LabAssessmentService = {
       subsByStudent[sub.student_id].push(sub);
     }
 
+    // Attach MCQ submissions for each attempt
+    for (const att of attempts) {
+      att.questionSubmissions = subsByStudent[att.student_id] || [];
+      att.mcqSubmissions = await LaMcqSubmissionModel.findByAttemptId(att.attempt_id);
+    }
+
     return {
       lab,
-      attempts: attempts.map((a) => ({
-        ...a,
-        questionSubmissions: subsByStudent[a.student_id] || [],
-      })),
+      attempts,
     };
   },
 
@@ -702,13 +821,14 @@ const LabAssessmentService = {
 
   /**
    * Get available/upcoming lab assessments for a student.
+   * Strictly returns assessments in rooms the student has joined.
    */
-  getStudentAvailableLabs: async (userId) => {
+  getStudentAvailableLabs: async (userId, roomId = null) => {
     await LabAssessmentModel.syncStatuses();
     await LaAttemptModel.expireTimedOut();
     let student = await ensureStudent(userId);
     if (!student) return [];
-    const labs = await LabAssessmentModel.findEligibleForStudent(student.student_id);
+    const labs = await LabAssessmentModel.findEligibleForStudent(student.student_id, roomId);
     // Attach topic list and student attempt to each lab
     for (const lab of labs) {
       lab.topics = await LaAssessmentTopicModel.findByLabId(lab.lab_id);
@@ -719,36 +839,53 @@ const LabAssessmentService = {
   },
 
   /**
-   * Get a specific lab's info for a student (no question details yet).
+   * Get a specific lab's info for a student.
+   * Strictly enforces that student is enrolled in the lab's room.
    */
   getStudentLabInfo: async (userId, labId) => {
     await LabAssessmentModel.syncStatuses();
     let student = await ensureStudent(userId);
     const lab = await LabAssessmentModel.findById(labId);
     if (!lab) { const e = new Error('Lab assessment not found.'); e.statusCode = 404; throw e; }
+
+    // Enforce Room Membership
+    const isEnrolled = await LabAssessmentModel.isStudentEnrolledInLabRoom(student.student_id, labId);
+    if (!isEnrolled) {
+      const e = new Error('Access denied: You must be enrolled in the room to view this lab assessment.');
+      e.statusCode = 403; throw e;
+    }
+
     if (!['published', 'active', 'completed'].includes(lab.status)) {
       const e = new Error('This assessment is not currently available.'); e.statusCode = 403; throw e;
     }
     lab.topics = await LaAssessmentTopicModel.findByLabId(labId);
-    // Check if student has an existing attempt
     const attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
     lab.attempt = attempt;
     return lab;
   },
 
   /**
-   * Start or resume a lab assessment for a student.
-   * Performs lazy random allocation if this is the first access.
-   * Uses a DB transaction to prevent duplicate allocations.
+   * Start or resume a hybrid lab assessment for a student.
+   * - Enforces room membership
+   * - Independent Fisher-Yates random sampling for coding questions and MCQs
+   * - Respects manual allocations (Modes B and C)
+   * - Atomically persists allocations in PostgreSQL
+   * - Never re-randomizes on refresh or resume
    */
   startOrResumeLab: async (userId, labId) => {
     await LabAssessmentModel.syncStatuses();
     await LaAttemptModel.expireTimedOut();
 
     const student = await ensureStudent(userId);
-
     const lab = await LabAssessmentModel.findById(labId);
     if (!lab) { const e = new Error('Lab assessment not found.'); e.statusCode = 404; throw e; }
+
+    // Enforce Room Membership
+    const isEnrolled = await LabAssessmentModel.isStudentEnrolledInLabRoom(student.student_id, labId);
+    if (!isEnrolled) {
+      const e = new Error('Access denied: You must be enrolled in the lab room to start this assessment.');
+      e.statusCode = 403; throw e;
+    }
 
     const now = new Date();
     const startTime = new Date(lab.start_time);
@@ -758,21 +895,36 @@ const LabAssessmentService = {
     let attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
 
     if (attempt) {
-      const questions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
-      // If already submitted, return flag instead of hard error so UI can show result directly
+      const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
+      for (const q of codingQuestions) {
+        q.publicTestCases = await LabTestCaseModel.findPublicByQuestionId(q.lab_question_id);
+      }
+      const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
+
+      const unifiedQuestions = [
+        ...codingQuestions.map((q, idx) => ({
+          ...q,
+          question_type: 'coding',
+          display_number: idx + 1,
+        })),
+        ...mcqs.map((m, idx) => ({
+          ...m,
+          question_type: 'mcq',
+          display_number: codingQuestions.length + idx + 1,
+        })),
+      ];
+
       if (attempt.status === 'submitted') {
-        return { attempt, questions, isNew: false, alreadySubmitted: true };
+        return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false, alreadySubmitted: true };
       }
       if (attempt.status === 'timed_out' || attempt.status === 'expired') {
-        return { attempt, questions, isNew: false, alreadySubmitted: true, isExpired: true };
+        return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false, alreadySubmitted: true, isExpired: true };
       }
-      // Check server-side deadline
       if (new Date(attempt.effective_deadline) <= now) {
         await LaAttemptModel.expireTimedOut();
-        return { attempt, questions, isNew: false, alreadySubmitted: true, isExpired: true };
+        return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false, alreadySubmitted: true, isExpired: true };
       }
-      // Return existing in-progress allocation
-      return { attempt, questions, isNew: false };
+      return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false };
     }
 
     if (now < startTime) {
@@ -792,24 +944,23 @@ const LabAssessmentService = {
     try {
       await client.query('BEGIN');
 
-      // Re-check inside transaction
       const checkResult = await client.query(
         'SELECT attempt_id FROM la_attempts WHERE lab_id = $1 AND student_id = $2',
         [labId, student.student_id]
       );
       if (checkResult.rows.length > 0) {
-        // Race condition — another request already created it
         await client.query('ROLLBACK');
         attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
-        const questions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
-        return { attempt, questions, isNew: false };
+        const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
+        const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
+        return { attempt, questions: [...codingQuestions, ...mcqs], isNew: false };
       }
 
-      let selected = [];
-      let isAlreadyAllocated = false;
+      // ── 1. Coding Question Allocation ──
+      let selectedCoding = [];
+      const numCoding = lab.num_coding_questions !== undefined ? lab.num_coding_questions : (lab.num_questions || 0);
 
-      // Check if student already has a pre-assigned manual allocation (Mode C Hybrid)
-      const manualAssigned = await client.query(
+      const manualCoding = await client.query(
         `SELECT lcq.lab_question_id, lcq.marks, lcq.difficulty, lcq.title, a.question_order
          FROM la_student_allocations a
          JOIN lab_coding_questions lcq ON a.lab_question_id = lcq.lab_question_id
@@ -818,66 +969,142 @@ const LabAssessmentService = {
         [labId, student.student_id]
       );
 
-      if (manualAssigned.rows.length > 0) {
-        selected = manualAssigned.rows;
-        isAlreadyAllocated = true;
-      } else if (lab.allocation_mode === 'specific') {
-        // Mode A: Faculty Selects Specific Questions
-        const specificSelected = await LaSelectedQuestionModel.findByLabId(labId, client);
-        if (specificSelected.length < lab.num_questions) {
-          await client.query('ROLLBACK');
-          const e = new Error(
-            `Incomplete assessment configuration. Needed ${lab.num_questions} questions, but only ${specificSelected.length} specific questions configured.`
-          );
-          e.statusCode = 400; throw e;
+      if (manualCoding.rows.length > 0) {
+        selectedCoding = manualCoding.rows;
+      } else if (numCoding > 0) {
+        if (lab.allocation_mode === 'specific') {
+          const specificSelected = await LaSelectedQuestionModel.findByLabId(labId, client);
+          if (specificSelected.length < numCoding) {
+            await client.query('ROLLBACK');
+            const e = new Error(
+              `Incomplete configuration: Needed ${numCoding} coding questions, but only ${specificSelected.length} specific questions configured.`
+            );
+            e.statusCode = 400; throw e;
+          }
+          // PER-STUDENT RANDOM SAMPLING WITHOUT REPLACEMENT (FISHER-YATES)
+          const poolCopy = [...specificSelected];
+          shuffleArray(poolCopy);
+          selectedCoding = poolCopy.slice(0, numCoding);
+        } else {
+          const pool = await LaAllocationModel.getEligiblePool(labId, client);
+          if (pool.length < numCoding) {
+            await client.query('ROLLBACK');
+            const e = new Error(
+              `Insufficient coding questions in pool. Required: ${numCoding}, Available: ${pool.length}.`
+            );
+            e.statusCode = 400; throw e;
+          }
+          const poolCopy = [...pool];
+          shuffleArray(poolCopy);
+          selectedCoding = poolCopy.slice(0, numCoding);
         }
-        selected = specificSelected.slice(0, lab.num_questions);
-      } else {
-        // Mode B (Random) or Mode C unassigned student: Random selection from eligible pool
-        const pool = await LaAllocationModel.getEligiblePool(labId);
-        if (pool.length < lab.num_questions) {
-          await client.query('ROLLBACK');
-          const e = new Error(
-            `Insufficient questions in pool. Required: ${lab.num_questions}, Available: ${pool.length}.`
-          );
-          e.statusCode = 400; throw e;
-        }
-        shuffleArray(pool);
-        selected = pool.slice(0, lab.num_questions);
       }
 
-      // Calculate effective_deadline = min(now + duration_minutes, end_time)
+      // ── 2. MCQ Allocation ──
+      let selectedMcqs = [];
+      const numMcqs = lab.num_mcq_questions || 0;
+
+      const manualMcqs = await client.query(
+        `SELECT q.mcq_id, q.marks, q.difficulty, q.question_text, a.question_order
+         FROM la_student_mcq_allocations a
+         JOIN lab_mcq_questions q ON a.mcq_id = q.mcq_id
+         WHERE a.lab_id = $1 AND a.student_id = $2 AND a.is_manual = TRUE
+         ORDER BY a.question_order`,
+        [labId, student.student_id]
+      );
+
+      if (manualMcqs.rows.length > 0) {
+        selectedMcqs = manualMcqs.rows;
+      } else if (numMcqs > 0) {
+        if (lab.allocation_mode === 'specific') {
+          const specificMcqs = await LaSelectedMcqModel.findByLabId(labId, client);
+          if (specificMcqs.length < numMcqs) {
+            await client.query('ROLLBACK');
+            const e = new Error(
+              `Incomplete configuration: Needed ${numMcqs} MCQs, but only ${specificMcqs.length} specific MCQs configured.`
+            );
+            e.statusCode = 400; throw e;
+          }
+          // PER-STUDENT RANDOM SAMPLING WITHOUT REPLACEMENT (FISHER-YATES)
+          const poolCopy = [...specificMcqs];
+          shuffleArray(poolCopy);
+          selectedMcqs = poolCopy.slice(0, numMcqs);
+        } else {
+          const pool = await LaMcqAllocationModel.getEligiblePool(labId, client);
+          if (pool.length < numMcqs) {
+            await client.query('ROLLBACK');
+            const e = new Error(
+              `Insufficient MCQs in pool. Required: ${numMcqs}, Available: ${pool.length}.`
+            );
+            e.statusCode = 400; throw e;
+          }
+          const poolCopy = [...pool];
+          shuffleArray(poolCopy);
+          selectedMcqs = poolCopy.slice(0, numMcqs);
+        }
+      }
+
+      // Calculate total marks based on assigned coding questions + assigned MCQs
+      const codingMarksTotal = selectedCoding.reduce((sum, q) => sum + (q.marks || lab.marks_per_question || 10), 0);
+      const mcqMarksTotal = selectedMcqs.reduce((sum, m) => sum + (m.marks || lab.marks_per_mcq || 2), 0);
+      const calculatedTotalMarks = codingMarksTotal + mcqMarksTotal;
+
       const deadlineFromDuration = new Date(now.getTime() + lab.duration * 60 * 1000);
       const effectiveDeadline = deadlineFromDuration < endTime ? deadlineFromDuration : endTime;
 
-      // Calculate total marks based on selected questions
-      const totalMarks = selected.reduce((sum, q) => sum + (q.marks || lab.marks_per_question || 10), 0);
-
-      // Create attempt
       const newAttempt = await client.query(
         `INSERT INTO la_attempts
            (lab_id, student_id, effective_deadline, status, total_marks, obtained_marks)
          VALUES ($1, $2, $3, 'in_progress', $4, 0)
          RETURNING *`,
-        [labId, student.student_id, effectiveDeadline.toISOString(), totalMarks]
+        [labId, student.student_id, effectiveDeadline.toISOString(), calculatedTotalMarks]
       );
       attempt = newAttempt.rows[0];
 
-      // Bulk-insert allocation if not already pre-allocated manually
-      if (!isAlreadyAllocated) {
+      // Bulk-insert coding allocations if not pre-allocated manually
+      if (manualCoding.rows.length === 0 && selectedCoding.length > 0) {
         await LaAllocationModel.bulkCreate(
           client,
           student.student_id,
           labId,
-          selected.map((q, i) => ({ lab_question_id: q.lab_question_id, question_order: i + 1 })),
+          selectedCoding.map((q, i) => ({ lab_question_id: q.lab_question_id, question_order: i + 1 })),
+          false
+        );
+      }
+
+      // Bulk-insert MCQ allocations if not pre-allocated manually
+      if (manualMcqs.rows.length === 0 && selectedMcqs.length > 0) {
+        await LaMcqAllocationModel.bulkCreate(
+          client,
+          student.student_id,
+          labId,
+          selectedMcqs.map((m, i) => ({ mcq_id: m.mcq_id, question_order: i + 1 })),
           false
         );
       }
 
       await client.query('COMMIT');
 
-      const questions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
-      return { attempt, questions, isNew: true };
+      const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
+      for (const q of codingQuestions) {
+        q.publicTestCases = await LabTestCaseModel.findPublicByQuestionId(q.lab_question_id);
+      }
+      const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
+
+      const unifiedQuestions = [
+        ...codingQuestions.map((q, idx) => ({
+          ...q,
+          question_type: 'coding',
+          display_number: idx + 1,
+        })),
+        ...mcqs.map((m, idx) => ({
+          ...m,
+          question_type: 'mcq',
+          display_number: codingQuestions.length + idx + 1,
+        })),
+      ];
+
+      return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: true };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -887,20 +1114,104 @@ const LabAssessmentService = {
   },
 
   /**
-   * Get the student's allocated questions (no hidden test case data).
+   * Get the student's allocated questions (no hidden test case data or correct answers).
    */
   getStudentQuestions: async (userId, labId) => {
     const student = await ensureStudent(userId);
 
+    const isEnrolled = await LabAssessmentModel.isStudentEnrolledInLabRoom(student.student_id, labId);
+    if (!isEnrolled) {
+      const e = new Error('Access denied: You must be enrolled in the room to view assessment questions.');
+      e.statusCode = 403; throw e;
+    }
+
     const attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
     if (!attempt) { const e = new Error('You have not started this assessment yet.'); e.statusCode = 400; throw e; }
 
-    const questions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
-    // Attach public test cases only
-    for (const q of questions) {
+    const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
+    for (const q of codingQuestions) {
       q.publicTestCases = await LabTestCaseModel.findPublicByQuestionId(q.lab_question_id);
     }
-    return { attempt, questions };
+    const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
+
+    const unifiedQuestions = [
+      ...codingQuestions.map((q, idx) => ({
+        ...q,
+        question_type: 'coding',
+        display_number: idx + 1,
+      })),
+      ...mcqs.map((m, idx) => ({
+        ...m,
+        question_type: 'mcq',
+        display_number: codingQuestions.length + idx + 1,
+      })),
+    ];
+
+    return { attempt, questions: unifiedQuestions, codingQuestions, mcqs };
+  },
+
+  /**
+   * Submit an answer to an MCQ during an active attempt.
+   */
+  submitMcqAnswer: async (userId, labId, { mcq_id, selected_option }) => {
+    const student = await ensureStudent(userId);
+
+    const isEnrolled = await LabAssessmentModel.isStudentEnrolledInLabRoom(student.student_id, labId);
+    if (!isEnrolled) {
+      const e = new Error('Access denied: You are not enrolled in the room for this assessment.');
+      e.statusCode = 403; throw e;
+    }
+
+    const attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
+    if (!attempt || attempt.status !== 'in_progress') {
+      const e = new Error('Assessment session is not currently active.');
+      e.statusCode = 400; throw e;
+    }
+    if (new Date(attempt.effective_deadline) <= new Date()) {
+      await LaAttemptModel.expireTimedOut();
+      const e = new Error('Assessment deadline has expired.');
+      e.statusCode = 400; throw e;
+    }
+
+    // Verify MCQ was allocated to this student
+    const allocations = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
+    const allocatedMcq = allocations.find((a) => a.mcq_id === parseInt(mcq_id, 10));
+    if (!allocatedMcq) {
+      const e = new Error('This MCQ is not assigned to your assessment attempt.');
+      e.statusCode = 403; throw e;
+    }
+
+    // Server-side evaluation against stored correct answer
+    const mcq = await LabMcqQuestionModel.findById(parseInt(mcq_id, 10));
+    if (!mcq) {
+      const e = new Error('MCQ not found.');
+      e.statusCode = 404; throw e;
+    }
+
+    const cleanOption = (selected_option || '').toUpperCase();
+    const isCorrect = cleanOption === mcq.correct_option.toUpperCase();
+    const marksObtained = isCorrect ? (mcq.marks || 2) : 0;
+
+    const submission = await LaMcqSubmissionModel.upsert({
+      attempt_id: attempt.attempt_id,
+      mcq_id: parseInt(mcq_id, 10),
+      selected_option: cleanOption,
+      is_correct: isCorrect,
+      marks_obtained: marksObtained,
+    });
+
+    // Update dynamic attempt total marks obtained
+    const codingMarks = await LaQuestionSubmissionModel.getTotalObtainedMarks(attempt.attempt_id);
+    const mcqMarks = await LaMcqSubmissionModel.getTotalMarksForAttempt(attempt.attempt_id);
+    await LaAttemptModel.updateMarks(attempt.attempt_id, codingMarks + mcqMarks);
+
+    // Shield evaluation correctness from active attempt response
+    return {
+      success: true,
+      mcq_id: parseInt(mcq_id, 10),
+      selected_option: cleanOption,
+      saved_at: submission.submitted_at,
+    };
   },
 
   /**
@@ -1147,19 +1458,30 @@ const LabAssessmentService = {
   /**
    * Get per-question submission statuses for a student's active attempt.
    */
+  /**
+   * Get per-question submission statuses for a student's active attempt.
+   */
   getSubmissionStatus: async (userId, labId) => {
     const student = await ensureStudent(userId);
     const attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
-    if (!attempt) return { attempt: null, submissions: [] };
+    if (!attempt) return { attempt: null, submissions: [], mcqSubmissions: [] };
     const submissions = await LaQuestionSubmissionModel.findByAttemptId(attempt.attempt_id);
-    return { attempt, submissions };
+    const mcqSubmissions = await LaMcqSubmissionModel.findByAttemptId(attempt.attempt_id);
+    return { attempt, submissions, mcqSubmissions };
   },
 
   /**
    * Final submission of the entire lab assessment.
+   * Accurately aggregates both coding and MCQ marks.
    */
   submitAssessment: async (userId, labId) => {
     const student = await ensureStudent(userId);
+
+    const isEnrolled = await LabAssessmentModel.isStudentEnrolledInLabRoom(student.student_id, labId);
+    if (!isEnrolled) {
+      const e = new Error('Access denied: You are not enrolled in the room for this assessment.');
+      e.statusCode = 403; throw e;
+    }
 
     const attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
     if (!attempt) { const e = new Error('You have not started this assessment.'); e.statusCode = 400; throw e; }
@@ -1172,7 +1494,10 @@ const LabAssessmentService = {
       const e = new Error('Your assessment time has expired.'); e.statusCode = 400; throw e;
     }
 
-    const totalObtained = await LaQuestionSubmissionModel.getTotalObtainedMarks(attempt.attempt_id);
+    const codingMarks = await LaQuestionSubmissionModel.getTotalObtainedMarks(attempt.attempt_id);
+    const mcqMarks = await LaMcqSubmissionModel.getTotalMarksForAttempt(attempt.attempt_id);
+    const totalObtained = codingMarks + mcqMarks;
+
     const submitted = await LaAttemptModel.submit(attempt.attempt_id, totalObtained);
     if (!submitted) { const e = new Error('Failed to submit assessment. Please try again.'); e.statusCode = 500; throw e; }
     return submitted;
@@ -1191,14 +1516,15 @@ const LabAssessmentService = {
     }
 
     const lab = await LabAssessmentModel.findById(labId);
-    const questions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
-    const submissions = await LaQuestionSubmissionModel.findByAttemptId(attempt.attempt_id);
+    const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
+    const codingSubmissions = await LaQuestionSubmissionModel.findByAttemptId(attempt.attempt_id);
+    const mcqs = await LaMcqAllocationModel.findByStudentAndLabDetailed(student.student_id, labId);
 
     // Map submissions to questions
     const subMap = {};
-    for (const s of submissions) subMap[s.lab_question_id] = s;
+    for (const s of codingSubmissions) subMap[s.lab_question_id] = s;
 
-    const questionResults = questions.map((q) => ({
+    const codingResults = codingQuestions.map((q) => ({
       ...q,
       submission: subMap[q.lab_question_id] || {
         status: 'not_attempted',
@@ -1211,7 +1537,9 @@ const LabAssessmentService = {
     return {
       lab,
       attempt,
-      questionResults,
+      codingResults,
+      questionResults: codingResults,
+      mcqResults: mcqs,
       totalObtained: attempt.obtained_marks,
       totalMarks: attempt.total_marks,
       percentage: attempt.total_marks > 0

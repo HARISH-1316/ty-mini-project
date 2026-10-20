@@ -1,11 +1,14 @@
 // ──────────────────────────────────────────────
-// Lab Assessment Validation Schemas (Joi)
+// Lab Assessment & MCQ Validation Schemas (Joi)
 // ──────────────────────────────────────────────
 
 import Joi from 'joi';
 
 // ── Faculty: Create/Update Lab Assessment ──────
 export const createLabAssessmentValidation = Joi.object({
+  room_id: Joi.number().integer().positive().required().messages({
+    'any.required': 'Room ID is required. Lab assessments must belong to a room.',
+  }),
   title: Joi.string().min(3).max(200).required().messages({
     'string.min': 'Title must be at least 3 characters',
     'any.required': 'Title is required',
@@ -23,15 +26,21 @@ export const createLabAssessmentValidation = Joi.object({
     'number.max': 'Duration cannot exceed 480 minutes (8 hours)',
     'any.required': 'Duration in minutes is required',
   }),
-  num_questions: Joi.number().integer().min(1).max(50).default(5),
+  num_coding_questions: Joi.number().integer().min(0).max(50).default(3),
+  num_mcq_questions: Joi.number().integer().min(0).max(100).default(0),
+  num_questions: Joi.number().integer().min(1).max(100).optional(),
   marks_per_question: Joi.number().integer().min(1).max(100).default(10),
+  marks_per_mcq: Joi.number().integer().min(1).max(50).default(2),
   topic_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
   allocation_mode: Joi.string().valid('specific', 'random', 'hybrid').default('random'),
   selected_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  selected_mcq_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
   manual_allocations: Joi.array().items(
     Joi.object({
       student_id: Joi.number().integer().positive().required(),
-      question_ids: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
+      question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+      coding_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+      mcq_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
     })
   ).optional(),
 });
@@ -42,15 +51,21 @@ export const updateLabAssessmentValidation = Joi.object({
   start_time: Joi.date().iso().optional(),
   end_time: Joi.date().iso().optional(),
   duration: Joi.number().integer().min(5).max(480).optional(),
-  num_questions: Joi.number().integer().min(1).max(50).optional(),
+  num_coding_questions: Joi.number().integer().min(0).max(50).optional(),
+  num_mcq_questions: Joi.number().integer().min(0).max(100).optional(),
+  num_questions: Joi.number().integer().min(1).max(100).optional(),
   marks_per_question: Joi.number().integer().min(1).max(100).optional(),
+  marks_per_mcq: Joi.number().integer().min(1).max(50).optional(),
   topic_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
   allocation_mode: Joi.string().valid('specific', 'random', 'hybrid').optional(),
   selected_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  selected_mcq_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
   manual_allocations: Joi.array().items(
     Joi.object({
       student_id: Joi.number().integer().positive().required(),
-      question_ids: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
+      question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+      coding_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+      mcq_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
     })
   ).optional(),
 });
@@ -74,7 +89,7 @@ export const labTestCaseValidation = Joi.object({
   order_index: Joi.number().integer().optional().allow(null),
 });
 
-// ── Faculty: Create Lab Question ───────────────
+// ── Faculty: Create Lab Coding Question ────────
 export const createLabQuestionValidation = Joi.object({
   topic_id: Joi.number().integer().positive().required().messages({
     'any.required': 'Topic selection is required',
@@ -126,6 +141,46 @@ export const updateLabQuestionValidation = Joi.object({
   testCases: Joi.array().items(labTestCaseValidation).min(1).optional(),
 });
 
+// ── Faculty: MCQ Question Bank Validation ───────
+export const createLabMcqValidation = Joi.object({
+  topic_id: Joi.number().integer().positive().required().messages({
+    'any.required': 'Topic selection is required',
+  }),
+  subtopic_id: Joi.number().integer().positive().optional().allow(null),
+  question_text: Joi.string().min(5).required().messages({
+    'any.required': 'Question text is required',
+    'string.min': 'Question text must be at least 5 characters',
+  }),
+  option_a: Joi.string().required().messages({ 'any.required': 'Option A is required' }),
+  option_b: Joi.string().required().messages({ 'any.required': 'Option B is required' }),
+  option_c: Joi.string().required().messages({ 'any.required': 'Option C is required' }),
+  option_d: Joi.string().required().messages({ 'any.required': 'Option D is required' }),
+  correct_option: Joi.string().valid('A', 'B', 'C', 'D', 'a', 'b', 'c', 'd').required().messages({
+    'any.required': 'Correct option (A, B, C, or D) is required',
+  }),
+  explanation: Joi.string().optional().allow(''),
+  difficulty: Joi.string().valid('easy', 'medium', 'hard').default('medium'),
+  marks: Joi.number().integer().min(1).max(50).default(2),
+  status: Joi.string().valid('draft', 'published', 'archived').default('published'),
+  is_published: Joi.boolean().default(true),
+});
+
+export const updateLabMcqValidation = Joi.object({
+  topic_id: Joi.number().integer().positive().optional(),
+  subtopic_id: Joi.number().integer().positive().optional().allow(null),
+  question_text: Joi.string().min(5).optional(),
+  option_a: Joi.string().optional(),
+  option_b: Joi.string().optional(),
+  option_c: Joi.string().optional(),
+  option_d: Joi.string().optional(),
+  correct_option: Joi.string().valid('A', 'B', 'C', 'D', 'a', 'b', 'c', 'd').optional(),
+  explanation: Joi.string().optional().allow(''),
+  difficulty: Joi.string().valid('easy', 'medium', 'hard').optional(),
+  marks: Joi.number().integer().min(1).max(50).optional(),
+  status: Joi.string().valid('draft', 'published', 'archived').optional(),
+  is_published: Joi.boolean().optional(),
+});
+
 // ── Student: Run Code ──────────────────────────
 export const laRunCodeValidation = Joi.object({
   lab_question_id: Joi.number().integer().positive().required(),
@@ -139,4 +194,12 @@ export const laSubmitQuestionValidation = Joi.object({
   lab_question_id: Joi.number().integer().positive().required(),
   language: Joi.string().valid('c', 'cpp', 'java', 'python', 'C', 'C++', 'Java', 'Python').required(),
   code: Joi.string().min(1).required(),
+});
+
+// ── Student: Submit MCQ Answer ─────────────────
+export const laSubmitMcqValidation = Joi.object({
+  mcq_id: Joi.number().integer().positive().required(),
+  selected_option: Joi.string().valid('A', 'B', 'C', 'D', 'a', 'b', 'c', 'd').required().messages({
+    'any.required': 'Selected option is required',
+  }),
 });

@@ -16,7 +16,12 @@ export const createLabAssessment = asyncHandler(async (req, res) => {
 });
 
 export const getFacultyLabAssessments = asyncHandler(async (req, res) => {
-  const labs = await LabAssessmentService.getFacultyAssessments(req.user.user_id, req.user.role);
+  const roomId = req.query.roomId || req.query.room_id || req.params.roomId;
+  const labs = await LabAssessmentService.getFacultyAssessments(
+    req.user.user_id,
+    req.user.role,
+    roomId ? parseInt(roomId, 10) : null
+  );
   return successResponse(res, 200, 'Lab assessments retrieved.', { labs });
 });
 
@@ -69,6 +74,8 @@ export const getQuestionPool = asyncHandler(async (req, res) => {
     questionPoolStats: lab.questionPoolStats,
     totalEligibleQuestions: lab.totalEligibleQuestions,
     numQuestionsRequired: lab.num_questions,
+    numCodingQuestions: lab.num_coding_questions,
+    numMcqQuestions: lab.num_mcq_questions,
   });
 });
 
@@ -83,8 +90,12 @@ export const getLabResults = asyncHandler(async (req, res) => {
 // =========================================================
 
 export const getStudentAvailableLabs = asyncHandler(async (req, res) => {
-  const labs = await LabAssessmentService.getStudentAvailableLabs(req.user.user_id);
-  return successResponse(res, 200, 'Available lab assessments retrieved.', { labs });
+  const roomId = req.query.roomId || req.query.room_id || req.params.roomId;
+  const labs = await LabAssessmentService.getStudentAvailableLabs(
+    req.user.user_id,
+    roomId ? parseInt(roomId, 10) : null
+  );
+  return successResponse(res, 200, 'Available lab assessments retrieved.', { labs, assessments: labs });
 });
 
 export const getStudentLabInfo = asyncHandler(async (req, res) => {
@@ -116,6 +127,12 @@ export const studentSubmitQuestion = asyncHandler(async (req, res) => {
   const { labId } = req.params;
   const result = await LabAssessmentService.submitQuestion(req.user.user_id, parseInt(labId, 10), req.body);
   return successResponse(res, 200, 'Question submitted and evaluated.', result);
+});
+
+export const studentSubmitMcq = asyncHandler(async (req, res) => {
+  const { labId } = req.params;
+  const result = await LabAssessmentService.submitMcqAnswer(req.user.user_id, parseInt(labId, 10), req.body);
+  return successResponse(res, 200, 'MCQ answer saved.', result);
 });
 
 export const getSubmissionStatus = asyncHandler(async (req, res) => {

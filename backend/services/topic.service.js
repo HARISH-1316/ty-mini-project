@@ -11,6 +11,8 @@ import StudentModel from '../models/student.model.js';
 import PrerequisiteModel from '../models/prerequisite.model.js';
 import RoomService from './room.service.js';
 
+import TopicVideoModel from '../models/topicVideo.model.js';
+
 const TopicService = {
   // ── Topic Operations ────────────────────────
   createTopic: async ({ title, description }) => {
@@ -34,9 +36,11 @@ const TopicService = {
     }
     const onlyPublished = userRole === 'student';
     const subtopics = await SubtopicModel.findByTopicId(topicId, { onlyPublished });
+    const videoReferences = await TopicVideoModel.findByTopicId(topicId);
     return {
       ...topic,
       subtopics,
+      videoReferences,
     };
   },
 
@@ -214,15 +218,39 @@ const TopicService = {
     return ProgressModel.findByStudentId(student.student_id);
   },
 
-  // ── Prerequisite Operations ─────────────────
-  getTopicPrerequisites: async (topicId) => {
+  // ── Video Reference Operations ─────────────
+  getTopicVideos: async (topicId) => {
+    return TopicVideoModel.findByTopicId(topicId);
+  },
+
+  addTopicVideo: async (topicId, data) => {
     const topic = await TopicModel.findById(topicId);
     if (!topic) {
       const error = new Error('Topic not found.');
       error.statusCode = 404;
       throw error;
     }
-    return PrerequisiteModel.findByTopicId(topicId);
+    return TopicVideoModel.create({ topic_id: topicId, ...data });
+  },
+
+  updateTopicVideo: async (videoId, data) => {
+    const video = await TopicVideoModel.findById(videoId);
+    if (!video) {
+      const error = new Error('Video reference not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+    return TopicVideoModel.update(videoId, data);
+  },
+
+  deleteTopicVideo: async (videoId) => {
+    const video = await TopicVideoModel.findById(videoId);
+    if (!video) {
+      const error = new Error('Video reference not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+    return TopicVideoModel.delete(videoId);
   },
 };
 

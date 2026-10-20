@@ -87,6 +87,7 @@ import {
   removeTopicFromAssessmentApi,
   getTopicsSummaryApi,
   listLabQuestionsApi,
+  listLabMcqsApi,
 } from '../../api/labApi';
 import {
   toLocalDatetimeInputString,
@@ -144,6 +145,13 @@ const CreateLabAssessment = () => {
   const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
   const [previewQuestion, setPreviewQuestion] = useState(null);
 
+  // MCQ state
+  const [availableMcqs, setAvailableMcqs] = useState([]);
+  const [selectedMcqIds, setSelectedMcqIds] = useState([]);
+  const [previewMcq, setPreviewMcq] = useState(null);
+  const [mcqSearch, setMcqSearch] = useState('');
+  const [mcqTopicFilter, setMcqTopicFilter] = useState('all');
+
   // Hybrid Mode state
   const [manualAllocations, setManualAllocations] = useState([]);
   const [targetStudentId, setTargetStudentId] = useState('');
@@ -166,8 +174,11 @@ const CreateLabAssessment = () => {
     start_time: '',
     end_time: '',
     duration: 120,
-    num_questions: 5,
+    num_questions: 8,
+    num_coding_questions: 3,
     marks_per_question: 10,
+    num_mcq_questions: 5,
+    marks_per_mcq: 2,
     allocation_mode: 'random',
   });
 
@@ -189,8 +200,11 @@ const CreateLabAssessment = () => {
         start_time: toLocalDatetimeInputString(labData?.start_time),
         end_time: toLocalDatetimeInputString(labData?.end_time),
         duration: labData?.duration || 120,
-        num_questions: labData?.num_questions || 5,
+        num_questions: labData?.num_questions || 8,
+        num_coding_questions: labData?.num_coding_questions ?? 3,
         marks_per_question: labData?.marks_per_question || 10,
+        num_mcq_questions: labData?.num_mcq_questions ?? 5,
+        marks_per_mcq: labData?.marks_per_mcq || 2,
         allocation_mode: mode,
       });
 
@@ -201,6 +215,9 @@ const CreateLabAssessment = () => {
       // Selected questions for Mode A
       const preSelected = (labData?.selectedQuestions || []).map((q) => q.lab_question_id);
       setSelectedQuestionIds(preSelected);
+
+      const preSelectedMcqs = (labData?.selectedMcqs || []).map((m) => m.mcq_id);
+      setSelectedMcqIds(preSelectedMcqs);
 
       // Existing manual allocations for Mode C
       if (labData?.allocations) {
@@ -221,16 +238,21 @@ const CreateLabAssessment = () => {
         setManualAllocations(Object.values(manualMap));
       }
 
-      // Load published questions for the assessment's selected topics
+      // Load published questions & MCQs for the assessment's selected topics
       const topicIds = (labData?.topics || []).map((t) => t.topic_id);
       if (topicIds.length > 0) {
-        const questionsPromises = topicIds.map((tId) =>
-          listLabQuestionsApi({ topicId: tId, status: 'published' }).catch(() => ({ data: { data: { questions: [] } } }))
-        );
-        const results = await Promise.all(questionsPromises);
+        const [questionsResults, mcqsResults] = await Promise.all([
+          Promise.all(topicIds.map((tId) =>
+            listLabQuestionsApi({ topicId: tId, status: 'published' }).catch(() => ({ data: { data: { questions: [] } } }))
+          )),
+          Promise.all(topicIds.map((tId) =>
+            listLabMcqsApi({ topicId: tId, status: 'published' }).catch(() => ({ data: { data: { mcqs: [] } } }))
+          )),
+        ]);
+
         const combined = [];
         const seen = new Set();
-        results.forEach((r) => {
+        questionsResults.forEach((r) => {
           const list = r.data?.data?.questions || r.data?.questions || [];
           list.forEach((q) => {
             if (!seen.has(q.lab_question_id)) {
@@ -240,8 +262,22 @@ const CreateLabAssessment = () => {
           });
         });
         setAvailableQuestions(combined);
+
+        const combinedMcqs = [];
+        const seenMcqs = new Set();
+        mcqsResults.forEach((r) => {
+          const list = r.data?.data?.mcqs || r.data?.mcqs || [];
+          list.forEach((m) => {
+            if (!seenMcqs.has(m.mcq_id)) {
+              seenMcqs.add(m.mcq_id);
+              combinedMcqs.push(m);
+            }
+          });
+        });
+        setAvailableMcqs(combinedMcqs);
       } else {
         setAvailableQuestions([]);
+        setAvailableMcqs([]);
       }
     } catch (err) {
       toast({
@@ -264,12 +300,35 @@ const CreateLabAssessment = () => {
     try {
       setIsSaving(true);
       const qIds = overrideSelectedQIds !== null ? overrideSelectedQIds : selectedQuestionIds;
+      const parsedCoding = parseInt(editForm.num_coding_questions ?? 0, 10);
+      const parsedMcq = parseInt(editForm.num_mcq_questions ?? 0, 10);
+      const validCoding = isNaN(parsedCoding) || parsedCoding < 0 ? 0 : parsedCoding;
+      const validMcq = isNaN(parsedMcq) || parsedMcq < 0 ? 0 : parsedMcq;
+
+      if (validCoding === 0 && validMcq === 0) {
+        toast({
+          title: 'Invalid question counts',
+          description: 'Assessment must include at least 1 question (either coding or MCQ).',
+          status: 'warning',
+          duration: 3500,
+          isClosable: true,
+        });
+        setIsSaving(false);
+        return;
+      }
+
       const payload = {
         ...editForm,
+        num_questions: validCoding + validMcq,
+        num_coding_questions: validCoding,
+        num_mcq_questions: validMcq,
+        marks_per_question: parseInt(editForm.marks_per_question || 10, 10),
+        marks_per_mcq: parseInt(editForm.marks_per_mcq || 2, 10),
         start_time: toUtcIsoString(editForm.start_time),
         end_time: toUtcIsoString(editForm.end_time),
         allocation_mode: editForm.allocation_mode,
         selected_question_ids: editForm.allocation_mode === 'specific' ? qIds : [],
+        selected_mcq_ids: editForm.allocation_mode === 'specific' ? selectedMcqIds : [],
         manual_allocations: editForm.allocation_mode === 'hybrid' ? manualAllocations : [],
       };
 
@@ -393,6 +452,13 @@ const CreateLabAssessment = () => {
     }
   };
 
+  const handleToggleSelectMcq = (mId) => {
+    setSelectedMcqIds((prev) => {
+      const next = prev.includes(mId) ? prev.filter((id) => id !== mId) : [...prev, mId];
+      return next;
+    });
+  };
+
   // Question filtering
   const filteredAvailableQuestions = availableQuestions.filter((q) => {
     if (qSearch.trim() && !q.title.toLowerCase().includes(qSearch.toLowerCase())) {
@@ -407,19 +473,44 @@ const CreateLabAssessment = () => {
     return true;
   });
 
+  // MCQ filtering
+  const filteredAvailableMcqs = availableMcqs.filter((m) => {
+    if (mcqSearch.trim()) {
+      const term = mcqSearch.toLowerCase();
+      const textMatch = m.question_text?.toLowerCase().includes(term);
+      const optMatch = m.option_a?.toLowerCase().includes(term) ||
+                       m.option_b?.toLowerCase().includes(term) ||
+                       m.option_c?.toLowerCase().includes(term) ||
+                       m.option_d?.toLowerCase().includes(term);
+      if (!textMatch && !optMatch) return false;
+    }
+    if (mcqTopicFilter !== 'all' && m.topic_id?.toString() !== mcqTopicFilter) {
+      return false;
+    }
+    return true;
+  });
+
   const isDraft = lab?.status === 'draft';
   const addedTopicIds = new Set(lab?.topics?.map((t) => t.topic_id) || []);
   const availableTopicsToAdd = allTopics.filter((t) => !addedTopicIds.has(t.topic_id));
 
   // Mode-specific sufficiency checks
-  const numReq = editForm.num_questions || 5;
+  const numCodingReq = parseInt(editForm.num_coding_questions ?? 0, 10) || 0;
+  const numMcqReq = parseInt(editForm.num_mcq_questions ?? 0, 10) || 0;
+  const numReq = numCodingReq + numMcqReq;
   const isModeA = editForm.allocation_mode === 'specific';
   const isModeB = editForm.allocation_mode === 'random';
   const isModeC = editForm.allocation_mode === 'hybrid';
 
-  const isQuestionSufficient = isModeA
-    ? selectedQuestionIds.length >= numReq
-    : totalEligible >= numReq;
+  const isCodingSufficient = isModeA
+    ? numCodingReq === 0 || selectedQuestionIds.length >= numCodingReq
+    : numCodingReq === 0 || totalEligible >= numCodingReq;
+
+  const isMcqSufficient = isModeA
+    ? numMcqReq === 0 || selectedMcqIds.length >= numMcqReq
+    : true;
+
+  const isQuestionSufficient = numReq > 0 && isCodingSufficient && isMcqSufficient;
 
   // Selected questions objects and total marks calculation
   const selectedQuestionObjects = availableQuestions.filter((q) =>
@@ -475,9 +566,14 @@ const CreateLabAssessment = () => {
               >
                 {isModeA ? 'Mode A: Specific Questions' : isModeC ? 'Mode C: Hybrid Allocation' : 'Mode B: Random Allocation'}
               </Badge>
+              {lab.room_name && (
+                <Badge colorScheme="teal" px={2.5} py={1} borderRadius="md">
+                  Room: {lab.room_name} ({lab.room_code})
+                </Badge>
+              )}
             </HStack>
             <Text color={mutedText} fontSize="sm">
-              Created by {lab.faculty_name} • Duration: {lab.duration} mins • {numReq} Questions / Student
+              Created by {lab.faculty_name} • Duration: {lab.duration} mins • {numCodingReq} Coding + {numMcqReq} MCQs
             </Text>
           </VStack>
 
@@ -526,16 +622,16 @@ const CreateLabAssessment = () => {
               {lab.topics?.length === 0
                 ? 'Topics Required'
                 : isModeA
-                ? `Mode A — Selected ${selectedQuestionIds.length} of ${numReq} required questions (${totalSelectedMarks} Total Marks)`
+                ? `Mode A — Selected ${selectedQuestionIds.length} / ${numCodingReq} Coding Qs & ${selectedMcqIds.length} / ${numMcqReq} MCQs (${totalSelectedMarks} Total Marks)`
                 : isModeC
                 ? `Mode C — Hybrid Pool: ${totalEligible} questions available (${manualAllocations.length} students assigned manually)`
-                : `Mode B — Ready for random allocation: ${totalEligible} eligible questions in pool (need at least ${numReq})`}
+                : `Mode B — Ready for random allocation: ${totalEligible} eligible questions in pool (need at least ${numCodingReq} coding)`}
             </AlertTitle>
             <AlertDescription fontSize="xs" color={mutedText}>
               {lab.topics?.length === 0
                 ? 'Add at least one curriculum topic to enable assessment question selection.'
-                : isModeA && selectedQuestionIds.length < numReq
-                ? `Select at least ${numReq - selectedQuestionIds.length} more question(s) from the question pool below before publishing.`
+                : isModeA && (!isCodingSufficient || !isMcqSufficient)
+                ? `Please ensure you select at least ${numCodingReq} coding question(s) and ${numMcqReq} MCQ(s) before publishing.`
                 : isModeA
                 ? 'All students taking this assessment will receive the exact questions you have selected below.'
                 : isModeC
@@ -618,13 +714,66 @@ const CreateLabAssessment = () => {
                     </FormControl>
 
                     <FormControl>
-                      <FormLabel fontSize="xs" fontWeight="600">Questions / Student</FormLabel>
+                      <FormLabel fontSize="xs" fontWeight="600">Coding Qs / Student</FormLabel>
+                      <NumberInput
+                        size="sm"
+                        min={0}
+                        max={20}
+                        value={editForm.num_coding_questions}
+                        onChange={(_, v) => setEditForm((f) => ({ ...f, num_coding_questions: isNaN(v) ? 0 : Math.max(0, v) }))}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel fontSize="xs" fontWeight="600">Marks / Coding Q</FormLabel>
+                      <NumberInput
+                        size="sm"
+                        min={1}
+                        max={100}
+                        value={editForm.marks_per_question}
+                        onChange={(_, v) => setEditForm((f) => ({ ...f, marks_per_question: isNaN(v) ? 10 : Math.max(1, v) }))}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+                  </SimpleGrid>
+
+                  <SimpleGrid columns={2} spacing={3} w="full">
+                    <FormControl>
+                      <FormLabel fontSize="xs" fontWeight="600">MCQs / Student</FormLabel>
+                      <NumberInput
+                        size="sm"
+                        min={0}
+                        max={50}
+                        value={editForm.num_mcq_questions}
+                        onChange={(_, v) => setEditForm((f) => ({ ...f, num_mcq_questions: isNaN(v) ? 0 : Math.max(0, v) }))}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormLabel fontSize="xs" fontWeight="600">Marks / MCQ</FormLabel>
                       <NumberInput
                         size="sm"
                         min={1}
                         max={50}
-                        value={editForm.num_questions}
-                        onChange={(_, v) => setEditForm((f) => ({ ...f, num_questions: v || 5 }))}
+                        value={editForm.marks_per_mcq}
+                        onChange={(_, v) => setEditForm((f) => ({ ...f, marks_per_mcq: isNaN(v) ? 2 : Math.max(1, v) }))}
                       >
                         <NumberInputField />
                         <NumberInputStepper>
@@ -756,14 +905,14 @@ const CreateLabAssessment = () => {
                   {/* Pool Progress */}
                   <Box mt={2} p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
                     <Flex justify="space-between" fontSize="xs" mb={1.5}>
-                      <Text color={mutedText}>Total Published Pool:</Text>
-                      <Text fontWeight="bold" color={totalEligible >= numReq ? 'green.600' : 'orange.600'}>
-                        {totalEligible} / {numReq} required
+                      <Text color={mutedText}>Coding Question Pool:</Text>
+                      <Text fontWeight="bold" color={numCodingReq === 0 || totalEligible >= numCodingReq ? 'green.600' : 'orange.600'}>
+                        {totalEligible} / {numCodingReq} coding required
                       </Text>
                     </Flex>
                     <Progress
-                      value={Math.min(100, (totalEligible / numReq) * 100)}
-                      colorScheme={totalEligible >= numReq ? 'green' : 'orange'}
+                      value={numCodingReq === 0 ? 100 : Math.min(100, (totalEligible / (numCodingReq || 1)) * 100)}
+                      colorScheme={numCodingReq === 0 || totalEligible >= numCodingReq ? 'green' : 'orange'}
                       size="sm"
                       borderRadius="full"
                     />
@@ -784,18 +933,18 @@ const CreateLabAssessment = () => {
                   <Flex justify="space-between" align={{ base: 'start', sm: 'center' }} mb={4} direction={{ base: 'column', sm: 'row' }} gap={2}>
                     <Box>
                       <Heading size="sm" color={textColor}>
-                        Mode A: Select Specific Questions
+                        Mode A: Select Specific Questions & MCQs
                       </Heading>
                       <Text fontSize="xs" color={mutedText}>
-                        Select exact questions to include. All students will receive these identical questions.
+                        Select exact coding questions and MCQs to include. All students will receive these configured questions.
                       </Text>
                     </Box>
-                    <HStack spacing={2}>
-                      <Tag size="md" colorScheme={selectedQuestionIds.length >= numReq ? 'green' : 'orange'} variant="solid">
-                        {selectedQuestionIds.length} / {numReq} Selected
+                    <HStack spacing={2} wrap="wrap">
+                      <Tag size="md" colorScheme={numCodingReq === 0 || selectedQuestionIds.length >= numCodingReq ? 'green' : 'orange'} variant="solid">
+                        {selectedQuestionIds.length} / {numCodingReq} Coding Qs
                       </Tag>
-                      <Tag size="md" colorScheme="blue" variant="outline">
-                        {totalSelectedMarks} Total Marks
+                      <Tag size="md" colorScheme={numMcqReq === 0 || selectedMcqIds.length >= numMcqReq ? 'green' : 'orange'} variant="solid">
+                        {selectedMcqIds.length} / {numMcqReq} MCQs
                       </Tag>
                       {isDraft && (
                         <Button
@@ -810,122 +959,262 @@ const CreateLabAssessment = () => {
                     </HStack>
                   </Flex>
 
-                  {/* Question Browser Filters */}
-                  <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={4}>
-                    <InputGroup size="sm">
-                      <InputLeftElement pointerEvents="none">
-                        <SearchIcon color="gray.400" />
-                      </InputLeftElement>
-                      <Input
-                        placeholder="Search questions..."
-                        value={qSearch}
-                        onChange={(e) => setQSearch(e.target.value)}
-                        borderRadius="lg"
-                      />
-                    </InputGroup>
+                  {/* Dual Mode A Tabs: Coding Questions and MCQs */}
+                  <Tabs variant="enclosed" colorScheme="green" defaultIndex={numCodingReq === 0 ? 1 : 0}>
+                    <TabList borderColor={cardBorder} mb={4}>
+                      <Tab fontWeight="bold" fontSize="sm">
+                        Coding Questions ({selectedQuestionIds.length} / {numCodingReq})
+                      </Tab>
+                      <Tab fontWeight="bold" fontSize="sm">
+                        Multiple Choice Questions ({selectedMcqIds.length} / {numMcqReq})
+                      </Tab>
+                    </TabList>
 
-                    <Select
-                      size="sm"
-                      borderRadius="lg"
-                      value={qTopicFilter}
-                      onChange={(e) => setQTopicFilter(e.target.value)}
-                    >
-                      <option value="all">All Selected Topics</option>
-                      {(lab.topics || []).map((t) => (
-                        <option key={t.topic_id} value={t.topic_id}>
-                          {t.topic_title}
-                        </option>
-                      ))}
-                    </Select>
+                    <TabPanels>
+                      {/* ── TAB 1: CODING QUESTIONS ── */}
+                      <TabPanel p={0}>
+                        {/* Question Browser Filters */}
+                        <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={4}>
+                          <InputGroup size="sm">
+                            <InputLeftElement pointerEvents="none">
+                              <SearchIcon color="gray.400" />
+                            </InputLeftElement>
+                            <Input
+                              placeholder="Search coding questions..."
+                              value={qSearch}
+                              onChange={(e) => setQSearch(e.target.value)}
+                              borderRadius="lg"
+                            />
+                          </InputGroup>
 
-                    <Select
-                      size="sm"
-                      borderRadius="lg"
-                      value={qDiffFilter}
-                      onChange={(e) => setQDiffFilter(e.target.value)}
-                    >
-                      <option value="all">All Difficulties</option>
-                      <option value="easy">Easy (5 marks)</option>
-                      <option value="medium">Medium (10 marks)</option>
-                      <option value="hard">Hard (15 marks)</option>
-                    </Select>
-                  </SimpleGrid>
-
-                  {/* Available Questions Table */}
-                  {filteredAvailableQuestions.length === 0 ? (
-                    <Box p={8} textAlign="center" borderRadius="xl" bg={surfaceBg}>
-                      <Text color={mutedText} fontSize="sm">
-                        No published questions available for the selected topics and filters.
-                      </Text>
-                    </Box>
-                  ) : (
-                    <VStack spacing={2.5} align="stretch" maxH="550px" overflowY="auto" pr={1}>
-                      {filteredAvailableQuestions.map((q) => {
-                        const isSelected = selectedQuestionIds.includes(q.lab_question_id);
-                        const diffColor = DIFFICULTY_COLORS[q.difficulty] || 'gray';
-                        const marks = q.marks || DIFFICULTY_MARKS[q.difficulty] || 10;
-                        return (
-                          <Box
-                            key={q.lab_question_id}
-                            p={3.5}
-                            borderRadius="xl"
-                            bg={isSelected ? surfaceBg : 'transparent'}
-                            borderWidth="2px"
-                            borderColor={isSelected ? 'blue.400' : cardBorder}
-                            transition="all 0.15s ease"
-                            _hover={{ borderColor: 'blue.300' }}
+                          <Select
+                            size="sm"
+                            borderRadius="lg"
+                            value={qTopicFilter}
+                            onChange={(e) => setQTopicFilter(e.target.value)}
                           >
-                            <Flex justify="space-between" align="start" gap={3}>
-                              <HStack spacing={3} align="start" flex={1}>
-                                {isDraft && (
-                                  <Checkbox
-                                    mt={1}
-                                    colorScheme="brand"
-                                    isChecked={isSelected}
-                                    onChange={() => handleToggleSelectQuestion(q.lab_question_id)}
-                                  />
-                                )}
-                                <VStack align="start" spacing={1}>
-                                  <HStack spacing={2} wrap="wrap">
-                                    <Text fontWeight="700" fontSize="sm" color={textColor}>
-                                      {q.title}
-                                    </Text>
-                                    <Badge colorScheme={diffColor} fontSize="xs">
-                                      {q.difficulty} ({marks}m)
-                                    </Badge>
-                                    {q.topic_title && (
-                                      <Badge colorScheme="blue" variant="subtle" fontSize="10px">
-                                        {q.topic_title}
-                                      </Badge>
-                                    )}
-                                  </HStack>
-                                  <Text fontSize="xs" color={mutedText} noOfLines={2}>
-                                    {q.problem_statement}
-                                  </Text>
-                                </VStack>
-                              </HStack>
+                            <option value="all">All Selected Topics</option>
+                            {(lab.topics || []).map((t) => (
+                              <option key={t.topic_id} value={t.topic_id}>
+                                {t.topic_title}
+                              </option>
+                            ))}
+                          </Select>
 
-                              <HStack spacing={1}>
-                                <Tooltip label="Preview problem statement" hasArrow>
-                                  <IconButton
-                                    icon={<ViewIcon />}
-                                    size="xs"
-                                    variant="ghost"
-                                    colorScheme="blue"
-                                    aria-label="Preview"
-                                    onClick={() => {
-                                      setPreviewQuestion(q);
-                                      onPreviewOpen();
-                                    }}
-                                  />
-                                </Tooltip>
-                              </HStack>
-                            </Flex>
+                          <Select
+                            size="sm"
+                            borderRadius="lg"
+                            value={qDiffFilter}
+                            onChange={(e) => setQDiffFilter(e.target.value)}
+                          >
+                            <option value="all">All Difficulties</option>
+                            <option value="easy">Easy (5 marks)</option>
+                            <option value="medium">Medium (10 marks)</option>
+                            <option value="hard">Hard (15 marks)</option>
+                          </Select>
+                        </SimpleGrid>
+
+                        {/* Available Coding Questions Table */}
+                        {filteredAvailableQuestions.length === 0 ? (
+                          <Box p={8} textAlign="center" borderRadius="xl" bg={surfaceBg}>
+                            <Text color={mutedText} fontSize="sm">
+                              No published coding questions available for the selected topics and filters.
+                            </Text>
                           </Box>
-                        );
-                      })}
-                    </VStack>
-                  )}
+                        ) : (
+                          <VStack spacing={2.5} align="stretch" maxH="550px" overflowY="auto" pr={1}>
+                            {filteredAvailableQuestions.map((q) => {
+                              const isSelected = selectedQuestionIds.includes(q.lab_question_id);
+                              const diffColor = DIFFICULTY_COLORS[q.difficulty] || 'gray';
+                              const marks = q.marks || DIFFICULTY_MARKS[q.difficulty] || 10;
+                              return (
+                                <Box
+                                  key={q.lab_question_id}
+                                  p={3.5}
+                                  borderRadius="xl"
+                                  bg={isSelected ? surfaceBg : 'transparent'}
+                                  borderWidth="2px"
+                                  borderColor={isSelected ? 'blue.400' : cardBorder}
+                                  transition="all 0.15s ease"
+                                  _hover={{ borderColor: 'blue.300' }}
+                                >
+                                  <Flex justify="space-between" align="start" gap={3}>
+                                    <HStack spacing={3} align="start" flex={1}>
+                                      {isDraft && (
+                                        <Checkbox
+                                          mt={1}
+                                          colorScheme="brand"
+                                          isChecked={isSelected}
+                                          onChange={() => handleToggleSelectQuestion(q.lab_question_id)}
+                                        />
+                                      )}
+                                      <VStack align="start" spacing={1}>
+                                        <HStack spacing={2} wrap="wrap">
+                                          <Text fontWeight="700" fontSize="sm" color={textColor}>
+                                            {q.title}
+                                          </Text>
+                                          <Badge colorScheme={diffColor} fontSize="xs">
+                                            {q.difficulty} ({marks}m)
+                                          </Badge>
+                                          {q.topic_title && (
+                                            <Badge colorScheme="blue" variant="subtle" fontSize="10px">
+                                              {q.topic_title}
+                                            </Badge>
+                                          )}
+                                        </HStack>
+                                        <Text fontSize="xs" color={mutedText} noOfLines={2}>
+                                          {q.problem_statement}
+                                        </Text>
+                                      </VStack>
+                                    </HStack>
+
+                                    <HStack spacing={1}>
+                                      <Tooltip label="Preview problem statement" hasArrow>
+                                        <IconButton
+                                          icon={<ViewIcon />}
+                                          size="xs"
+                                          variant="ghost"
+                                          colorScheme="blue"
+                                          aria-label="Preview"
+                                          onClick={() => {
+                                            setPreviewQuestion(q);
+                                            onPreviewOpen();
+                                          }}
+                                        />
+                                      </Tooltip>
+                                    </HStack>
+                                  </Flex>
+                                </Box>
+                              );
+                            })}
+                          </VStack>
+                        )}
+                      </TabPanel>
+
+                      {/* ── TAB 2: MCQ QUESTIONS ── */}
+                      <TabPanel p={0}>
+                        {/* MCQ Filters */}
+                        <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3} mb={4}>
+                          <InputGroup size="sm">
+                            <InputLeftElement pointerEvents="none">
+                              <SearchIcon color="gray.400" />
+                            </InputLeftElement>
+                            <Input
+                              placeholder="Search MCQs by question or option..."
+                              value={mcqSearch}
+                              onChange={(e) => setMcqSearch(e.target.value)}
+                              borderRadius="lg"
+                            />
+                          </InputGroup>
+
+                          <Select
+                            size="sm"
+                            borderRadius="lg"
+                            value={mcqTopicFilter}
+                            onChange={(e) => setMcqTopicFilter(e.target.value)}
+                          >
+                            <option value="all">All Selected Topics</option>
+                            {(lab.topics || []).map((t) => (
+                              <option key={t.topic_id} value={t.topic_id}>
+                                {t.topic_title}
+                              </option>
+                            ))}
+                          </Select>
+                        </SimpleGrid>
+
+                        {/* Available MCQs List */}
+                        {filteredAvailableMcqs.length === 0 ? (
+                          <Box p={8} textAlign="center" borderRadius="xl" bg={surfaceBg}>
+                            <Text color={mutedText} fontSize="sm">
+                              No published MCQs available for the selected topics and filters.
+                            </Text>
+                          </Box>
+                        ) : (
+                          <VStack spacing={3} align="stretch" maxH="550px" overflowY="auto" pr={1}>
+                            {filteredAvailableMcqs.map((m) => {
+                              const isSelected = selectedMcqIds.includes(m.mcq_id);
+                              return (
+                                <Box
+                                  key={m.mcq_id}
+                                  p={4}
+                                  borderRadius="xl"
+                                  bg={isSelected ? surfaceBg : 'transparent'}
+                                  borderWidth="2px"
+                                  borderColor={isSelected ? 'purple.400' : cardBorder}
+                                  transition="all 0.15s ease"
+                                  _hover={{ borderColor: 'purple.300' }}
+                                >
+                                  <Flex justify="space-between" align="start" gap={3}>
+                                    <HStack spacing={3} align="start" flex={1}>
+                                      {isDraft && (
+                                        <Checkbox
+                                          mt={1}
+                                          colorScheme="purple"
+                                          isChecked={isSelected}
+                                          onChange={() => handleToggleSelectMcq(m.mcq_id)}
+                                        />
+                                      )}
+                                      <VStack align="start" spacing={2} w="full">
+                                        <HStack spacing={2} wrap="wrap">
+                                          <Badge colorScheme="purple" fontSize="xs">
+                                            MCQ #{m.mcq_id}
+                                          </Badge>
+                                          {m.topic_title && (
+                                            <Badge colorScheme="blue" variant="subtle" fontSize="10px">
+                                              {m.topic_title}
+                                            </Badge>
+                                          )}
+                                          <Badge colorScheme="green" fontSize="xs">
+                                            Correct: Option {m.correct_option}
+                                          </Badge>
+                                          <Badge colorScheme="teal" variant="outline" fontSize="xs">
+                                            {m.marks || 2} marks
+                                          </Badge>
+                                        </HStack>
+
+                                        <Text fontWeight="600" fontSize="sm" color={textColor}>
+                                          {m.question_text}
+                                        </Text>
+
+                                        {/* Options Grid */}
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2} w="full" pt={1}>
+                                          {['A', 'B', 'C', 'D'].map((optKey) => {
+                                            const optText = m[`option_${optKey.toLowerCase()}`];
+                                            const isCorrect = m.correct_option === optKey;
+                                            return (
+                                              <Box
+                                                key={optKey}
+                                                p={2}
+                                                borderRadius="md"
+                                                bg={isCorrect ? 'green.50' : surfaceBg}
+                                                borderWidth="1px"
+                                                borderColor={isCorrect ? 'green.400' : cardBorder}
+                                                fontSize="xs"
+                                              >
+                                                <Text color={isCorrect ? 'green.800' : textColor}>
+                                                  <strong>({optKey})</strong> {optText}
+                                                </Text>
+                                              </Box>
+                                            );
+                                          })}
+                                        </SimpleGrid>
+
+                                        {m.explanation && (
+                                          <Text fontSize="2xs" color={mutedText} fontStyle="italic" pt={1}>
+                                            💡 Explanation: {m.explanation}
+                                          </Text>
+                                        )}
+                                      </VStack>
+                                    </HStack>
+                                  </Flex>
+                                </Box>
+                              );
+                            })}
+                          </VStack>
+                        )}
+                      </TabPanel>
+                    </TabPanels>
+                  </Tabs>
                 </Box>
               )}
 
@@ -953,36 +1242,86 @@ const CreateLabAssessment = () => {
                     </Box>
                   </Alert>
 
-                  <Heading size="xs" textTransform="uppercase" color="gray.500" mb={2}>
-                    Eligible Question Pool Preview ({availableQuestions.length} Questions)
-                  </Heading>
-                  <VStack spacing={2} align="stretch" maxH="450px" overflowY="auto">
-                    {availableQuestions.map((q) => (
-                      <Box key={q.lab_question_id} p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
-                        <Flex justify="space-between" align="center">
-                          <VStack align="start" spacing={0.5}>
-                            <HStack spacing={2}>
-                              <Text fontWeight="600" fontSize="xs">{q.title}</Text>
-                              <Badge colorScheme={DIFFICULTY_COLORS[q.difficulty]} fontSize="9px">{q.difficulty} ({q.marks || DIFFICULTY_MARKS[q.difficulty]}m)</Badge>
-                              <Badge colorScheme="blue" variant="subtle" fontSize="9px">{q.topic_title}</Badge>
-                            </HStack>
-                            <Text fontSize="10px" color={mutedText} noOfLines={1}>{q.problem_statement}</Text>
-                          </VStack>
-                          <IconButton
-                            icon={<ViewIcon />}
-                            size="xs"
-                            variant="ghost"
-                            colorScheme="blue"
-                            aria-label="Preview"
-                            onClick={() => {
-                              setPreviewQuestion(q);
-                              onPreviewOpen();
-                            }}
-                          />
-                        </Flex>
-                      </Box>
-                    ))}
-                  </VStack>
+                  <Tabs variant="enclosed" colorScheme="green" size="sm" mt={3}>
+                    <TabList borderColor={cardBorder}>
+                      <Tab fontSize="xs" fontWeight="bold">
+                        Coding Questions Pool ({availableQuestions.length})
+                      </Tab>
+                      <Tab fontSize="xs" fontWeight="bold">
+                        MCQ Pool ({availableMcqs.length})
+                      </Tab>
+                    </TabList>
+
+                    <TabPanels pt={3}>
+                      <TabPanel p={0}>
+                        <VStack spacing={2} align="stretch" maxH="450px" overflowY="auto">
+                          {availableQuestions.length === 0 ? (
+                            <Text fontSize="xs" color={mutedText} py={4} textAlign="center">
+                              No published coding questions found for the selected topics.
+                            </Text>
+                          ) : (
+                            availableQuestions.map((q) => (
+                              <Box key={q.lab_question_id} p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                                <Flex justify="space-between" align="center">
+                                  <VStack align="start" spacing={0.5}>
+                                    <HStack spacing={2}>
+                                      <Text fontWeight="600" fontSize="xs">{q.title}</Text>
+                                      <Badge colorScheme={DIFFICULTY_COLORS[q.difficulty]} fontSize="9px">{q.difficulty} ({q.marks || DIFFICULTY_MARKS[q.difficulty]}m)</Badge>
+                                      <Badge colorScheme="blue" variant="subtle" fontSize="9px">{q.topic_title}</Badge>
+                                    </HStack>
+                                    <Text fontSize="10px" color={mutedText} noOfLines={1}>{q.problem_statement}</Text>
+                                  </VStack>
+                                  <IconButton
+                                    icon={<ViewIcon />}
+                                    size="xs"
+                                    variant="ghost"
+                                    colorScheme="blue"
+                                    aria-label="Preview"
+                                    onClick={() => {
+                                      setPreviewQuestion(q);
+                                      onPreviewOpen();
+                                    }}
+                                  />
+                                </Flex>
+                              </Box>
+                            ))
+                          )}
+                        </VStack>
+                      </TabPanel>
+
+                      <TabPanel p={0}>
+                        <VStack spacing={2} align="stretch" maxH="450px" overflowY="auto">
+                          {availableMcqs.length === 0 ? (
+                            <Text fontSize="xs" color={mutedText} py={4} textAlign="center">
+                              No published MCQs found for the selected topics.
+                            </Text>
+                          ) : (
+                            availableMcqs.map((m) => (
+                              <Box key={m.mcq_id} p={3} borderRadius="lg" bg={surfaceBg} borderWidth="1px" borderColor={cardBorder}>
+                                <VStack align="stretch" spacing={1}>
+                                  <HStack justify="space-between">
+                                    <HStack spacing={2}>
+                                      <Badge colorScheme="purple" fontSize="9px">{m.topic_title || 'Topic'}</Badge>
+                                      <Badge colorScheme={DIFFICULTY_COLORS[m.difficulty]} fontSize="9px">{m.difficulty || 'medium'}</Badge>
+                                      <Badge colorScheme="green" fontSize="9px">Correct: Option {m.correct_option}</Badge>
+                                    </HStack>
+                                  </HStack>
+                                  <Text fontSize="xs" fontWeight="600" color={textColor} mt={1}>{m.question_text}</Text>
+                                  <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={1} pt={1}>
+                                    {['A', 'B', 'C', 'D'].map((k) => (
+                                      <Text key={k} fontSize="10px" color={m.correct_option === k ? 'green.600' : mutedText} fontWeight={m.correct_option === k ? 'bold' : 'normal'}>
+                                        {k}. {m[`option_${k.toLowerCase()}`]}
+                                      </Text>
+                                    ))}
+                                  </SimpleGrid>
+                                </VStack>
+                              </Box>
+                            ))
+                          )}
+                        </VStack>
+                      </TabPanel>
+                    </TabPanels>
+                  </Tabs>
                 </Box>
               )}
 

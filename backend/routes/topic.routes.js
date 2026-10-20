@@ -25,6 +25,10 @@ import {
   updateProgress,
   getMyProgress,
   getTopicPrerequisites,
+  getTopicVideos,
+  addTopicVideo,
+  updateTopicVideo,
+  deleteTopicVideo,
 } from '../controllers/topic.controller.js';
 import { isAuthenticated, isStudent, isFacultyOrAdmin } from '../middlewares/auth.middleware.js';
 import validate from '../middlewares/validation.middleware.js';
@@ -97,5 +101,11 @@ router.get('/:topicId/prerequisites', isAuthenticated, studentTopicAccessGuard, 
 
 // ── Progress Route ────────────────────────────
 router.post('/:topicId/progress', isAuthenticated, isStudent, studentTopicAccessGuard, validate(updateProgressValidation), updateProgress);
+
+// ── Topic Video References Routes ─────────────
+router.get('/:topicId/videos', isAuthenticated, studentTopicAccessGuard, getTopicVideos);
+router.post('/:topicId/videos', isAuthenticated, isFacultyOrAdmin, addTopicVideo);
+router.put('/:topicId/videos/:videoId', isAuthenticated, isFacultyOrAdmin, updateTopicVideo);
+router.delete('/:topicId/videos/:videoId', isAuthenticated, isFacultyOrAdmin, deleteTopicVideo);
 
 export default router;

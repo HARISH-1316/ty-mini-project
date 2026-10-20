@@ -88,9 +88,9 @@ const Navbar = ({ onOpenSidebar }) => {
         justify="space-between"
         px={{ base: 4, md: 8 }}
         py={3}
-        bg="slate.900"
+        bg="bg.surface"
         borderBottom="1px solid"
-        borderColor="slate.800"
+        borderColor="border.primary"
         position="sticky"
         top={0}
         zIndex={100}
@@ -146,7 +146,7 @@ const Navbar = ({ onOpenSidebar }) => {
                   size="sm"
                   name={user?.name}
                   bg="brand.500"
-                  color="white"
+                  color="pureWhite"
                 />
                 <VStack spacing={0} align="start" display={{ base: 'none', lg: 'flex' }}>
                   <Text color="text.primary" fontSize="xs" fontWeight="bold" lineHeight="short">
@@ -166,15 +166,15 @@ const Navbar = ({ onOpenSidebar }) => {
               </HStack>
             </MenuButton>
 
-            <MenuList bg="slate.800" borderColor="slate.700" color="text.primary" shadow="xl">
-              <MenuItem bg="slate.800" _hover={{ bg: 'accent.soft' }} onClick={onOpen}>
+            <MenuList bg="bg.card" borderColor="border.primary" color="text.primary" shadow="xl">
+              <MenuItem bg="bg.card" _hover={{ bg: 'accent.soft' }} onClick={onOpen}>
                 Profile Info
               </MenuItem>
-              <MenuDivider borderColor="slate.700" />
+              <MenuDivider borderColor="border.primary" />
               <MenuItem
-                bg="slate.800"
-                color="red.400"
-                _hover={{ bg: 'accent.soft', color: 'red.500' }}
+                bg="bg.card"
+                color="red.500"
+                _hover={{ bg: 'accent.soft', color: 'red.600' }}
                 onClick={handleLogout}
                 isDisabled={isLoggingOut}
               >
@@ -188,7 +188,7 @@ const Navbar = ({ onOpenSidebar }) => {
       {/* User Profile Modal */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="text.primary">
+        <ModalContent bg="bg.card" borderColor="border.primary" borderWidth="1px" color="text.primary">
           <ModalHeader>User Profile</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -196,16 +196,16 @@ const Navbar = ({ onOpenSidebar }) => {
               <Flex justify="center" py={2}>
                 <Avatar size="xl" name={user?.name} bg="brand.500" />
               </Flex>
-              <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
-                <Text color="gray.400" fontSize="sm">Full Name</Text>
+              <HStack justify="space-between" bg="bg.secondary" p={3} borderRadius="lg">
+                <Text color="text.secondary" fontSize="sm">Full Name</Text>
                 <Text fontWeight="bold">{user?.name}</Text>
               </HStack>
-              <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
-                <Text color="gray.400" fontSize="sm">Email</Text>
+              <HStack justify="space-between" bg="bg.secondary" p={3} borderRadius="lg">
+                <Text color="text.secondary" fontSize="sm">Email</Text>
                 <Text fontWeight="bold">{user?.email}</Text>
               </HStack>
-              <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
-                <Text color="gray.400" fontSize="sm">Role</Text>
+              <HStack justify="space-between" bg="bg.secondary" p={3} borderRadius="lg">
+                <Text color="text.secondary" fontSize="sm">Role</Text>
                 <Badge colorScheme={roleBadgeColor[user?.role] || 'gray'} textTransform="uppercase">
                   {user?.role}
                 </Badge>
@@ -213,13 +213,13 @@ const Navbar = ({ onOpenSidebar }) => {
 
               {user?.profile && user.role === 'student' && (
                 <>
-                  <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
-                    <Text color="gray.400" fontSize="sm">Roll Number</Text>
+                  <HStack justify="space-between" bg="bg.secondary" p={3} borderRadius="lg">
+                    <Text color="text.secondary" fontSize="sm">Roll Number</Text>
                     <Text fontWeight="bold">{user.profile.roll_number}</Text>
                   </HStack>
                   {user.profile.course && (
-                    <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
-                      <Text color="gray.400" fontSize="sm">Course</Text>
+                    <HStack justify="space-between" bg="bg.secondary" p={3} borderRadius="lg">
+                      <Text color="text.secondary" fontSize="sm">Course</Text>
                       <Text fontWeight="bold">{user.profile.course}</Text>
                     </HStack>
                   )}
@@ -227,8 +227,8 @@ const Navbar = ({ onOpenSidebar }) => {
               )}
 
               {user?.profile && user.role === 'faculty' && (
-                <HStack justify="space-between" bg="slate.900" p={3} borderRadius="lg">
-                  <Text color="gray.400" fontSize="sm">Designation</Text>
+                <HStack justify="space-between" bg="bg.secondary" p={3} borderRadius="lg">
+                  <Text color="text.secondary" fontSize="sm">Designation</Text>
                   <Text fontWeight="bold">{user.profile.designation}</Text>
                 </HStack>
               )}

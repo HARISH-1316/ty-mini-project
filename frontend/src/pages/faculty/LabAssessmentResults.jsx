@@ -49,6 +49,7 @@ import {
   AccordionIcon,
   Tag,
   Code,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   ArrowBackIcon,
@@ -88,9 +89,16 @@ const LabAssessmentResults = () => {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  // Selected student for submission inspection modal
   const [selectedStudentAttempt, setSelectedStudentAttempt] = useState(null);
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
+
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#171918');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#A3B19B');
+  const hoverBg = useColorModeValue('#F5F7F5', '#252926');
+  const monacoTheme = useColorModeValue('vs', 'vs-dark');
 
   const loadResults = useCallback(async () => {
     try {
@@ -169,10 +177,10 @@ const LabAssessmentResults = () => {
         </Button>
         <Flex justify="space-between" align="start" gap={4} direction={{ base: 'column', md: 'row' }}>
           <VStack align="start" spacing={1}>
-            <Heading size="lg" color="#1A2024">
+            <Heading size="lg" color={textColor}>
               Results — {lab?.title}
             </Heading>
-            <Text color="#505750" fontSize="sm">
+            <Text color={mutedText} fontSize="sm">
               {totalStudents} students started • Total marks: {lab?.num_questions * lab?.marks_per_question || 0}
             </Text>
           </VStack>
@@ -191,10 +199,10 @@ const LabAssessmentResults = () => {
             color: 'brand.500',
           },
         ].map((s) => (
-          <Card key={s.label} bg="#FFFFFF" borderColor="#DDE5DD" borderWidth="1px" borderRadius="xl" boxShadow="sm">
+          <Card key={s.label} bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
             <CardBody>
               <Stat>
-                <StatLabel color="#505750" fontSize="xs" fontWeight="600">
+                <StatLabel color={mutedText} fontSize="xs" fontWeight="600">
                   {s.label}
                 </StatLabel>
                 <StatNumber color={s.color} fontSize="2xl" fontWeight="800">
@@ -210,23 +218,22 @@ const LabAssessmentResults = () => {
       <HStack spacing={4} wrap="wrap">
         <InputGroup maxW="280px">
           <InputLeftElement pointerEvents="none">
-            <SearchIcon color="#505750" />
+            <SearchIcon color={mutedText} />
           </InputLeftElement>
           <Input
             placeholder="Search by name or roll no..."
-            bg="#FFFFFF"
-            borderColor="#DDE5DD"
-            color="#1A2024"
+            bg={cardBg}
+            borderColor={cardBorder}
+            color={textColor}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            _placeholder={{ color: '#859086' }}
           />
         </InputGroup>
         <Select
           maxW="180px"
-          bg="#FFFFFF"
-          borderColor="#DDE5DD"
-          color="#1A2024"
+          bg={cardBg}
+          borderColor={cardBorder}
+          color={textColor}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
@@ -247,29 +254,29 @@ const LabAssessmentResults = () => {
 
       {/* Results Table */}
       {filteredAttempts.length === 0 ? (
-        <Box p={10} bg="#FFFFFF" borderRadius="xl" borderColor="#DDE5DD" borderWidth="1px" textAlign="center" boxShadow="sm">
-          <Text color="#505750">No student attempts yet.</Text>
+        <Box p={10} bg={cardBg} borderRadius="xl" borderColor={cardBorder} borderWidth="1px" textAlign="center" boxShadow="sm">
+          <Text color={mutedText}>No student attempts yet.</Text>
         </Box>
       ) : (
-        <Box overflowX="auto" bg="#FFFFFF" borderRadius="xl" borderWidth="1px" borderColor="#DDE5DD" boxShadow="sm">
+        <Box overflowX="auto" bg={cardBg} borderRadius="xl" borderWidth="1px" borderColor={cardBorder} boxShadow="sm">
           <Table size="sm" variant="unstyled">
             <Thead>
-              <Tr borderBottom="1px solid" borderColor="#DDE5DD">
-                <Th color="#505750" py={4} px={4}>
+              <Tr borderBottom="1px solid" borderColor={cardBorder}>
+                <Th color={mutedText} py={4} px={4}>
                   Student
                 </Th>
-                <Th color="#505750">Roll No</Th>
-                <Th color="#505750">Status</Th>
-                <Th color="#505750" isNumeric>
+                <Th color={mutedText}>Roll No</Th>
+                <Th color={mutedText}>Status</Th>
+                <Th color={mutedText} isNumeric>
                   Score
                 </Th>
-                <Th color="#505750" isNumeric>
+                <Th color={mutedText} isNumeric>
                   %
                 </Th>
-                <Th color="#505750">Started</Th>
-                <Th color="#505750">Submitted</Th>
-                <Th color="#505750">Q Statuses</Th>
-                <Th color="#505750" textAlign="center">
+                <Th color={mutedText}>Started</Th>
+                <Th color={mutedText}>Submitted</Th>
+                <Th color={mutedText}>Q Statuses</Th>
+                <Th color={mutedText} textAlign="center">
                   Action
                 </Th>
               </Tr>
@@ -284,17 +291,17 @@ const LabAssessmentResults = () => {
                   <Tr
                     key={attempt.attempt_id}
                     borderBottom="1px solid"
-                    borderColor="#DDE5DD"
-                    _hover={{ bg: '#F5F7F5' }}
+                    borderColor={cardBorder}
+                    _hover={{ bg: hoverBg }}
                     transition="background 0.15s"
                   >
                     <Td px={4} py={3}>
-                      <Text color="#1A2024" fontSize="sm" fontWeight="600">
+                      <Text color={textColor} fontSize="sm" fontWeight="600">
                         {attempt.student_name}
                       </Text>
                     </Td>
                     <Td>
-                      <Text color="#505750" fontSize="sm">
+                      <Text color={mutedText} fontSize="sm">
                         {attempt.roll_number}
                       </Text>
                     </Td>
@@ -325,18 +332,18 @@ const LabAssessmentResults = () => {
                           colorScheme={pct >= 80 ? 'green' : pct >= 50 ? 'orange' : 'red'}
                           borderRadius="full"
                         />
-                        <Text color="#505750" fontSize="xs">
+                        <Text color={mutedText} fontSize="xs">
                           {pct}%
                         </Text>
                       </HStack>
                     </Td>
                     <Td>
-                      <Text color="#505750" fontSize="xs">
+                      <Text color={mutedText} fontSize="xs">
                         {formatDT(attempt.started_at)}
                       </Text>
                     </Td>
                     <Td>
-                      <Text color="#505750" fontSize="xs">
+                      <Text color={mutedText} fontSize="xs">
                         {formatDT(attempt.submitted_at)}
                       </Text>
                     </Td>
@@ -354,7 +361,7 @@ const LabAssessmentResults = () => {
                               borderRadius="sm"
                               bg={
                                 qs.status === 'accepted'
-                                  ? 'green.500'
+                                   ? 'green.500'
                                   : qs.status === 'partially_correct'
                                   ? 'yellow.500'
                                   : qs.status === 'not_attempted'
@@ -390,14 +397,14 @@ const LabAssessmentResults = () => {
       {/* Student Attempt Inspection Modal */}
       <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="4xl">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="#FFFFFF" color="#1A2024" borderColor="#DDE5DD" borderWidth="1px" borderRadius="2xl" maxH="85vh" boxShadow="xl">
-          <ModalHeader borderBottomWidth="1px" borderColor="#DDE5DD">
+        <ModalContent bg={cardBg} color={textColor} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl" maxH="85vh" boxShadow="xl">
+          <ModalHeader borderBottomWidth="1px" borderColor={cardBorder}>
             <Flex justify="space-between" align="center" pr={8}>
               <VStack align="start" spacing={0}>
-                <Heading size="md" color="#1A2024">
+                <Heading size="md" color={textColor}>
                   {selectedStudentAttempt?.student_name}
                 </Heading>
-                <Text fontSize="xs" color="#505750">
+                <Text fontSize="xs" color={mutedText}>
                   Roll: {selectedStudentAttempt?.roll_number} • Status: {formatStatus(selectedStudentAttempt?.status)}
                 </Text>
               </VStack>
@@ -411,31 +418,31 @@ const LabAssessmentResults = () => {
           <ModalBody py={6} overflowY="auto">
             {(!selectedStudentAttempt?.questionSubmissions ||
               selectedStudentAttempt.questionSubmissions.length === 0) ? (
-              <Box p={6} textAlign="center" bg="#F5F7F5" borderRadius="lg" border="1px solid" borderColor="#DDE5DD">
-                <Text color="#505750">No question submissions recorded yet for this student.</Text>
+              <Box p={6} textAlign="center" bg={surfaceBg} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
+                <Text color={mutedText}>No question submissions recorded yet for this student.</Text>
               </Box>
             ) : (
               <Accordion allowMultiple defaultIndex={[0]}>
                 {selectedStudentAttempt.questionSubmissions.map((sub, index) => (
                   <AccordionItem
                     key={sub.submission_id || index}
-                    borderColor="#DDE5DD"
-                    bg="#FFFFFF"
+                    borderColor={cardBorder}
+                    bg={cardBg}
                     borderRadius="lg"
                     borderWidth="1px"
                     mb={3}
                   >
                     <h2>
-                      <AccordionButton _expanded={{ bg: '#F5F7F5' }} py={3}>
+                      <AccordionButton _expanded={{ bg: hoverBg }} py={3}>
                         <Box flex="1" textAlign="left">
                           <HStack spacing={3}>
                             <Badge colorScheme={STATUS_COLORS[sub.status] || 'gray'}>
                               {formatStatus(sub.status)}
                             </Badge>
-                            <Text fontWeight="semibold" fontSize="sm" color="#1A2024">
+                            <Text fontWeight="semibold" fontSize="sm" color={textColor}>
                               {sub.question_title || `Question #${index + 1}`}
                             </Text>
-                            <Text fontSize="xs" color="#505750">
+                            <Text fontSize="xs" color={mutedText}>
                               ({sub.marks_obtained} Marks • {sub.passed_test_cases}/{sub.total_test_cases} Test Cases)
                             </Text>
                           </HStack>
@@ -447,19 +454,19 @@ const LabAssessmentResults = () => {
                       <VStack align="stretch" spacing={3}>
                         <Flex justify="space-between" align="center">
                           <HStack spacing={2}>
-                            <Text fontSize="xs" color="#505750" fontWeight="bold">
+                            <Text fontSize="xs" color={mutedText} fontWeight="bold">
                               Language:
                             </Text>
                             <Tag size="sm" colorScheme="green">
                               {sub.language || 'cpp'}
                             </Tag>
                           </HStack>
-                          <Text fontSize="xs" color="#505750">
+                          <Text fontSize="xs" color={mutedText}>
                             Submitted at: {formatDT(sub.submitted_at)}
                           </Text>
                         </Flex>
 
-                        <Box borderRadius="md" overflow="hidden" borderWidth="1px" borderColor="#DDE5DD">
+                        <Box borderRadius="md" overflow="hidden" borderWidth="1px" borderColor={cardBorder}>
                           <Editor
                             height="220px"
                             language={
@@ -471,7 +478,7 @@ const LabAssessmentResults = () => {
                                 ? 'c'
                                 : 'cpp'
                             }
-                            theme="vs-dark"
+                            theme={monacoTheme}
                             value={sub.source_code || '// No source code submitted'}
                             options={{
                               readOnly: true,
@@ -489,7 +496,7 @@ const LabAssessmentResults = () => {
               </Accordion>
             )}
           </ModalBody>
-          <ModalFooter borderTopWidth="1px" borderColor="#DDE5DD">
+          <ModalFooter borderTopWidth="1px" borderColor={cardBorder}>
             <Button colorScheme="brand" onClick={onDetailClose}>
               Close
             </Button>
