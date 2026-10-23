@@ -119,6 +119,7 @@ const LabAssessmentResult = () => {
   }
 
   const { lab, attempt, questionResults, totalObtained, totalMarks, percentage } = resultData;
+  const mcqList = resultData.mcqResults || resultData.mcqs || [];
 
   const acceptedCount = (questionResults || []).filter(
     (q) => q.submission?.status === 'accepted'
@@ -127,6 +128,8 @@ const LabAssessmentResult = () => {
   const partiallyCorrectCount = (questionResults || []).filter(
     (q) => q.submission?.status === 'partially_correct'
   ).length;
+
+  const mcqCorrectCount = (mcqList || []).filter((m) => m.is_correct).length;
 
   const handleOpenCode = (q) => {
     setActiveCodeView({
@@ -227,7 +230,7 @@ const LabAssessmentResult = () => {
       </Card>
 
       {/* Summary Metrics */}
-      <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, sm: mcqList.length > 0 ? 4 : 3 }} spacing={4}>
         <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
             <Text color={mutedText} fontSize="xs" textTransform="uppercase" fontWeight="bold">
@@ -251,6 +254,20 @@ const LabAssessmentResult = () => {
             <Text color={mutedText} fontSize="xs" mt={1}>Partial marks credited</Text>
           </CardBody>
         </Card>
+
+        {mcqList.length > 0 && (
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
+            <CardBody>
+              <Text color={mutedText} fontSize="xs" textTransform="uppercase" fontWeight="bold">
+                MCQs Correct
+              </Text>
+              <Heading size="lg" color="brand.500" mt={1}>
+                {mcqCorrectCount} <Text as="span" fontSize="sm" color={mutedText}>of {mcqList.length}</Text>
+              </Heading>
+              <Text color={mutedText} fontSize="xs" mt={1}>Correct answers marked</Text>
+            </CardBody>
+          </Card>
+        )}
 
         <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
           <CardBody>
@@ -357,17 +374,17 @@ const LabAssessmentResult = () => {
       </VStack>
 
       {/* Multiple-Choice Questions Breakdown */}
-      {resultData.mcqs && resultData.mcqs.length > 0 && (
+      {mcqList && mcqList.length > 0 && (
         <VStack align="stretch" spacing={4}>
           <Heading size="md" color={textColor}>
-            Multiple-Choice Questions ({resultData.mcqs.length})
+            Multiple-Choice Questions ({mcqList.length})
           </Heading>
 
           <VStack spacing={4} align="stretch">
-            {resultData.mcqs.map((mcq, idx) => {
+            {mcqList.map((mcq, idx) => {
               const isCorrect = mcq.is_correct;
               const hasAnswered = Boolean(mcq.selected_option);
-              const marksAwarded = mcq.marks_awarded ?? (isCorrect ? (mcq.marks || 2) : 0);
+              const marksAwarded = mcq.marks_obtained ?? mcq.marks_awarded ?? (isCorrect ? (mcq.marks || 2) : 0);
               const maxMarks = mcq.marks || 2;
 
               return (
@@ -408,8 +425,8 @@ const LabAssessmentResult = () => {
                       {/* Options */}
                       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2} pt={1}>
                         {['A', 'B', 'C', 'D'].map((optKey) => {
-                          const isOptionCorrect = mcq.correct_option === optKey;
-                          const isStudentChoice = mcq.selected_option === optKey;
+                          const isOptionCorrect = mcq.correct_option?.toUpperCase() === optKey;
+                          const isStudentChoice = mcq.selected_option?.toUpperCase() === optKey;
                           const optText = mcq[`option_${optKey.toLowerCase()}`];
 
                           let optBorderColor = cardBorder;
@@ -417,10 +434,10 @@ const LabAssessmentResult = () => {
 
                           if (isOptionCorrect) {
                             optBorderColor = 'green.500';
-                            optBg = surfaceBg;
+                            optBg = 'rgba(72, 187, 120, 0.08)';
                           } else if (isStudentChoice && !isOptionCorrect) {
                             optBorderColor = 'red.400';
-                            optBg = surfaceBg;
+                            optBg = 'rgba(245, 101, 101, 0.08)';
                           }
 
                           return (
@@ -449,12 +466,12 @@ const LabAssessmentResult = () => {
                                 </Text>
                                 {isStudentChoice && (
                                   <Badge colorScheme={isOptionCorrect ? 'green' : 'red'} ml="auto" fontSize="2xs">
-                                    Your Choice
+                                    Your Choice {isOptionCorrect ? '✓' : '✗'}
                                   </Badge>
                                 )}
                                 {isOptionCorrect && !isStudentChoice && (
                                   <Badge colorScheme="green" ml="auto" fontSize="2xs">
-                                    Correct Answer
+                                    Correct Answer ✓
                                   </Badge>
                                 )}
                               </HStack>

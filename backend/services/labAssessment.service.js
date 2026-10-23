@@ -559,7 +559,8 @@ const LabAssessmentService = {
     // Attach MCQ submissions and violations for each attempt
     for (const att of attempts) {
       att.questionSubmissions = subsByStudent[att.student_id] || [];
-      att.mcqSubmissions = await LaMcqSubmissionModel.findByAttemptId(att.attempt_id);
+      att.mcqResults = await LaMcqAllocationModel.findByStudentAndLabDetailed(att.student_id, labId);
+      att.mcqSubmissions = att.mcqResults;
       att.violations = violationsByStudent[att.student_id] || [];
       att.violationsCount = (violationsByStudent[att.student_id] || []).length;
     }
@@ -1639,6 +1640,7 @@ const LabAssessmentService = {
       codingResults,
       questionResults: codingResults,
       mcqResults: mcqs,
+      mcqs,
       totalObtained: attempt.obtained_marks,
       totalMarks: attempt.total_marks,
       percentage: attempt.total_marks > 0

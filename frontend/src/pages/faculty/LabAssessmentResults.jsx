@@ -463,10 +463,157 @@ const LabAssessmentResults = () => {
               </Box>
             )}
 
+            {/* 1. Multiple-Choice Questions (MCQs) Breakdown */}
+            {(() => {
+              const studentMcqs = selectedStudentAttempt?.mcqResults || selectedStudentAttempt?.mcqSubmissions || [];
+              if (studentMcqs.length === 0) return null;
+              const mcqCorrectCount = studentMcqs.filter((m) => m.is_correct).length;
+              return (
+                <Box mb={6}>
+                  <Flex justify="space-between" align="center" mb={3}>
+                    <Heading size="xs" color="brand.500" textTransform="uppercase" letterSpacing="wider">
+                      📝 Multiple-Choice Questions ({studentMcqs.length})
+                    </Heading>
+                    <Badge colorScheme="brand" variant="subtle" fontSize="2xs" px={2} py={0.5} borderRadius="md">
+                      {mcqCorrectCount} of {studentMcqs.length} Correct
+                    </Badge>
+                  </Flex>
+
+                  <Accordion allowMultiple defaultIndex={[]}>
+                    {studentMcqs.map((mcq, idx) => {
+                      const isCorrect = mcq.is_correct;
+                      const hasAnswered = Boolean(mcq.selected_option);
+                      const marksAwarded = mcq.marks_obtained ?? (isCorrect ? (mcq.marks || 2) : 0);
+                      const maxMarks = mcq.marks || 2;
+
+                      return (
+                        <AccordionItem
+                          key={mcq.mcq_id || idx}
+                          borderColor={isCorrect ? 'green.500' : hasAnswered ? 'red.400' : cardBorder}
+                          bg={cardBg}
+                          borderRadius="lg"
+                          borderWidth="1px"
+                          mb={3}
+                        >
+                          <h2>
+                            <AccordionButton _expanded={{ bg: hoverBg }} py={3}>
+                              <Box flex="1" textAlign="left">
+                                <HStack spacing={3} wrap="wrap">
+                                  <Badge colorScheme={isCorrect ? 'green' : hasAnswered ? 'red' : 'gray'}>
+                                    {isCorrect ? 'CORRECT' : hasAnswered ? 'INCORRECT' : 'NOT ANSWERED'}
+                                  </Badge>
+                                  <Text fontWeight="semibold" fontSize="sm" color={textColor}>
+                                    MCQ #{idx + 1}: {mcq.question_text?.slice(0, 55)}{mcq.question_text?.length > 55 ? '...' : ''}
+                                  </Text>
+                                  <Text fontSize="xs" color={isCorrect ? 'green.600' : 'red.600'} fontWeight="bold">
+                                    ({marksAwarded}/{maxMarks} Marks)
+                                  </Text>
+                                  {hasAnswered ? (
+                                    <Badge variant="outline" colorScheme={isCorrect ? 'green' : 'red'} fontSize="2xs">
+                                      Marked: Option {mcq.selected_option}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" colorScheme="gray" fontSize="2xs">
+                                      Unattempted
+                                    </Badge>
+                                  )}
+                                </HStack>
+                              </Box>
+                              <AccordionIcon />
+                            </AccordionButton>
+                          </h2>
+                          <AccordionPanel pb={4}>
+                            <VStack align="stretch" spacing={3}>
+                              <Text fontWeight="semibold" fontSize="sm" color={textColor}>
+                                {mcq.question_text}
+                              </Text>
+
+                              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                                {['A', 'B', 'C', 'D'].map((optKey) => {
+                                  const isOptionCorrect = mcq.correct_option?.toUpperCase() === optKey;
+                                  const isStudentChoice = mcq.selected_option?.toUpperCase() === optKey;
+                                  const optText = mcq[`option_${optKey.toLowerCase()}`];
+
+                                  let optBorderColor = cardBorder;
+                                  let optBg = 'transparent';
+
+                                  if (isOptionCorrect) {
+                                    optBorderColor = 'green.500';
+                                    optBg = 'rgba(72, 187, 120, 0.08)';
+                                  } else if (isStudentChoice && !isOptionCorrect) {
+                                    optBorderColor = 'red.400';
+                                    optBg = 'rgba(245, 101, 101, 0.08)';
+                                  }
+
+                                  return (
+                                    <Box
+                                      key={optKey}
+                                      p={2.5}
+                                      borderRadius="md"
+                                      bg={optBg}
+                                      border="1px solid"
+                                      borderColor={optBorderColor}
+                                    >
+                                      <HStack spacing={2} align="start">
+                                        <Badge
+                                          colorScheme={
+                                            isOptionCorrect
+                                              ? 'green'
+                                              : isStudentChoice
+                                              ? 'red'
+                                              : 'gray'
+                                          }
+                                        >
+                                          {optKey}
+                                        </Badge>
+                                        <Text fontSize="sm" color={textColor} fontWeight={isStudentChoice || isOptionCorrect ? 'bold' : 'normal'}>
+                                          {optText}
+                                        </Text>
+                                        {isStudentChoice && (
+                                          <Badge colorScheme={isOptionCorrect ? 'green' : 'red'} ml="auto" fontSize="2xs">
+                                            Student Marked {isOptionCorrect ? '✓' : '✗'}
+                                          </Badge>
+                                        )}
+                                        {isOptionCorrect && !isStudentChoice && (
+                                          <Badge colorScheme="green" ml="auto" fontSize="2xs">
+                                            Correct Answer ✓
+                                          </Badge>
+                                        )}
+                                      </HStack>
+                                    </Box>
+                                  );
+                                })}
+                              </SimpleGrid>
+
+                              {mcq.explanation && (
+                                <Box bg={surfaceBg} p={3} borderRadius="md" borderLeft="3px solid" borderColor="green.500">
+                                  <Text fontSize="xs" fontWeight="bold" color="green.600" mb={0.5}>
+                                    Explanation:
+                                  </Text>
+                                  <Text fontSize="xs" color={textColor}>
+                                    {mcq.explanation}
+                                  </Text>
+                                </Box>
+                              )}
+                            </VStack>
+                          </AccordionPanel>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </Box>
+              );
+            })()}
+
+            {/* 2. Coding Submissions Section */}
+            <Heading size="xs" color="brand.500" textTransform="uppercase" letterSpacing="wider" mb={3}>
+              💻 Coding Questions ({selectedStudentAttempt?.questionSubmissions?.length || 0})
+            </Heading>
+
             {(!selectedStudentAttempt?.questionSubmissions ||
               selectedStudentAttempt.questionSubmissions.length === 0) ? (
               <Box p={6} textAlign="center" bg={surfaceBg} borderRadius="lg" border="1px solid" borderColor={cardBorder}>
-                <Text color={mutedText}>No question submissions recorded yet for this student.</Text>
+                <Text color={mutedText}>No coding question submissions recorded yet for this student.</Text>
               </Box>
             ) : (
               <Accordion allowMultiple defaultIndex={[0]}>
