@@ -360,10 +360,10 @@ const LabAssessmentWorkspace = () => {
 
   // Auto-enter fullscreen when questions / assessment loads
   useEffect(() => {
-    if (!isLoading && allQuestions.length > 0) {
+    if (!isLoading && (questions.length > 0 || mcqs.length > 0)) {
       enterFullscreen();
     }
-  }, [isLoading, allQuestions.length, enterFullscreen]);
+  }, [isLoading, questions.length, mcqs.length, enterFullscreen]);
 
   // Proctoring listeners: Fullscreen exit, Tab switch, Window blur
   useEffect(() => {
