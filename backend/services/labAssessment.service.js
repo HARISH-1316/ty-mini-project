@@ -965,6 +965,20 @@ const LabAssessmentService = {
     const startTime = new Date(lab.start_time);
     const endTime = new Date(lab.end_time);
 
+    const safeLab = {
+      lab_id: lab.lab_id,
+      title: lab.title,
+      instructions: lab.instructions,
+      duration: lab.duration,
+      room_id: lab.room_id,
+      status: lab.status,
+      start_time: lab.start_time,
+      end_time: lab.end_time,
+      total_marks: lab.total_marks,
+      marks_per_question: lab.marks_per_question,
+      marks_per_mcq: lab.marks_per_mcq,
+    };
+
     // Check for an existing attempt first
     let attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
 
@@ -978,16 +992,16 @@ const LabAssessmentService = {
       const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
 
       if (attempt.status === 'submitted') {
-        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, lab: safeLab };
       }
       if (attempt.status === 'timed_out' || attempt.status === 'expired') {
-        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, isExpired: true };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, isExpired: true, lab: safeLab };
       }
       if (new Date(attempt.effective_deadline) <= now) {
         await LaAttemptModel.expireTimedOut();
-        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, isExpired: true };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, isExpired: true, lab: safeLab };
       }
-      return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false };
+      return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, lab: safeLab };
     }
 
     if (now < startTime) {
@@ -1017,7 +1031,7 @@ const LabAssessmentService = {
         const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
         const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
         const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
-        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, lab: safeLab };
       }
 
       // ── 1. Coding Question Allocation ──
@@ -1181,7 +1195,7 @@ const LabAssessmentService = {
       const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
 
       const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
-      return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: true };
+      return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: true, lab: safeLab };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -1211,8 +1225,18 @@ const LabAssessmentService = {
     }
     const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
 
+    const lab = await LabAssessmentModel.findById(labId);
+    const safeLab = lab ? {
+      lab_id: lab.lab_id,
+      title: lab.title,
+      instructions: lab.instructions,
+      duration: lab.duration,
+      room_id: lab.room_id,
+      status: lab.status,
+    } : null;
+
     const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
-    return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs };
+    return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, lab: safeLab };
   },
 
   /**

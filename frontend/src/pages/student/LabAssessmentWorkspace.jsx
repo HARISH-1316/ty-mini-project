@@ -65,6 +65,7 @@ import {
 import {
   startOrResumeLabApi,
   getStudentQuestionsApi,
+  getStudentLabInfoApi,
   labRunCodeApi,
   labSubmitQuestionApi,
   getLabSubmissionStatusApi,
@@ -483,11 +484,15 @@ const LabAssessmentWorkspace = () => {
         }
 
         setAttempt(att);
-        setLab(startData.lab || startData.assessment || qData.lab || { lab_id: labId });
 
-        // Fetch detailed questions with public test cases and MCQs
-        const qRes = await getStudentQuestionsApi(labId);
+        // Fetch detailed questions with public test cases and MCQs, and lab info in parallel
+        const [qRes, infoRes] = await Promise.all([
+          getStudentQuestionsApi(labId),
+          getStudentLabInfoApi(labId).catch(() => null),
+        ]);
         const qData = qRes.data?.data || {};
+        const labObj = infoRes?.data?.data?.lab || startData.lab || startData.assessment || qData.lab || { lab_id: labId };
+        setLab(labObj);
 
         // Extract ONLY coding questions
         const codingList =
@@ -537,7 +542,8 @@ const LabAssessmentWorkspace = () => {
         }
       } catch (err) {
         if (!isMounted) return;
-        const errMsg = err.response?.data?.message || '';
+        console.error('initAssessment error:', err);
+        const errMsg = err.response?.data?.message || err.message || '';
         if (errMsg.toLowerCase().includes('already submitted') || errMsg.toLowerCase().includes('expired')) {
           navigate(`/student/lab-assessments/${labId}/result`, { replace: true });
           return;
