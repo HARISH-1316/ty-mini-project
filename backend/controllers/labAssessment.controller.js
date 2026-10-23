@@ -165,3 +165,8 @@ export const getLabViolations = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Violations retrieved.', result);
 });
 
+export const getRecentFacultyViolations = asyncHandler(async (req, res) => {
+  const result = await LabAssessmentService.getRecentFacultyViolations(req.user.user_id, req.user.role);
+  return successResponse(res, 200, 'Recent faculty violations retrieved.', result);
+});
+

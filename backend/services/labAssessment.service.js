@@ -1664,6 +1664,17 @@ const LabAssessmentService = {
     const violations = await LaProctoringViolationModel.findByLabId(labId);
     return { violations };
   },
+
+  getRecentFacultyViolations: async (userId, role = 'faculty') => {
+    let facultyId = null;
+    if (role !== 'admin') {
+      const faculty = await FacultyModel.findByUserId(userId);
+      if (!faculty) return { violations: [] };
+      facultyId = faculty.faculty_id;
+    }
+    const violations = await LaProctoringViolationModel.findRecentByFacultyId(facultyId, role === 'admin');
+    return { violations };
+  },
 };
 
 export default LabAssessmentService;

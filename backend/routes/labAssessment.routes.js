@@ -30,6 +30,7 @@ import {
   studentSubmitMcq,
   logStudentViolation,
   getLabViolations,
+  getRecentFacultyViolations,
 } from '../controllers/labAssessment.controller.js';
 
 import {
@@ -86,6 +87,7 @@ router.post('/student/:labId/log-violation', isAuthenticated, isStudent, logStud
 router.get('/:labId/violations', isAuthenticated, isFacultyOrAdmin, getLabViolations);
 
 // Assessment collection
+router.get('/faculty/recent-violations', isAuthenticated, isFacultyOrAdmin, getRecentFacultyViolations);
 router.post('/', isAuthenticated, isFacultyOrAdmin, validate(createLabAssessmentValidation), createLabAssessment);
 router.get('/', isAuthenticated, isFacultyOrAdmin, getFacultyLabAssessments);
 router.get('/topics-summary', isAuthenticated, isFacultyOrAdmin, getTopicsSummary);

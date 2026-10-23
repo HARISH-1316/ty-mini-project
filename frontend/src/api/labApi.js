@@ -128,6 +128,9 @@ export const logStudentViolationApi = (labId, data) =>
 export const getLabViolationsApi = (labId) =>
   api.get(`/lab-assessments/${labId}/violations`);
 
+export const getRecentFacultyViolationsApi = () =>
+  api.get('/lab-assessments/faculty/recent-violations');
+
 export const getRoomLabAssessmentsApi = (roomId) =>
   api.get(`/rooms/${roomId}/lab-assessments`);
 

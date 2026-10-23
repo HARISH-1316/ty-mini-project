@@ -323,8 +323,8 @@ const LabAssessmentWorkspace = () => {
 
   // Update assessment active ref
   useEffect(() => {
-    assessmentActiveRef.current = !isLoading && !isFinalSubmitting && Boolean(lab);
-  }, [isLoading, isFinalSubmitting, lab]);
+    assessmentActiveRef.current = !isLoading && !isFinalSubmitting && (Boolean(attempt) || questions.length > 0 || mcqs.length > 0);
+  }, [isLoading, isFinalSubmitting, attempt, questions.length, mcqs.length]);
 
   // Report proctoring violation to backend and faculty
   const reportViolation = useCallback(
@@ -483,6 +483,7 @@ const LabAssessmentWorkspace = () => {
         }
 
         setAttempt(att);
+        setLab(startData.lab || startData.assessment || qData.lab || { lab_id: labId });
 
         // Fetch detailed questions with public test cases and MCQs
         const qRes = await getStudentQuestionsApi(labId);

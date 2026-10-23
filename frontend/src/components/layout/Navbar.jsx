@@ -2,7 +2,7 @@
 // Top Navigation Bar Component
 // ──────────────────────────────────────────────
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Flex,
@@ -28,9 +28,11 @@ import {
   VStack,
   useDisclosure,
   useColorMode,
+  Box,
 } from '@chakra-ui/react';
-import { HamburgerIcon, ChevronDownIcon, SunIcon, MoonIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, ChevronDownIcon, SunIcon, MoonIcon, BellIcon } from '@chakra-ui/icons';
 import useAuth from '../../hooks/useAuth';
+import { getRecentFacultyViolationsApi } from '../../api/labApi';
 
 const roleBadgeColor = {
   student: 'orange',
@@ -45,6 +47,58 @@ const Navbar = ({ onOpenSidebar }) => {
   const { user, logout } = useAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [violations, setViolations] = useState([]);
+  const lastSeenViolationIdRef = useRef(null);
+
+  // Poll for proctoring violations if user is faculty or admin
+  useEffect(() => {
+    if (user?.role !== 'faculty' && user?.role !== 'admin') return;
+
+    let isSubscribed = true;
+
+    const pollViolations = async () => {
+      try {
+        const res = await getRecentFacultyViolationsApi();
+        const list = res.data?.data?.violations || [];
+        if (!isSubscribed) return;
+
+        setViolations(list);
+
+        // Check for newly arrived violations to notify faculty
+        if (list.length > 0) {
+          const newest = list[0];
+          if (
+            lastSeenViolationIdRef.current !== null &&
+            newest.violation_id !== lastSeenViolationIdRef.current
+          ) {
+            const unseen = list.filter(
+              (v) => v.violation_id > lastSeenViolationIdRef.current
+            );
+            unseen.forEach((v) => {
+              toast({
+                id: `proctor-alert-${v.violation_id}`,
+                title: '🚨 Anti-Cheat Alert: Student Violation!',
+                description: `${v.student_name} (${v.roll_number}) in "${v.lab_title || 'Assessment'}": ${v.violation_type?.replace(/_/g, ' ').toUpperCase()}`,
+                status: 'error',
+                duration: 8000,
+                isClosable: true,
+                position: 'top-right',
+              });
+            });
+          }
+          lastSeenViolationIdRef.current = newest.violation_id;
+        }
+      } catch {}
+    };
+
+    pollViolations();
+    const interval = setInterval(pollViolations, 4000);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
+  }, [user?.role, toast]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -119,8 +173,94 @@ const Navbar = ({ onOpenSidebar }) => {
           </Heading>
         </HStack>
 
-        {/* Right: Color Mode Toggle + User Menu */}
+        {/* Right: Notification Bell + Color Mode Toggle + User Menu */}
         <HStack spacing={3}>
+          {/* Faculty / Admin Proctoring Notification Bell */}
+          {(user?.role === 'faculty' || user?.role === 'admin') && (
+            <Menu placement="bottom-end">
+              <MenuButton
+                as={Box}
+                position="relative"
+                cursor="pointer"
+                p={2}
+                borderRadius="full"
+                _hover={{ bg: 'accent.soft' }}
+              >
+                <BellIcon boxSize={5} color={violations.length > 0 ? 'red.500' : 'text.secondary'} />
+                {violations.length > 0 && (
+                  <Badge
+                    colorScheme="red"
+                    variant="solid"
+                    position="absolute"
+                    top="-1px"
+                    right="-1px"
+                    borderRadius="full"
+                    fontSize="2xs"
+                    px={1.5}
+                    py={0}
+                    boxShadow="0 0 8px rgba(239, 68, 68, 0.6)"
+                  >
+                    {violations.length}
+                  </Badge>
+                )}
+              </MenuButton>
+              <MenuList
+                bg="bg.card"
+                borderColor="border.primary"
+                color="text.primary"
+                shadow="2xl"
+                maxW="360px"
+                maxH="400px"
+                overflowY="auto"
+                p={2}
+              >
+                <Flex justify="space-between" align="center" px={3} py={2} borderBottom="1px solid" borderColor="border.primary">
+                  <Text fontWeight="bold" fontSize="xs">
+                    🛡️ Live Anti-Cheat Alerts
+                  </Text>
+                  <Badge colorScheme={violations.length > 0 ? 'red' : 'green'} fontSize="2xs">
+                    {violations.length > 0 ? `${violations.length} Incident(s)` : 'All Clean'}
+                  </Badge>
+                </Flex>
+                {violations.length === 0 ? (
+                  <Box p={4} textAlign="center">
+                    <Text fontSize="xs" color="text.secondary">
+                      ✓ No proctoring violations recorded in your rooms.
+                    </Text>
+                  </Box>
+                ) : (
+                  violations.map((v) => (
+                    <MenuItem
+                      key={v.violation_id}
+                      bg="bg.card"
+                      _hover={{ bg: 'accent.soft' }}
+                      borderRadius="md"
+                      my={1}
+                      onClick={() => navigate(`/faculty/lab-assessments/${v.lab_id}/results`)}
+                    >
+                      <VStack align="start" spacing={0.5} w="full">
+                        <HStack justify="space-between" w="full">
+                          <Text fontWeight="bold" fontSize="xs" color="red.500">
+                            ⚠️ {v.violation_type?.replace(/_/g, ' ').toUpperCase()}
+                          </Text>
+                          <Text fontSize="2xs" color="text.secondary">
+                            {new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                        </HStack>
+                        <Text fontSize="xs" fontWeight="600" color="text.primary">
+                          {v.student_name} ({v.roll_number})
+                        </Text>
+                        <Text fontSize="2xs" color="text.secondary" isTruncated maxW="280px">
+                          {v.lab_title || 'Lab Assessment'} • {v.details}
+                        </Text>
+                      </VStack>
+                    </MenuItem>
+                  ))
+                )}
+              </MenuList>
+            </Menu>
+          )}
+
           <IconButton
             aria-label="Toggle color mode"
             icon={colorMode === 'dark' ? <SunIcon color="accent.primary" /> : <MoonIcon color="accent.primary" />}
