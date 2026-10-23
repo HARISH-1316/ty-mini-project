@@ -790,6 +790,12 @@ const LabAssessmentWorkspace = () => {
         duration: 3000,
         isClosable: true,
       });
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        try {
+          if (document.exitFullscreen) await document.exitFullscreen();
+          else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        } catch (_) {}
+      }
       onFinishClose();
       navigate(`/student/lab-assessments/${labId}/result`);
     } catch (err) {
@@ -1750,15 +1756,28 @@ const LabAssessmentWorkspace = () => {
                     </Badge>
                   )}
                 </HStack>
-                {mcqAnswers[currentQuestion?.mcq_id] ? (
-                  <Badge colorScheme="green" px={3} py={1} borderRadius="md" fontSize="xs">
-                    ✓ Saved Answer: Option {mcqAnswers[currentQuestion?.mcq_id]}
-                  </Badge>
-                ) : (
-                  <Badge colorScheme="gray" px={3} py={1} borderRadius="md" fontSize="xs">
-                    Not Answered Yet
-                  </Badge>
-                )}
+                <HStack spacing={2.5}>
+                  {mcqAnswers[currentQuestion?.mcq_id] ? (
+                    <Badge colorScheme="green" px={3} py={1} borderRadius="md" fontSize="xs">
+                      ✓ Saved Answer: Option {mcqAnswers[currentQuestion?.mcq_id]}
+                    </Badge>
+                  ) : (
+                    <Badge colorScheme="gray" px={3} py={1} borderRadius="md" fontSize="xs">
+                      Not Answered Yet
+                    </Badge>
+                  )}
+                  <Tooltip label={isFullscreen ? 'Exit Full Screen (Esc)' : 'Enter Full Screen'} fontSize="xs">
+                    <Button
+                      size="xs"
+                      variant={isFullscreen ? 'solid' : 'outline'}
+                      colorScheme={isFullscreen ? 'green' : 'gray'}
+                      onClick={toggleFullscreen}
+                      aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+                    >
+                      {isFullscreen ? 'Exit Fullscreen' : '⛶ Fullscreen'}
+                    </Button>
+                  </Tooltip>
+                </HStack>
               </Flex>
 
               {/* Question Statement */}
@@ -1871,7 +1890,13 @@ const LabAssessmentWorkspace = () => {
       )}
 
       {/* Finish Assessment Confirmation Modal */}
-      <Modal isOpen={isFinishOpen} onClose={onFinishClose} isCentered size="md">
+      <Modal
+        isOpen={isFinishOpen}
+        onClose={onFinishClose}
+        isCentered
+        size="md"
+        portalProps={{ containerRef: workspaceRef }}
+      >
         <ModalOverlay backdropFilter="blur(4px)" />
         <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} borderRadius="2xl">
           <ModalHeader color={textColor}>Final Assessment Submission</ModalHeader>
