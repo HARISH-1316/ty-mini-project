@@ -994,7 +994,7 @@ const LabAssessmentWorkspace = () => {
             </HStack>
 
             <Button
-              colorScheme="red"
+              colorScheme="brand"
               variant="outline"
               size="sm"
               onClick={onFinishOpen}
@@ -1930,7 +1930,7 @@ const LabAssessmentWorkspace = () => {
               Continue Working
             </Button>
             <Button
-              colorScheme="red"
+              colorScheme="brand"
               onClick={handleFinalSubmit}
               isLoading={isFinalSubmitting}
               loadingText="Finalizing..."
