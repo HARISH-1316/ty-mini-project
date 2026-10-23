@@ -38,6 +38,8 @@ import {
 import { ArrowBackIcon, AddIcon, DeleteIcon, TimeIcon, CheckCircleIcon, ViewIcon } from '@chakra-ui/icons';
 import { getRoomByIdApi, getRoomTopicsApi, addTopicToRoomApi, removeTopicFromRoomApi, getRoomStudentsApi, getRoomLabAssessmentsApi } from '../../api/roomApi';
 import { getAllTopicsApi } from '../../api/topicApi';
+import { publishLabAssessmentApi } from '../../api/labApi';
+import { formatDisplayDateTime } from '../../utils/dateUtils';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 
@@ -139,6 +141,26 @@ const RoomManagement = () => {
       toast({
         title: 'Error',
         description: 'Failed to remove topic.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handlePublishAssessment = async (labId) => {
+    try {
+      await publishLabAssessmentApi(labId);
+      toast({
+        title: 'Assessment Published! 🚀',
+        description: 'Students in this room can now take this assessment during the scheduled window.',
+        status: 'success',
+        duration: 3000,
+      });
+      fetchRoomData();
+    } catch (err) {
+      toast({
+        title: 'Failed to publish assessment',
+        description: err.response?.data?.message || 'Error publishing assessment.',
         status: 'error',
         duration: 3000,
       });
@@ -274,26 +296,47 @@ const RoomManagement = () => {
                             </Tag>
                           </HStack>
 
+                          {(la.start_time || la.end_time) && (
+                            <HStack spacing={1.5} fontSize="xs" color={mutedText} pt={0.5}>
+                              <TimeIcon />
+                              <Text>
+                                {la.start_time ? formatDisplayDateTime(la.start_time) : 'Immediate'} — {la.end_time ? formatDisplayDateTime(la.end_time) : 'No due date'}
+                              </Text>
+                            </HStack>
+                          )}
+
                           <Divider borderColor={cardBorder} />
 
-                          <Flex justify="space-between" align="center" pt={1}>
-                            <Button
-                              as={RouterLink}
-                              to={`/faculty/lab-assessments/${la.lab_id}`}
-                              size="xs"
-                              variant="outline"
-                              colorScheme="brand"
-                            >
-                              Configure & Questions
-                            </Button>
-                            <Button
-                              as={RouterLink}
-                              to={`/faculty/lab-assessments/${la.lab_id}/results`}
-                              size="xs"
-                              colorScheme="brand"
-                            >
-                              View Results
-                            </Button>
+                          <Flex justify="space-between" align="center" pt={1} gap={2} wrap="wrap">
+                            <HStack spacing={2}>
+                              <Button
+                                as={RouterLink}
+                                to={`/faculty/lab-assessments/${la.lab_id}`}
+                                size="xs"
+                                variant="outline"
+                                colorScheme="brand"
+                              >
+                                Configure & Questions
+                              </Button>
+                              <Button
+                                as={RouterLink}
+                                to={`/faculty/lab-assessments/${la.lab_id}/results`}
+                                size="xs"
+                                colorScheme="brand"
+                              >
+                                View Results
+                              </Button>
+                            </HStack>
+                            {la.status === 'draft' && (
+                              <Button
+                                size="xs"
+                                colorScheme="green"
+                                variant="solid"
+                                onClick={() => handlePublishAssessment(la.lab_id)}
+                              >
+                                Publish
+                              </Button>
+                            )}
                           </Flex>
                         </VStack>
                       </CardBody>

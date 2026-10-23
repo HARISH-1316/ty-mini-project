@@ -43,12 +43,14 @@ export const getFacultyStudentsProgress = asyncHandler(async (req, res) => {
 
 export const getFacultyStudentDetailedProgress = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
-  const data = await ProgressService.getFacultyStudentDetailedProgress(req.user.user_id, studentId);
+  const { roomId } = req.query;
+  const data = await ProgressService.getFacultyStudentDetailedProgress(req.user.user_id, studentId, roomId);
   return successResponse(res, 200, 'Student detailed progress retrieved.', data);
 });
 
 export const getFacultyAnalytics = asyncHandler(async (req, res) => {
-  const analytics = await ProgressService.getFacultyAnalytics(req.user.user_id);
+  const { roomId } = req.query;
+  const analytics = await ProgressService.getFacultyAnalytics(req.user.user_id, roomId);
   return successResponse(res, 200, 'Faculty analytics retrieved.', analytics);
 });
 

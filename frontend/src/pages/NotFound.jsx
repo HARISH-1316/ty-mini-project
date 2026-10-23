@@ -10,12 +10,12 @@ const NotFound = () => {
   return (
     <Flex minH="80vh" align="center" justify="center" p={4} textAlign="center">
       <VStack spacing={6} maxW="md">
-        <QuestionOutlineIcon w={16} h={16} color="purple.400" />
-        <Heading size="xl" color="white">404 — Page Not Found</Heading>
-        <Text color="gray.400">
+        <QuestionOutlineIcon w={16} h={16} color="brand.500" />
+        <Heading size="xl" color="text.primary">404 — Page Not Found</Heading>
+        <Text color="text.secondary">
           The page you are looking for does not exist or has been moved.
         </Text>
-        <Button as={RouterLink} to="/login" colorScheme="purple">
+        <Button as={RouterLink} to="/login" colorScheme="brand">
           Back to Main Platform
         </Button>
       </VStack>

@@ -59,10 +59,10 @@ const FinalAssessmentPage = () => {
     return (
       <VStack spacing={6} align="stretch" w="full">
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color="white">
+          <Heading size="lg" color="text.primary">
             {topic?.title || 'Topic'} — Final Coding Assessment
           </Heading>
-          <Text color="gray.400" fontSize="sm">
+          <Text color="text.secondary" fontSize="sm">
             Comprehensive practical coding evaluation.
           </Text>
         </VStack>
@@ -78,10 +78,10 @@ const FinalAssessmentPage = () => {
   return (
     <VStack spacing={6} align="stretch" w="full">
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">
+        <Heading size="lg" color="text.primary">
           {topic?.title} — Final Coding Assessment
         </Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Text color="text.secondary" fontSize="sm">
           Solve these programming challenges to demonstrate your practical problem-solving mastery in this topic.
         </Text>
       </VStack>

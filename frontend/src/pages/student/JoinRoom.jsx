@@ -62,26 +62,26 @@ const JoinRoom = () => {
       <Box
         w="full"
         maxW="md"
-        bg="slate.800"
+        bg="bg.card"
         borderRadius="2xl"
         border="1px solid"
-        borderColor="slate.700"
+        borderColor="border.primary"
         p={8}
-        boxShadow="xl"
+        boxShadow="md"
       >
         <VStack spacing={6} align="stretch">
           <VStack spacing={2} textAlign="center">
-            <Heading size="lg" color="white">
+            <Heading size="lg" color="text.primary">
               Join Virtual Lab Room
             </Heading>
-            <Text color="gray.400" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               Enter the unique 6-character room code provided by your faculty instructor.
             </Text>
           </VStack>
 
           {error && (
-            <Alert status="error" borderRadius="lg" bg="red.900" color="red.200">
-              <AlertIcon color="red.300" />
+            <Alert status="error" borderRadius="lg">
+              <AlertIcon />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -89,7 +89,7 @@ const JoinRoom = () => {
           <form onSubmit={handleSubmit}>
             <VStack spacing={6}>
               <FormControl isRequired>
-                <FormLabel color="gray.300" textAlign="center" fontSize="sm">
+                <FormLabel color="text.secondary" textAlign="center" fontSize="sm">
                   Room Code
                 </FormLabel>
                 <Input
@@ -106,12 +106,12 @@ const JoinRoom = () => {
                   fontSize="2xl"
                   fontWeight="bold"
                   letterSpacing="widest"
-                  bg="slate.900"
-                  borderColor="slate.600"
-                  color="purple.300"
-                  _placeholder={{ color: 'gray.600', letterSpacing: 'normal', fontSize: 'lg' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400', boxShadow: '0 0 0 2px var(--chakra-colors-purple-400)' }}
+                  bg="bg.surface"
+                  borderColor="border.primary"
+                  color="accent.primary"
+                  _placeholder={{ color: 'text.muted', letterSpacing: 'normal', fontSize: 'lg' }}
+                  _hover={{ borderColor: 'brand.500' }}
+                  _focus={{ borderColor: 'brand.500' }}
                 />
               </FormControl>
 

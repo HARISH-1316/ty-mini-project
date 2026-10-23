@@ -25,23 +25,23 @@ const AimPage = () => {
 
   return (
     <VStack spacing={6} align="stretch" w="full">
-      <Heading size="lg" color="white">
+      <Heading size="lg" color="text.primary">
         {subtopic.title}
       </Heading>
 
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody>
           <VStack align="start" spacing={4}>
-            <Heading size="md" color="cyan.300">
+            <Heading size="md" color="accent.primary">
               🎯 Aim of the Experiment
             </Heading>
 
             {aim ? (
-              <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
+              <Text color="text.primary" fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
                 {aim}
               </Text>
             ) : (
-              <Text color="gray.500" fontSize="sm" fontStyle="italic">
+              <Text color="text.secondary" fontSize="sm" fontStyle="italic">
                 The aim for this subtopic has not been published yet. Please check back later.
               </Text>
             )}

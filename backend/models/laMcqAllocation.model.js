@@ -5,23 +5,28 @@
 import { query } from '../config/database.js';
 
 const LaMcqAllocationModel = {
-  bulkCreate: async (dbClient, studentId, labId, items, isManual = false) => {
+  bulkCreate: async (dbClient, studentId, labId, items, isManual = false, defaultMarks = 2) => {
     if (!items || items.length === 0) return [];
     const values = [];
     const params = [labId, studentId, isManual];
     let pIdx = 4;
 
     for (const item of items) {
-      values.push(`($1, $2, $${pIdx}, $${pIdx + 1}, $3)`);
-      params.push(item.mcq_id, item.question_order);
-      pIdx += 2;
+      const mMarks = item.marks !== undefined
+        ? Math.max(1, parseInt(item.marks, 10) || 2)
+        : Math.max(1, parseInt(defaultMarks, 10) || 2);
+
+      values.push(`($1, $2, $${pIdx}, $${pIdx + 1}, $3, $${pIdx + 2})`);
+      params.push(item.mcq_id, item.question_order, mMarks);
+      pIdx += 3;
     }
 
     const result = await dbClient.query(
       `INSERT INTO la_student_mcq_allocations
-         (lab_id, student_id, mcq_id, question_order, is_manual)
+         (lab_id, student_id, mcq_id, question_order, is_manual, marks)
        VALUES ${values.join(', ')}
-       ON CONFLICT (lab_id, student_id, mcq_id) DO NOTHING
+       ON CONFLICT (lab_id, student_id, mcq_id) DO UPDATE
+       SET marks = EXCLUDED.marks, question_order = EXCLUDED.question_order
        RETURNING *`,
       params
     );
@@ -29,12 +34,13 @@ const LaMcqAllocationModel = {
   },
 
   /**
-   * For student attempt: strictly omits correct_option, explanation, and individual marks.
+   * For student attempt: strictly omits correct_option, explanation, but includes assessment marks snapshot.
    */
   findByStudentAndLab: async (studentId, labId, dbClient = null) => {
     const exec = dbClient ? (text, params) => dbClient.query(text, params) : query;
     const result = await exec(
       `SELECT a.allocation_id, a.lab_id, a.student_id, a.mcq_id, a.question_order,
+              COALESCE(a.marks, 2) AS marks,
               q.topic_id, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d,
               t.title AS topic_title,
               s.selected_option, s.submitted_at AS answered_at
@@ -57,8 +63,9 @@ const LaMcqAllocationModel = {
     const exec = dbClient ? (text, params) => dbClient.query(text, params) : query;
     const result = await exec(
       `SELECT a.allocation_id, a.lab_id, a.student_id, a.mcq_id, a.question_order,
+              COALESCE(a.marks, 2) AS marks,
               q.topic_id, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d,
-              q.correct_option, q.explanation, q.difficulty, q.marks,
+              q.correct_option, q.explanation, q.difficulty,
               t.title AS topic_title,
               s.selected_option, s.is_correct, s.marks_obtained, s.submitted_at AS answered_at
        FROM la_student_mcq_allocations a
@@ -94,8 +101,9 @@ const LaMcqAllocationModel = {
   findAllocationsByLab: async (labId) => {
     const result = await query(
       `SELECT a.allocation_id, a.lab_id, a.student_id, a.mcq_id, a.question_order, a.is_manual,
+              COALESCE(a.marks, 2) AS marks,
               u.name AS student_name, st.roll_number,
-              q.question_text, q.difficulty, q.marks
+              q.question_text, q.difficulty
        FROM la_student_mcq_allocations a
        JOIN student st ON a.student_id = st.student_id
        JOIN users u ON st.user_id = u.user_id

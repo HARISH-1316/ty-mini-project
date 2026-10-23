@@ -90,11 +90,11 @@ const Login = () => {
       <Box
         w="full"
         maxW="md"
-        bg="gray.800"
+        bg="bg.card"
         borderRadius="2xl"
-        boxShadow="0 0 40px rgba(128, 90, 213, 0.15)"
+        boxShadow="md"
         border="1px solid"
-        borderColor="gray.700"
+        borderColor="border.primary"
         p={8}
       >
         {/* Header */}
@@ -107,15 +107,15 @@ const Login = () => {
           >
             WCE Virtual Lab
           </Heading>
-          <Text color="gray.400" fontSize="md">
+          <Text color="text.secondary" fontSize="md">
             Sign in to your account
           </Text>
         </VStack>
 
         {/* Server Error Alert */}
         {serverError && (
-          <Alert status="error" borderRadius="lg" mb={4} bg="red.900" color="red.200">
-            <AlertIcon color="red.300" />
+          <Alert status="error" borderRadius="lg" mb={4}>
+            <AlertIcon />
             <AlertDescription>{serverError}</AlertDescription>
           </Alert>
         )}
@@ -125,10 +125,10 @@ const Login = () => {
           <VStack spacing={5}>
             {/* Email */}
             <FormControl isInvalid={!!getFieldError('email')}>
-              <FormLabel color="gray.300">Email</FormLabel>
+              <FormLabel color="text.primary">Email</FormLabel>
               <InputGroup>
                 <InputLeftElement pointerEvents="none">
-                  <EmailIcon color="gray.500" />
+                  <EmailIcon color="text.secondary" />
                 </InputLeftElement>
                 <Input
                   id="login-email"
@@ -137,13 +137,13 @@ const Login = () => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
-                  bg="gray.700"
+                  bg="bg.surface"
                   border="1px solid"
-                  borderColor="gray.600"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400', boxShadow: '0 0 0 1px var(--chakra-colors-purple-400)' }}
+                  borderColor="border.primary"
+                  color="text.primary"
+                  _placeholder={{ color: 'text.muted' }}
+                  _hover={{ borderColor: 'brand.500' }}
+                  _focus={{ borderColor: 'brand.500' }}
                 />
               </InputGroup>
               <FormErrorMessage>{getFieldError('email')}</FormErrorMessage>
@@ -151,10 +151,10 @@ const Login = () => {
 
             {/* Password */}
             <FormControl isInvalid={!!getFieldError('password')}>
-              <FormLabel color="gray.300">Password</FormLabel>
+              <FormLabel color="text.primary">Password</FormLabel>
               <InputGroup>
                 <InputLeftElement pointerEvents="none">
-                  <LockIcon color="gray.500" />
+                  <LockIcon color="text.secondary" />
                 </InputLeftElement>
                 <Input
                   id="login-password"
@@ -163,13 +163,13 @@ const Login = () => {
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
-                  bg="gray.700"
+                  bg="bg.surface"
                   border="1px solid"
-                  borderColor="gray.600"
-                  color="white"
-                  _placeholder={{ color: 'gray.500' }}
-                  _hover={{ borderColor: 'purple.400' }}
-                  _focus={{ borderColor: 'purple.400', boxShadow: '0 0 0 1px var(--chakra-colors-purple-400)' }}
+                  borderColor="border.primary"
+                  color="text.primary"
+                  _placeholder={{ color: 'text.muted' }}
+                  _hover={{ borderColor: 'brand.500' }}
+                  _focus={{ borderColor: 'brand.500' }}
                 />
                 <InputRightElement>
                   <IconButton
@@ -177,8 +177,8 @@ const Login = () => {
                     icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
                     onClick={() => setShowPassword(!showPassword)}
                     variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'purple.300' }}
+                    color="text.secondary"
+                    _hover={{ color: 'brand.500' }}
                     size="sm"
                   />
                 </InputRightElement>
@@ -203,9 +203,9 @@ const Login = () => {
         </form>
 
         {/* Footer */}
-        <Text mt={6} textAlign="center" color="gray.400" fontSize="sm">
+        <Text mt={6} textAlign="center" color="text.secondary" fontSize="sm">
           Don&apos;t have an account?{' '}
-          <Text as={RouterLink} to="/signup" color="purple.300" _hover={{ color: 'purple.200', textDecoration: 'underline' }}>
+          <Text as={RouterLink} to="/signup" color="accent.primary" fontWeight="semibold" _hover={{ textDecoration: 'underline' }}>
             Create one
           </Text>
         </Text>

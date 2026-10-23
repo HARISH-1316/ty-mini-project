@@ -96,8 +96,8 @@ const AdminProgress = () => {
     <VStack spacing={8} align="stretch" w="full" pb={12}>
       {/* Header */}
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">Platform-Wide Student Analytics</Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Heading size="lg" color="text.primary">Platform-Wide Student Analytics</Heading>
+        <Text color="text.secondary" fontSize="sm">
           Global overview of student learning progress, quiz attempts, and course completion
         </Text>
       </VStack>
@@ -105,46 +105,46 @@ const AdminProgress = () => {
       {/* Global Analytics Cards */}
       {analytics && (
         <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
-          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
             <CardBody p={5}>
               <Stat>
-                <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">TOTAL STUDENTS</StatLabel>
-                <StatNumber color="purple.300" fontSize="3xl" mt={1}>{analytics.totalStudents}</StatNumber>
-                <Text fontSize="xs" color="gray.500" mt={1}>{analytics.activeStudents} active (last 30 days)</Text>
+                <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">TOTAL STUDENTS</StatLabel>
+                <StatNumber color="accent.primary" fontSize="3xl" mt={1}>{analytics.totalStudents}</StatNumber>
+                <Text fontSize="xs" color="text.muted" mt={1}>{analytics.activeStudents} active (last 30 days)</Text>
               </Stat>
             </CardBody>
           </Card>
 
-          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
             <CardBody p={5}>
               <Stat>
-                <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">FACULTY & ROOMS</StatLabel>
-                <StatNumber color="cyan.300" fontSize="3xl" mt={1}>
-                  {analytics.totalFaculty} <Text as="span" fontSize="lg" color="gray.500">/ {analytics.totalRooms} Rooms</Text>
+                <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">FACULTY & ROOMS</StatLabel>
+                <StatNumber color="brand.500" fontSize="3xl" mt={1}>
+                  {analytics.totalFaculty} <Text as="span" fontSize="lg" color="text.muted">/ {analytics.totalRooms} Rooms</Text>
                 </StatNumber>
-                <Text fontSize="xs" color="gray.500" mt={1}>Platform mentors & virtual labs</Text>
+                <Text fontSize="xs" color="text.muted" mt={1}>Platform mentors & virtual labs</Text>
               </Stat>
             </CardBody>
           </Card>
 
-          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
             <CardBody p={5}>
               <Stat>
-                <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">TOPICS & SUBTOPICS</StatLabel>
-                <StatNumber color="emerald.300" fontSize="3xl" mt={1}>
-                  {analytics.totalTopics} <Text as="span" fontSize="lg" color="gray.500">/ {analytics.totalSubtopics} Subtopics</Text>
+                <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">TOPICS & SUBTOPICS</StatLabel>
+                <StatNumber color="green.500" fontSize="3xl" mt={1}>
+                  {analytics.totalTopics} <Text as="span" fontSize="lg" color="text.muted">/ {analytics.totalSubtopics} Subtopics</Text>
                 </StatNumber>
-                <Text fontSize="xs" color="gray.500" mt={1}>Curated learning material</Text>
+                <Text fontSize="xs" color="text.muted" mt={1}>Curated learning material</Text>
               </Stat>
             </CardBody>
           </Card>
 
-          <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+          <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
             <CardBody p={5}>
               <Stat>
-                <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">AVERAGE QUIZ SCORE</StatLabel>
-                <StatNumber color="amber.300" fontSize="3xl" mt={1}>{analytics.avgQuizScore}%</StatNumber>
-                <Text fontSize="xs" color="gray.500" mt={1}>{analytics.totalQuizAttempts} total submissions</Text>
+                <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">AVERAGE QUIZ SCORE</StatLabel>
+                <StatNumber color="amber.500" fontSize="3xl" mt={1}>{analytics.avgQuizScore}%</StatNumber>
+                <Text fontSize="xs" color="text.muted" mt={1}>{analytics.totalQuizAttempts} total submissions</Text>
               </Stat>
             </CardBody>
           </Card>
@@ -152,17 +152,17 @@ const AdminProgress = () => {
       )}
 
       {/* Filter and Search Bar */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody p={4}>
           <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
             <InputGroup>
               <InputLeftElement pointerEvents="none">
-                <SearchIcon color="gray.400" />
+                <SearchIcon color="text.secondary" />
               </InputLeftElement>
               <Input
                 placeholder="Search student or roll no..."
-                bg="slate.900"
-                borderColor="slate.700"
+                bg="bg.surface"
+                borderColor="border.primary"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && fetchStudents(1)}
@@ -171,8 +171,8 @@ const AdminProgress = () => {
 
             <Input
               placeholder="Filter by Course (e.g. CSE)"
-              bg="slate.900"
-              borderColor="slate.700"
+              bg="bg.surface"
+              borderColor="border.primary"
               value={course}
               onChange={(e) => setCourse(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && fetchStudents(1)}
@@ -180,8 +180,8 @@ const AdminProgress = () => {
 
             <Select
               placeholder="All Years"
-              bg="slate.900"
-              borderColor="slate.700"
+              bg="bg.surface"
+              borderColor="border.primary"
               value={year}
               onChange={(e) => setYear(e.target.value)}
             >
@@ -192,7 +192,7 @@ const AdminProgress = () => {
             </Select>
 
             <Button
-              colorScheme="purple"
+              colorScheme="brand"
               onClick={() => fetchStudents(1)}
             >
               Apply Filter
@@ -210,30 +210,30 @@ const AdminProgress = () => {
           description="No students match the selected search or filter criteria."
         />
       ) : (
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" overflow="hidden">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" overflow="hidden">
           <CardBody p={0}>
             <Table variant="simple" size="md">
-              <Thead bg="slate.900">
+              <Thead bg="bg.surface">
                 <Tr>
-                  <Th color="gray.400">Student</Th>
-                  <Th color="gray.400">Roll Number</Th>
-                  <Th color="gray.400">Course & Year</Th>
-                  <Th color="gray.400" w="180px">Overall Progress</Th>
-                  <Th color="gray.400">Quizzes</Th>
-                  <Th color="gray.400">Coding</Th>
-                  <Th color="gray.400" textAlign="right">Action</Th>
+                  <Th color="text.secondary">Student</Th>
+                  <Th color="text.secondary">Roll Number</Th>
+                  <Th color="text.secondary">Course & Year</Th>
+                  <Th color="text.secondary" w="180px">Overall Progress</Th>
+                  <Th color="text.secondary">Quizzes</Th>
+                  <Th color="text.secondary">Coding</Th>
+                  <Th color="text.secondary" textAlign="right">Action</Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {students.map((st) => (
-                  <Tr key={st.student_id} _hover={{ bg: 'slate.750' }}>
+                  <Tr key={st.student_id} _hover={{ bg: 'bg.secondary' }}>
                     <Td>
                       <VStack align="start" spacing={0}>
-                        <Text color="white" fontWeight="bold">{st.name}</Text>
-                        <Text color="gray.400" fontSize="xs">{st.email}</Text>
+                        <Text color="text.primary" fontWeight="bold">{st.name}</Text>
+                        <Text color="text.secondary" fontSize="xs">{st.email}</Text>
                       </VStack>
                     </Td>
-                    <Td color="gray.300">{st.roll_number || 'N/A'}</Td>
+                    <Td color="text.secondary">{st.roll_number || 'N/A'}</Td>
                     <Td>
                       <Tag size="sm" colorScheme="purple" variant="subtle">
                         {st.course || 'Engg'} • Y{st.year || '1'}
@@ -281,14 +281,14 @@ const AdminProgress = () => {
       {/* Pagination Footer */}
       {pagination.totalPages > 1 && (
         <HStack justify="space-between" pt={2}>
-          <Text color="gray.400" fontSize="sm">
+          <Text color="text.secondary" fontSize="sm">
             Showing Page {pagination.page} of {pagination.totalPages} ({pagination.total} total students)
           </Text>
           <HStack spacing={2}>
             <Button
               size="sm"
               variant="outline"
-              borderColor="slate.700"
+              borderColor="border.primary"
               isDisabled={pagination.page <= 1}
               onClick={() => fetchStudents(pagination.page - 1)}
             >
@@ -297,7 +297,7 @@ const AdminProgress = () => {
             <Button
               size="sm"
               variant="outline"
-              borderColor="slate.700"
+              borderColor="border.primary"
               isDisabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchStudents(pagination.page + 1)}
             >

@@ -16,10 +16,10 @@ const EmptyState = ({
       w="full"
       p={10}
       textAlign="center"
-      bg="slate.800"
+      bg="bg.card"
       borderRadius="2xl"
       border="1px dashed"
-      borderColor="slate.700"
+      borderColor="border.primary"
       my={4}
     >
       <VStack spacing={4}>

@@ -62,10 +62,10 @@ const CodingAssessmentPage = () => {
     return (
       <VStack spacing={6} align="stretch" w="full">
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color="white">
+          <Heading size="lg" color="text.primary">
             {subtopic?.title || 'Subtopic'} — Coding Practice
           </Heading>
-          <Text color="gray.400" fontSize="sm">
+          <Text color="text.secondary" fontSize="sm">
             Hands-on programming challenges for this module.
           </Text>
         </VStack>
@@ -81,10 +81,10 @@ const CodingAssessmentPage = () => {
   return (
     <VStack spacing={6} align="stretch" w="full">
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">
+        <Heading size="lg" color="text.primary">
           {subtopic?.title} — Coding Assessment
         </Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Text color="text.secondary" fontSize="sm">
           Write and run real code against test cases in the sandboxed execution environment.
         </Text>
       </VStack>

@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Heading,
@@ -25,12 +25,10 @@ import {
   Progress,
   Tag,
   SimpleGrid,
-  Stat,
-  StatLabel,
-  StatNumber,
   InputGroup,
   InputLeftElement,
   useToast,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { SearchIcon, ViewIcon } from '@chakra-ui/icons';
 import { getFacultyStudentsProgressApi } from '../../api/progressApi';
@@ -40,13 +38,22 @@ import EmptyState from '../../components/common/EmptyState';
 
 const FacultyStudents = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
+
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const tableHeaderBg = useColorModeValue('#E8EFE9', '#1A1D1B');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
+  const tableHoverBg = useColorModeValue('#F7FAF8', '#252926');
 
   const [students, setStudents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [search, setSearch] = useState('');
-  const [selectedRoom, setSelectedRoom] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState(searchParams.get('roomId') || '');
   const [isLoading, setIsLoading] = useState(true);
 
   // Load faculty rooms for filter dropdown
@@ -87,6 +94,7 @@ const FacultyStudents = () => {
   }, [search, selectedRoom, toast]);
 
   useEffect(() => {
+    setStudents([]);
     fetchStudents(1);
   }, [fetchStudents]);
 
@@ -94,24 +102,26 @@ const FacultyStudents = () => {
     <VStack spacing={6} align="stretch" w="full" pb={12}>
       {/* Header */}
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">Student Progress Management</Heading>
-        <Text color="gray.400" fontSize="sm">
-          Track learning completion, quiz performance, and coding achievements for students in your rooms
+        <Heading size="lg" color={textColor}>Student Progress Management</Heading>
+        <Text color={mutedText} fontSize="sm">
+          Track learning completion, quiz performance, and coding achievements strictly for students in your selected room
         </Text>
       </VStack>
 
       {/* Filter and Search Bar */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" boxShadow="sm">
         <CardBody p={4}>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
             <InputGroup>
               <InputLeftElement pointerEvents="none">
-                <SearchIcon color="gray.400" />
+                <SearchIcon color={mutedText} />
               </InputLeftElement>
               <Input
                 placeholder="Search by student name or roll number..."
-                bg="slate.900"
-                borderColor="slate.700"
+                bg={surfaceBg}
+                borderColor={cardBorder}
+                color={textColor}
+                _placeholder={{ color: mutedText }}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && fetchStudents(1)}
@@ -120,10 +130,20 @@ const FacultyStudents = () => {
 
             <Select
               placeholder="All Rooms"
-              bg="slate.900"
-              borderColor="slate.700"
+              bg={surfaceBg}
+              borderColor={cardBorder}
+              color={textColor}
               value={selectedRoom}
-              onChange={(e) => setSelectedRoom(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setStudents([]);
+                setSelectedRoom(val);
+                if (val) {
+                  setSearchParams({ roomId: val });
+                } else {
+                  setSearchParams({});
+                }
+              }}
             >
               {rooms.map((r) => (
                 <option key={r.room_id} value={r.room_id}>
@@ -133,8 +153,11 @@ const FacultyStudents = () => {
             </Select>
 
             <Button
-              colorScheme="purple"
-              onClick={() => fetchStudents(1)}
+              colorScheme="brand"
+              onClick={() => {
+                setStudents([]);
+                fetchStudents(1);
+              }}
             >
               Apply Filter
             </Button>
@@ -151,72 +174,80 @@ const FacultyStudents = () => {
           description={
             rooms.length === 0
               ? 'You have not created any rooms yet. Create a room and share the room code with students to track their progress.'
+              : selectedRoom
+              ? 'No students are currently enrolled in this room matching your search query.'
               : 'No students are currently enrolled matching your filters.'
           }
           actionLabel={rooms.length === 0 ? 'Create a Room' : undefined}
           onAction={rooms.length === 0 ? () => navigate('/faculty/rooms') : undefined}
         />
       ) : (
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" overflow="hidden">
+        <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" overflow="hidden" boxShadow="sm">
           <CardBody p={0}>
             <Table variant="simple" size="md">
-              <Thead bg="slate.900">
+              <Thead bg={tableHeaderBg}>
                 <Tr>
-                  <Th color="gray.400">Student</Th>
-                  <Th color="gray.400">Roll Number</Th>
-                  <Th color="gray.400">Enrolled Rooms</Th>
-                  <Th color="gray.400" w="180px">Overall Progress</Th>
-                  <Th color="gray.400">Quizzes</Th>
-                  <Th color="gray.400">Coding</Th>
-                  <Th color="gray.400" textAlign="right">Action</Th>
+                  <Th color={mutedText} borderColor={cardBorder}>Student</Th>
+                  <Th color={mutedText} borderColor={cardBorder}>Roll Number</Th>
+                  <Th color={mutedText} borderColor={cardBorder}>Enrolled Rooms</Th>
+                  <Th color={mutedText} borderColor={cardBorder} w="180px">Room Progress</Th>
+                  <Th color={mutedText} borderColor={cardBorder}>Quizzes</Th>
+                  <Th color={mutedText} borderColor={cardBorder}>Coding</Th>
+                  <Th color={mutedText} borderColor={cardBorder} textAlign="right">Action</Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {students.map((st) => (
-                  <Tr key={st.student_id} _hover={{ bg: 'slate.750' }}>
-                    <Td>
+                  <Tr key={st.student_id} _hover={{ bg: tableHoverBg }}>
+                    <Td borderColor={cardBorder}>
                       <VStack align="start" spacing={0}>
-                        <Text color="white" fontWeight="bold">{st.name}</Text>
-                        <Text color="gray.400" fontSize="xs">{st.email}</Text>
+                        <Text color={textColor} fontWeight="bold">{st.name}</Text>
+                        <Text color={mutedText} fontSize="xs">{st.email}</Text>
                       </VStack>
                     </Td>
-                    <Td color="gray.300">{st.roll_number || 'N/A'}</Td>
-                    <Td>
+                    <Td borderColor={cardBorder} color={textColor}>{st.roll_number || 'N/A'}</Td>
+                    <Td borderColor={cardBorder}>
                       <HStack spacing={1} flexWrap="wrap">
                         {st.rooms?.map((rm, idx) => (
-                          <Tag key={idx} size="sm" colorScheme="purple" variant="subtle">
+                          <Tag key={idx} size="sm" colorScheme="brand" variant="subtle">
                             {rm}
                           </Tag>
                         ))}
                       </HStack>
                     </Td>
-                    <Td>
+                    <Td borderColor={cardBorder}>
                       <VStack align="stretch" spacing={1}>
                         <HStack justify="space-between" fontSize="xs">
-                          <Text color="gray.400">Complete</Text>
-                          <Text color="purple.300" fontWeight="bold">{st.overallProgress}%</Text>
+                          <Text color={mutedText}>Complete</Text>
+                          <Text color="green.600" fontWeight="bold">{st.overallProgress}%</Text>
                         </HStack>
                         <Progress
                           value={st.overallProgress}
-                          colorScheme={st.overallProgress === 100 ? 'green' : 'purple'}
+                          colorScheme={st.overallProgress === 100 ? 'green' : 'brand'}
                           size="xs"
                           borderRadius="full"
                         />
                       </VStack>
                     </Td>
-                    <Td color="emerald.300" fontWeight="semibold">
+                    <Td borderColor={cardBorder} color="green.600" fontWeight="semibold">
                       {st.quizzesCompleted}
                     </Td>
-                    <Td color="amber.300" fontWeight="semibold">
+                    <Td borderColor={cardBorder} color="blue.600" fontWeight="semibold">
                       {st.codingCompleted}
                     </Td>
-                    <Td textAlign="right">
+                    <Td borderColor={cardBorder} textAlign="right">
                       <Button
                         size="sm"
                         variant="outline"
-                        colorScheme="purple"
+                        colorScheme="brand"
                         leftIcon={<ViewIcon />}
-                        onClick={() => navigate(`/faculty/students/${st.student_id}/progress`)}
+                        onClick={() =>
+                          navigate(
+                            `/faculty/students/${st.student_id}/progress${
+                              selectedRoom ? `?roomId=${selectedRoom}` : ''
+                            }`
+                          )
+                        }
                       >
                         Inspect
                       </Button>
@@ -232,14 +263,15 @@ const FacultyStudents = () => {
       {/* Pagination Footer */}
       {pagination.totalPages > 1 && (
         <HStack justify="space-between" pt={2}>
-          <Text color="gray.400" fontSize="sm">
+          <Text color={mutedText} fontSize="sm">
             Showing Page {pagination.page} of {pagination.totalPages} ({pagination.total} total students)
           </Text>
           <HStack spacing={2}>
             <Button
               size="sm"
               variant="outline"
-              borderColor="slate.700"
+              borderColor={cardBorder}
+              color={textColor}
               isDisabled={pagination.page <= 1}
               onClick={() => fetchStudents(pagination.page - 1)}
             >
@@ -248,7 +280,8 @@ const FacultyStudents = () => {
             <Button
               size="sm"
               variant="outline"
-              borderColor="slate.700"
+              borderColor={cardBorder}
+              color={textColor}
               isDisabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchStudents(pagination.page + 1)}
             >

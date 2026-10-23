@@ -21,13 +21,13 @@ const Breadcrumbs = ({ items = [] }) => {
     <Box
       px={{ base: 4, md: 6 }}
       py={3}
-      bg="slate.800"
+      bg="bg.card"
       borderBottom="1px solid"
       borderColor="border.primary"
     >
       <Breadcrumb
         spacing="8px"
-        separator={<ChevronRightIcon color="gray.500" />}
+        separator={<ChevronRightIcon color="text.secondary" />}
       >
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
@@ -42,7 +42,7 @@ const Breadcrumbs = ({ items = [] }) => {
                 <BreadcrumbLink
                   as={RouterLink}
                   to={item.path || '#'}
-                  color="gray.400"
+                  color="text.secondary"
                   fontSize="sm"
                   _hover={{ color: 'accent.primary', textDecoration: 'underline' }}
                   transition="color 0.2s"

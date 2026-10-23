@@ -1127,11 +1127,19 @@ const LabQuestionBank = () => {
               {/* Constraints */}
               <FormControl>
                 <FormLabel fontSize="sm" fontWeight="600" color={textColor}>Constraints</FormLabel>
-                <Input
-                  placeholder="e.g. 1 <= N <= 10^5, -10^9 <= nums[i] <= 10^9"
+                <Textarea
+                  rows={3}
+                  fontFamily="mono"
+                  fontSize="sm"
+                  placeholder={`e.g.\n1 <= N <= 10^5\n-10^9 <= nums[i] <= 10^9\nTime Limit: 2.0s\nMemory Limit: 256MB`}
                   value={createForm.constraints}
                   onChange={(e) => setCreateForm((f) => ({ ...f, constraints: e.target.value }))}
+                  bg={surfaceBg}
+                  borderColor={cardBorder}
                 />
+                <FormHelperText fontSize="xs" color={mutedText}>
+                  Enter algorithmic input boundaries and execution constraints (one per line).
+                </FormHelperText>
               </FormControl>
 
               {/* Sample Input & Output */}
@@ -1243,32 +1251,45 @@ const LabQuestionBank = () => {
 
               <Divider />
 
-              {/* ── Test Cases Management ── */}
+              {/* ── Test Cases Management (Sticky Action Header) ── */}
               <Box>
-                <Flex justify="space-between" align="center" mb={3}>
-                  <Box>
-                    <Heading size="xs" textTransform="uppercase" color={textColor} fontWeight="700">
-                      Test Cases ({createTestCases.length})
-                    </Heading>
-                    <Text fontSize="xs" color={mutedText}>
-                      Include both visible sample test cases and hidden evaluation cases.
-                    </Text>
-                  </Box>
-                  <Button
-                    size="xs"
-                    leftIcon={<AddIcon />}
-                    colorScheme="brand"
-                    variant="outline"
-                    onClick={() =>
-                      setCreateTestCases((prev) => [
-                        ...prev,
-                        { input: '', expected_output: '', is_hidden: true },
-                      ])
-                    }
-                  >
-                    Add Test Case
-                  </Button>
-                </Flex>
+                <Box
+                  position="sticky"
+                  top={0}
+                  zIndex={4}
+                  bg={cardBg}
+                  py={2.5}
+                  borderBottom="1px solid"
+                  borderColor={cardBorder}
+                  mb={3}
+                >
+                  <Flex justify="space-between" align="center">
+                    <Box>
+                      <Heading size="xs" textTransform="uppercase" color={textColor} fontWeight="700">
+                        Test Cases ({createTestCases.length})
+                      </Heading>
+                      <Text fontSize="xs" color={mutedText}>
+                        Include both visible sample test cases and hidden evaluation cases.
+                      </Text>
+                    </Box>
+                    <Button
+                      size="sm"
+                      leftIcon={<AddIcon />}
+                      colorScheme="brand"
+                      variant="solid"
+                      boxShadow="xs"
+                      _hover={{ transform: 'translateY(-1px)', boxShadow: 'sm' }}
+                      onClick={() =>
+                        setCreateTestCases((prev) => [
+                          ...prev,
+                          { input: '', expected_output: '', is_hidden: true },
+                        ])
+                      }
+                    >
+                      Add Test Case
+                    </Button>
+                  </Flex>
+                </Box>
 
                 <VStack spacing={3} align="stretch">
                   {createTestCases.map((tc, idx) => (
@@ -1458,10 +1479,19 @@ const LabQuestionBank = () => {
 
               <FormControl>
                 <FormLabel fontSize="sm" fontWeight="600" color={textColor}>Constraints</FormLabel>
-                <Input
+                <Textarea
+                  rows={3}
+                  fontFamily="mono"
+                  fontSize="sm"
+                  placeholder={`e.g.\n1 <= N <= 10^5\n-10^9 <= nums[i] <= 10^9\nTime Limit: 2.0s\nMemory Limit: 256MB`}
                   value={editForm.constraints || ''}
                   onChange={(e) => setEditForm((f) => ({ ...f, constraints: e.target.value }))}
+                  bg={surfaceBg}
+                  borderColor={cardBorder}
                 />
+                <FormHelperText fontSize="xs" color={mutedText}>
+                  Enter algorithmic input boundaries and execution constraints (one per line).
+                </FormHelperText>
               </FormControl>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
@@ -1565,32 +1595,45 @@ const LabQuestionBank = () => {
 
               <Divider />
 
-              {/* Edit Test Cases */}
+              {/* Edit Test Cases (Sticky Action Header) */}
               <Box>
-                <Flex justify="space-between" align="center" mb={3}>
-                  <Box>
-                    <Heading size="xs" textTransform="uppercase" color={textColor} fontWeight="700">
-                      Test Cases ({editTestCases.length})
-                    </Heading>
-                    <Text fontSize="xs" color={mutedText}>
-                      Add, update, or remove test cases for evaluation.
-                    </Text>
-                  </Box>
-                  <Button
-                    size="xs"
-                    leftIcon={<AddIcon />}
-                    colorScheme="brand"
-                    variant="outline"
-                    onClick={() =>
-                      setEditTestCases((prev) => [
-                        ...prev,
-                        { input: '', expected_output: '', is_hidden: true },
-                      ])
-                    }
-                  >
-                    Add Test Case
-                  </Button>
-                </Flex>
+                <Box
+                  position="sticky"
+                  top={0}
+                  zIndex={4}
+                  bg={cardBg}
+                  py={2.5}
+                  borderBottom="1px solid"
+                  borderColor={cardBorder}
+                  mb={3}
+                >
+                  <Flex justify="space-between" align="center">
+                    <Box>
+                      <Heading size="xs" textTransform="uppercase" color={textColor} fontWeight="700">
+                        Test Cases ({editTestCases.length})
+                      </Heading>
+                      <Text fontSize="xs" color={mutedText}>
+                        Add, update, or remove test cases for evaluation.
+                      </Text>
+                    </Box>
+                    <Button
+                      size="sm"
+                      leftIcon={<AddIcon />}
+                      colorScheme="brand"
+                      variant="solid"
+                      boxShadow="xs"
+                      _hover={{ transform: 'translateY(-1px)', boxShadow: 'sm' }}
+                      onClick={() =>
+                        setEditTestCases((prev) => [
+                          ...prev,
+                          { input: '', expected_output: '', is_hidden: true },
+                        ])
+                      }
+                    >
+                      Add Test Case
+                    </Button>
+                  </Flex>
+                </Box>
 
                 <VStack spacing={3} align="stretch">
                   {editTestCases.map((tc, idx) => (

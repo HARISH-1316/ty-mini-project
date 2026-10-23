@@ -15,6 +15,7 @@ import {
   DrawerCloseButton,
   DrawerHeader,
   DrawerBody,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import useAuth from '../../hooks/useAuth';
 
@@ -23,14 +24,12 @@ const navItemsByRole = {
   student: [
     { label: 'Dashboard', path: '/student/dashboard', icon: 'home' },
     { label: 'My Rooms', path: '/student/rooms', icon: 'rooms' },
-    { label: 'Lab Assessments', path: '/student/lab-assessments', icon: 'assessments' },
     { label: 'Join Room', path: '/student/join-room', icon: 'join' },
     { label: 'My Progress', path: '/student/progress', icon: 'progress' },
   ],
   faculty: [
     { label: 'Dashboard', path: '/faculty/dashboard', icon: 'home' },
     { label: 'Virtual Rooms', path: '/faculty/rooms', icon: 'rooms' },
-    { label: 'Lab Assessments', path: '/faculty/lab-assessments', icon: 'assessments' },
     { label: 'Theory & Content', path: '/faculty/topics', icon: 'topics' },
     { label: 'Coding Question Bank', path: '/faculty/lab-questions', icon: 'questions' },
     { label: 'MCQ Question Bank', path: '/faculty/mcq-bank', icon: 'mcq' },
@@ -42,7 +41,6 @@ const navItemsByRole = {
     { label: 'Account Approvals', path: '/admin/approvals', icon: 'approvals' },
     { label: 'All Users', path: '/admin/users', icon: 'users' },
     { label: 'Virtual Rooms', path: '/faculty/rooms', icon: 'rooms' },
-    { label: 'Lab Assessments', path: '/admin/lab-assessments', icon: 'assessments' },
     { label: 'Theory & Content', path: '/faculty/topics', icon: 'topics' },
     { label: 'Coding Question Bank', path: '/faculty/lab-questions', icon: 'questions' },
     { label: 'MCQ Bank', path: '/admin/mcq-bank', icon: 'mcq' },
@@ -79,17 +77,16 @@ const NavItem = ({ label, path, onClick }) => {
   );
 };
 
+import WorkspaceHeader from './WorkspaceHeader';
+export { WorkspaceHeader };
+
 export const SidebarContent = ({ onClose }) => {
   const { user } = useAuth();
   const items = navItemsByRole[user?.role] || [];
 
   return (
     <VStack spacing={2} align="stretch" w="full">
-      <Box px={4} py={2}>
-        <Text fontSize="xs" fontWeight="bold" color="text.secondary" textTransform="uppercase" letterSpacing="wider">
-          {user?.role} Workspace
-        </Text>
-      </Box>
+      <WorkspaceHeader role={user?.role} />
       {items.map((item) => (
         <NavItem key={item.path} label={item.label} path={item.path} onClick={onClose} />
       ))}
@@ -103,7 +100,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Desktop Sidebar */}
       <Box
         display={{ base: 'none', md: 'block' }}
-        w="240px"
+        w="250px"
         bg="bg.surface"
         borderRight="1px solid"
         borderColor="border.primary"

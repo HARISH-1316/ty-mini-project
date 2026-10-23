@@ -36,8 +36,8 @@ export const getFacultyStudentDetailApi = async (studentId) => {
   return response.data;
 };
 
-export const getFacultyAnalyticsApi = async () => {
-  const response = await api.get('/faculty/analytics');
+export const getFacultyAnalyticsApi = async (params = {}) => {
+  const response = await api.get('/faculty/analytics', { params });
   return response.data;
 };
 

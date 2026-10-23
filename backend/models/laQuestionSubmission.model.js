@@ -3,6 +3,7 @@
 // ──────────────────────────────────────────────
 // Tracks individual question submissions within an LA attempt.
 // Uses UPSERT — latest valid submission overwrites previous.
+// Retains max_marks snapshot so evaluation is strictly scored against configured assessment marks.
 // ──────────────────────────────────────────────
 
 import { query } from '../config/database.js';
@@ -21,12 +22,13 @@ const LaQuestionSubmissionModel = {
     passed_test_cases,
     total_test_cases,
     marks_obtained,
+    max_marks = 10,
   }) => {
     const result = await query(
       `INSERT INTO la_question_submissions
          (attempt_id, lab_question_id, source_code, language,
-          status, passed_test_cases, total_test_cases, marks_obtained, submitted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+          status, passed_test_cases, total_test_cases, marks_obtained, max_marks, submitted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
        ON CONFLICT (attempt_id, lab_question_id)
        DO UPDATE SET
          source_code = EXCLUDED.source_code,
@@ -35,6 +37,7 @@ const LaQuestionSubmissionModel = {
          passed_test_cases = EXCLUDED.passed_test_cases,
          total_test_cases = EXCLUDED.total_test_cases,
          marks_obtained = EXCLUDED.marks_obtained,
+         max_marks = EXCLUDED.max_marks,
          submitted_at = CURRENT_TIMESTAMP
        RETURNING *`,
       [
@@ -46,6 +49,7 @@ const LaQuestionSubmissionModel = {
         passed_test_cases,
         total_test_cases,
         marks_obtained,
+        max_marks,
       ]
     );
     return result.rows[0];
@@ -65,6 +69,7 @@ const LaQuestionSubmissionModel = {
          s.passed_test_cases,
          s.total_test_cases,
          s.marks_obtained,
+         COALESCE(s.max_marks, 10) AS max_marks,
          s.submitted_at
        FROM la_question_submissions s
        WHERE s.attempt_id = $1
@@ -79,7 +84,7 @@ const LaQuestionSubmissionModel = {
    */
   findByAttemptAndQuestion: async (attemptId, labQuestionId) => {
     const result = await query(
-      `SELECT * FROM la_question_submissions
+      `SELECT *, COALESCE(max_marks, 10) AS max_marks FROM la_question_submissions
        WHERE attempt_id = $1 AND lab_question_id = $2`,
       [attemptId, labQuestionId]
     );
@@ -106,6 +111,7 @@ const LaQuestionSubmissionModel = {
     const result = await query(
       `SELECT
          qs.*,
+         COALESCE(qs.max_marks, 10) AS max_marks,
          a.student_id,
          s.roll_number,
          u.name AS student_name,

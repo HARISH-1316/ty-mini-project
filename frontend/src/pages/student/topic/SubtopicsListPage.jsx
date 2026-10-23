@@ -66,11 +66,11 @@ const SubtopicsListPage = () => {
 
   return (
     <VStack spacing={6} align="stretch" w="full">
-      <Heading size="lg" color="white">
+      <Heading size="lg" color="text.primary">
         Subtopics
       </Heading>
 
-      <Text color="gray.400" fontSize="sm">
+      <Text color="text.secondary" fontSize="sm">
         {topic.title} — {subtopics.length} subtopic{subtopics.length !== 1 ? 's' : ''} available
       </Text>
 
@@ -89,15 +89,15 @@ const SubtopicsListPage = () => {
                 key={sub.subtopic_id}
                 as={RouterLink}
                 to={`/student/topics/${topicId}/subtopics/${sub.subtopic_id}/aim`}
-                bg="slate.800"
-                borderColor="slate.700"
+                bg="bg.card"
+                borderColor="border.primary"
                 borderWidth="1px"
                 borderRadius="xl"
                 transition="all 0.2s"
                 _hover={{
                   transform: 'translateY(-3px)',
-                  borderColor: 'cyan.500',
-                  boxShadow: '0 4px 20px rgba(34, 211, 238, 0.15)',
+                  borderColor: 'brand.500',
+                  boxShadow: 'md',
                 }}
                 cursor="pointer"
                 textDecoration="none"
@@ -107,8 +107,10 @@ const SubtopicsListPage = () => {
                     <Flex justify="space-between" w="full" align="center">
                       <HStack spacing={2}>
                         <Badge
-                          bg="slate.700"
-                          color="cyan.300"
+                          bg="bg.surface"
+                          color="accent.primary"
+                          border="1px solid"
+                          borderColor="border.primary"
                           px={2}
                           py={0.5}
                           borderRadius="md"
@@ -122,15 +124,15 @@ const SubtopicsListPage = () => {
                           </Badge>
                         )}
                       </HStack>
-                      <ArrowForwardIcon color="cyan.400" />
+                      <ArrowForwardIcon color="brand.500" />
                     </Flex>
 
-                    <Heading size="sm" color="white" noOfLines={2}>
+                    <Heading size="sm" color="text.primary" noOfLines={2}>
                       {sub.title}
                     </Heading>
 
                     {sub.content?.aim && (
-                      <Text color="gray.400" fontSize="xs" noOfLines={2}>
+                      <Text color="text.secondary" fontSize="xs" noOfLines={2}>
                         {sub.content.aim}
                       </Text>
                     )}

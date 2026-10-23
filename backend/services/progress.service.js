@@ -25,7 +25,7 @@ const ProgressService = {
   /**
    * Calculate complete overall progress for a student.
    */
-  getStudentOverallProgress: async (userId) => {
+  getStudentOverallProgress: async (userId, roomId = null) => {
     const student = await StudentModel.findByUserId(userId);
     if (!student) {
       const error = new Error('Student profile not found.');
@@ -33,8 +33,40 @@ const ProgressService = {
       throw error;
     }
 
-    // Get all topics assigned to rooms joined by this student
-    const accessibleTopics = await RoomService.getStudentTopics(userId);
+    let accessibleTopics = [];
+    if (roomId) {
+      const parsedRoomId = parseInt(roomId, 10);
+      const enrolledRes = await query(
+        `SELECT 1 FROM student_rooms WHERE student_id = $1 AND room_id = $2`,
+        [student.student_id, parsedRoomId]
+      );
+      if (enrolledRes.rows.length === 0) {
+        return {
+          student: {
+            name: student.name,
+            roll_number: student.roll_number,
+            course: student.course,
+            year: student.year,
+          },
+          overallProgress: 0,
+          completedTopicsCount: 0,
+          totalTopicsCount: 0,
+          completedSubtopicsCount: 0,
+          totalSubtopicsCount: 0,
+          completedQuizzesCount: 0,
+          totalQuizzesCount: 0,
+          completedAssessmentsCount: 0,
+          totalAssessmentsCount: 0,
+          totalTimeSpent: 0,
+          recentActivity: [],
+          topicsProgress: [],
+        };
+      }
+      accessibleTopics = await RoomService.getRoomTopics(parsedRoomId);
+    } else {
+      accessibleTopics = await RoomService.getStudentTopics(userId);
+    }
+
     const accessibleTopicIds = accessibleTopics.map((t) => t.topic_id);
 
     if (accessibleTopicIds.length === 0) {
@@ -587,7 +619,7 @@ const ProgressService = {
     // Student Rows with room names
     params.push(limit, offset);
     const studentsRes = await query(
-      `SELECT s.student_id, s.roll_number, s.course, s.year, u.name, u.email, u.last_login,
+      `SELECT s.student_id, s.user_id, s.roll_number, s.course, s.year, u.name, u.email, u.last_login,
               ARRAY_AGG(DISTINCT r.room_name) as room_names,
               COUNT(DISTINCT qa.attempt_id) as quizzes_completed,
               COALESCE(AVG(qa.percentage), 0)::numeric(5,2) as avg_quiz_score,
@@ -600,18 +632,19 @@ const ProgressService = {
        LEFT JOIN quiz_attempts qa ON s.student_id = qa.student_id AND qa.submitted_at IS NOT NULL
        LEFT JOIN coding_submissions cs ON s.student_id = cs.student_id
        WHERE ${whereStr}
-       GROUP BY s.student_id, s.roll_number, s.course, s.year, u.name, u.email, u.last_login
+       GROUP BY s.student_id, s.user_id, s.roll_number, s.course, s.year, u.name, u.email, u.last_login
        ORDER BY u.name ASC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
 
-    // Calculate overall progress for each student
+    // Calculate overall progress for each student, strictly scoped to roomId if provided
     const studentList = [];
     for (const row of studentsRes.rows) {
-      const overallProg = await ProgressService.getStudentOverallProgress(row.user_id || (await StudentModel.findById(row.student_id))?.user_id);
+      const overallProg = await ProgressService.getStudentOverallProgress(row.user_id, roomId);
       studentList.push({
         student_id: row.student_id,
+        user_id: row.user_id,
         name: row.name,
         email: row.email,
         roll_number: row.roll_number,
@@ -619,9 +652,9 @@ const ProgressService = {
         year: row.year,
         rooms: row.room_names,
         overallProgress: overallProg.overallProgress,
-        quizzesCompleted: parseInt(row.quizzes_completed, 10) || 0,
+        quizzesCompleted: roomId ? overallProg.completedQuizzesCount : (parseInt(row.quizzes_completed, 10) || 0),
         avgQuizScore: parseFloat(row.avg_quiz_score) || 0,
-        codingCompleted: parseInt(row.coding_completed, 10) || 0,
+        codingCompleted: roomId ? overallProg.completedAssessmentsCount : (parseInt(row.coding_completed, 10) || 0),
         lastActivity: row.last_activity,
       });
     }
@@ -640,7 +673,7 @@ const ProgressService = {
   /**
    * Detailed student progress for faculty (with authorization verification).
    */
-  getFacultyStudentDetailedProgress: async (facultyUserId, studentId) => {
+  getFacultyStudentDetailedProgress: async (facultyUserId, studentId, roomId = null) => {
     const faculty = await FacultyModel.findByUserId(facultyUserId);
     if (!faculty) {
       const error = new Error('Faculty profile not found.');
@@ -648,17 +681,22 @@ const ProgressService = {
       throw error;
     }
 
-    // Verify student belongs to at least one room owned by this faculty
-    const checkRes = await query(
-      `SELECT 1 FROM student_rooms sr
+    // Verify student belongs to at least one room owned by this faculty (and to roomId if provided)
+    const checkParams = [studentId, faculty.faculty_id];
+    let checkSql = `SELECT 1 FROM student_rooms sr
        JOIN rooms r ON sr.room_id = r.room_id
-       WHERE sr.student_id = $1 AND r.faculty_id = $2
-       LIMIT 1`,
-      [studentId, faculty.faculty_id]
-    );
+       WHERE sr.student_id = $1 AND r.faculty_id = $2`;
+    if (roomId) {
+      checkParams.push(parseInt(roomId, 10));
+      checkSql += ` AND r.room_id = $${checkParams.length}`;
+    }
+    checkSql += ` LIMIT 1`;
 
+    const checkRes = await query(checkSql, checkParams);
     if (checkRes.rows.length === 0) {
-      const error = new Error('Access denied. This student is not enrolled in any of your rooms.');
+      const error = new Error(roomId
+        ? 'Access denied. This student is not enrolled in the selected room.'
+        : 'Access denied. This student is not enrolled in any of your rooms.');
       error.statusCode = 403;
       throw error;
     }
@@ -670,13 +708,13 @@ const ProgressService = {
       throw error;
     }
 
-    return ProgressService.getStudentOverallProgress(student.user_id);
+    return ProgressService.getStudentOverallProgress(student.user_id, roomId);
   },
 
   /**
    * Faculty Analytics for authorized rooms and content.
    */
-  getFacultyAnalytics: async (facultyUserId) => {
+  getFacultyAnalytics: async (facultyUserId, roomId = null) => {
     const faculty = await FacultyModel.findByUserId(facultyUserId);
     if (!faculty) {
       const error = new Error('Faculty profile not found.');
@@ -684,13 +722,26 @@ const ProgressService = {
       throw error;
     }
 
-    // 1. Total Distinct Students in faculty rooms
+    const parsedRoomId = roomId ? parseInt(roomId, 10) : null;
+    if (parsedRoomId) {
+      const isOwner = await RoomModel.isFacultyOwner(faculty.faculty_id, parsedRoomId);
+      if (!isOwner) {
+        const error = new Error('Access denied: You do not manage this room.');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    const roomFilter = parsedRoomId ? 'AND r.room_id = $2' : '';
+    const queryParams = parsedRoomId ? [faculty.faculty_id, parsedRoomId] : [faculty.faculty_id];
+
+    // 1. Total Distinct Students in faculty room(s)
     const studentsCountRes = await query(
       `SELECT COUNT(DISTINCT sr.student_id) as total_students
        FROM rooms r
        JOIN student_rooms sr ON r.room_id = sr.room_id
-       WHERE r.faculty_id = $1`,
-      [faculty.faculty_id]
+       WHERE r.faculty_id = $1 ${roomFilter}`,
+      queryParams
     );
     const totalStudents = parseInt(studentsCountRes.rows[0].total_students, 10) || 0;
 
@@ -700,8 +751,8 @@ const ProgressService = {
        FROM rooms r
        JOIN student_rooms sr ON r.room_id = sr.room_id
        JOIN progress p ON sr.student_id = p.student_id
-       WHERE r.faculty_id = $1 AND p.last_accessed > (CURRENT_TIMESTAMP - INTERVAL '30 days')`,
-      [faculty.faculty_id]
+       WHERE r.faculty_id = $1 ${roomFilter} AND p.last_accessed > (CURRENT_TIMESTAMP - INTERVAL '30 days')`,
+      queryParams
     );
     const activeStudents = parseInt(activeStudentsRes.rows[0].active_students, 10) || 0;
 
@@ -712,8 +763,8 @@ const ProgressService = {
        FROM rooms r
        JOIN student_rooms sr ON r.room_id = sr.room_id
        JOIN quiz_attempts qa ON sr.student_id = qa.student_id
-       WHERE r.faculty_id = $1 AND qa.submitted_at IS NOT NULL`,
-      [faculty.faculty_id]
+       WHERE r.faculty_id = $1 ${roomFilter} AND qa.submitted_at IS NOT NULL`,
+      queryParams
     );
 
     // 4. Room Performance Breakdown
@@ -726,10 +777,10 @@ const ProgressService = {
        LEFT JOIN student_rooms sr ON r.room_id = sr.room_id
        LEFT JOIN room_topics rt ON r.room_id = rt.room_id
        LEFT JOIN quiz_attempts qa ON sr.student_id = qa.student_id AND qa.submitted_at IS NOT NULL
-       WHERE r.faculty_id = $1
+       WHERE r.faculty_id = $1 ${roomFilter}
        GROUP BY r.room_id, r.room_name, r.room_code
        ORDER BY r.created_at DESC`,
-      [faculty.faculty_id]
+      queryParams
     );
 
     return {

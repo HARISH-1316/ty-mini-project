@@ -211,23 +211,23 @@ const StudentProgress = () => {
                   colorScheme={overallProgress === 100 ? 'green' : 'purple'}
                   size="lg"
                   borderRadius="full"
-                  bg="slate.950"
+                  bg="border.primary"
                 />
               </Box>
             </VStack>
 
-            <Box p={4} bg="slate.900" borderRadius="2xl" border="1px solid" borderColor="slate.700" textAlign="center">
-              <Text color="gray.400" fontSize="xs" fontWeight="bold" textTransform="uppercase">
+            <Box p={4} bg="bg.surface" borderRadius="2xl" border="1px solid" borderColor="border.primary" textAlign="center">
+              <Text color="text.secondary" fontSize="xs" fontWeight="bold" textTransform="uppercase">
                 Time Invested
               </Text>
               <HStack justify="center" spacing={2} my={2}>
-                <Icon as={TimeIcon} color="cyan.400" w={6} h={6} />
-                <Text fontSize="3xl" fontWeight="bold" color="cyan.300">
+                <Icon as={TimeIcon} color="brand.500" w={6} h={6} />
+                <Text fontSize="3xl" fontWeight="bold" color="brand.500">
                   {totalTimeSpent}
                 </Text>
-                <Text fontSize="sm" color="gray.400">mins</Text>
+                <Text fontSize="sm" color="text.secondary">mins</Text>
               </HStack>
-              <Text color="gray.400" fontSize="xs">Active learning, quiz & coding time</Text>
+              <Text color="text.secondary" fontSize="xs">Active learning, quiz & coding time</Text>
             </Box>
           </SimpleGrid>
         </CardBody>
@@ -235,12 +235,12 @@ const StudentProgress = () => {
 
       {/* Metric Breakdown Cards */}
       <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody p={5}>
             <Stat>
-              <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">TOPICS COMPLETED</StatLabel>
-              <StatNumber color="purple.300" fontSize="2xl" mt={1}>
-                {completedTopicsCount} <Text as="span" fontSize="lg" color="gray.500">/ {totalTopicsCount}</Text>
+              <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">TOPICS COMPLETED</StatLabel>
+              <StatNumber color="accent.primary" fontSize="2xl" mt={1}>
+                {completedTopicsCount} <Text as="span" fontSize="lg" color="text.muted">/ {totalTopicsCount}</Text>
               </StatNumber>
               <Progress
                 value={totalTopicsCount > 0 ? (completedTopicsCount / totalTopicsCount) * 100 : 0}
@@ -253,12 +253,12 @@ const StudentProgress = () => {
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody p={5}>
             <Stat>
-              <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">SUBTOPICS MASTERED</StatLabel>
-              <StatNumber color="cyan.300" fontSize="2xl" mt={1}>
-                {completedSubtopicsCount} <Text as="span" fontSize="lg" color="gray.500">/ {totalSubtopicsCount}</Text>
+              <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">SUBTOPICS MASTERED</StatLabel>
+              <StatNumber color="brand.500" fontSize="2xl" mt={1}>
+                {completedSubtopicsCount} <Text as="span" fontSize="lg" color="text.muted">/ {totalSubtopicsCount}</Text>
               </StatNumber>
               <Progress
                 value={totalSubtopicsCount > 0 ? (completedSubtopicsCount / totalSubtopicsCount) * 100 : 0}
@@ -271,12 +271,12 @@ const StudentProgress = () => {
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody p={5}>
             <Stat>
-              <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">QUIZZES PASSED</StatLabel>
-              <StatNumber color="emerald.300" fontSize="2xl" mt={1}>
-                {completedQuizzesCount} <Text as="span" fontSize="lg" color="gray.500">/ {totalQuizzesCount}</Text>
+              <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">QUIZZES PASSED</StatLabel>
+              <StatNumber color="green.500" fontSize="2xl" mt={1}>
+                {completedQuizzesCount} <Text as="span" fontSize="lg" color="text.muted">/ {totalQuizzesCount}</Text>
               </StatNumber>
               <Progress
                 value={totalQuizzesCount > 0 ? (completedQuizzesCount / totalQuizzesCount) * 100 : 0}
@@ -289,12 +289,12 @@ const StudentProgress = () => {
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody p={5}>
             <Stat>
-              <StatLabel color="gray.400" fontSize="xs" fontWeight="bold">CODING ASSESSMENTS</StatLabel>
-              <StatNumber color="amber.300" fontSize="2xl" mt={1}>
-                {completedAssessmentsCount} <Text as="span" fontSize="lg" color="gray.500">/ {Math.max(1, totalAssessmentsCount)}</Text>
+              <StatLabel color="text.secondary" fontSize="xs" fontWeight="bold">CODING ASSESSMENTS</StatLabel>
+              <StatNumber color="amber.500" fontSize="2xl" mt={1}>
+                {completedAssessmentsCount} <Text as="span" fontSize="lg" color="text.muted">/ {Math.max(1, totalAssessmentsCount)}</Text>
               </StatNumber>
               <Progress
                 value={totalAssessmentsCount > 0 ? (completedAssessmentsCount / totalAssessmentsCount) * 100 : 0}
@@ -398,40 +398,40 @@ const StudentProgress = () => {
                 <AccordionIcon color="gray.400" />
               </AccordionButton>
 
-              <AccordionPanel pb={6} px={6} pt={2} bg="slate.850" borderTop="1px solid" borderColor="slate.700">
+              <AccordionPanel pb={6} px={6} pt={2} bg="bg.surface" borderTop="1px solid" borderColor="border.primary">
                 <VStack spacing={6} align="stretch">
-                  {/* Topic Quizzes & Assessment Summary Bar */}
+                   {/* Topic Quizzes & Assessment Summary Bar */}
                   <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} pt={2}>
-                    <Box p={4} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.750">
-                      <Text fontSize="xs" color="gray.400" fontWeight="bold" textTransform="uppercase">
+                    <Box p={4} bg="bg.card" borderRadius="lg" border="1px solid" borderColor="border.primary">
+                      <Text fontSize="xs" color="text.secondary" fontWeight="bold" textTransform="uppercase">
                         Prerequisite Quiz
                       </Text>
                       <Box mt={2}>
                         {getQuizStatusBadge(tp.prereqStatus, tp.prereqScore, tp.prereqTotal)}
                       </Box>
                       {tp.prereqAttemptsCount > 0 && (
-                        <Text fontSize="xs" color="gray.500" mt={1}>
+                        <Text fontSize="xs" color="text.muted" mt={1}>
                           {tp.prereqAttemptsCount} attempt(s) recorded
                         </Text>
                       )}
                     </Box>
 
-                    <Box p={4} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.750">
-                      <Text fontSize="xs" color="gray.400" fontWeight="bold" textTransform="uppercase">
+                    <Box p={4} bg="bg.card" borderRadius="lg" border="1px solid" borderColor="border.primary">
+                      <Text fontSize="xs" color="text.secondary" fontWeight="bold" textTransform="uppercase">
                         Final Topic Quiz
                       </Text>
                       <Box mt={2}>
                         {getQuizStatusBadge(tp.finalQuizStatus, tp.finalQuizScore, tp.finalQuizTotal)}
                       </Box>
                       {tp.finalAttemptsCount > 0 && (
-                        <Text fontSize="xs" color="gray.500" mt={1}>
+                        <Text fontSize="xs" color="text.muted" mt={1}>
                           {tp.finalAttemptsCount} attempt(s) recorded
                         </Text>
                       )}
                     </Box>
 
-                    <Box p={4} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.750">
-                      <Text fontSize="xs" color="gray.400" fontWeight="bold" textTransform="uppercase">
+                    <Box p={4} bg="bg.card" borderRadius="lg" border="1px solid" borderColor="border.primary">
+                      <Text fontSize="xs" color="text.secondary" fontWeight="bold" textTransform="uppercase">
                         Topic Coding Assessment
                       </Text>
                       <Box mt={2}>

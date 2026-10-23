@@ -473,6 +473,7 @@ CREATE TABLE IF NOT EXISTS la_selected_questions (
     lab_question_id INT NOT NULL
         REFERENCES lab_coding_questions(lab_question_id) ON DELETE CASCADE,
     question_order INT NOT NULL DEFAULT 1,
+    marks INT NOT NULL DEFAULT 10,
     UNIQUE(lab_id, lab_question_id)
 );
 
@@ -486,6 +487,7 @@ CREATE TABLE IF NOT EXISTS la_student_allocations (
     lab_question_id INT NOT NULL
         REFERENCES lab_coding_questions(lab_question_id) ON DELETE CASCADE,
     question_order INT NOT NULL,
+    marks INT NOT NULL DEFAULT 10,
     is_manual BOOLEAN NOT NULL DEFAULT FALSE,
     allocated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(lab_id, student_id, lab_question_id)
@@ -531,6 +533,7 @@ CREATE TABLE IF NOT EXISTS la_question_submissions (
     passed_test_cases INT NOT NULL DEFAULT 0,
     total_test_cases INT NOT NULL DEFAULT 0,
     marks_obtained INT NOT NULL DEFAULT 0,
+    max_marks INT NOT NULL DEFAULT 10,
     submitted_at TIMESTAMPTZ,
     UNIQUE(attempt_id, lab_question_id)
 );

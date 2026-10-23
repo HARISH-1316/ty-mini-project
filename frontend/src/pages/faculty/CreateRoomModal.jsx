@@ -21,11 +21,18 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { createRoomApi } from '../../api/roomApi';
 
 const CreateRoomModal = ({ isOpen, onClose, onRoomCreated }) => {
   const toast = useToast();
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
+
   const [formData, setFormData] = useState({ room_name: '', description: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -63,55 +70,55 @@ const CreateRoomModal = ({ isOpen, onClose, onRoomCreated }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
       <ModalOverlay backdropFilter="blur(4px)" />
-      <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white">
-        <ModalHeader>Create New Virtual Lab Room</ModalHeader>
+      <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor}>
+        <ModalHeader color={textColor}>Create New Virtual Lab Room</ModalHeader>
         <ModalCloseButton />
         <form onSubmit={handleSubmit}>
           <ModalBody pb={6}>
             <VStack spacing={4} align="stretch">
               {error && (
-                <Alert status="error" borderRadius="lg" bg="red.900" color="red.200">
-                  <AlertIcon color="red.300" />
+                <Alert status="error" borderRadius="lg">
+                  <AlertIcon />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
               <FormControl isRequired>
-                <FormLabel color="gray.300">Room Name</FormLabel>
+                <FormLabel color={textColor} fontSize="sm" fontWeight="600">Room Name</FormLabel>
                 <Input
                   placeholder="e.g. Data Structures & Algorithms Lab"
                   value={formData.room_name}
                   onChange={(e) => setFormData({ ...formData, room_name: e.target.value })}
-                  bg="slate.900"
-                  borderColor="slate.700"
-                  color="white"
-                  _focus={{ borderColor: 'purple.400' }}
+                  bg={surfaceBg}
+                  borderColor={cardBorder}
+                  color={textColor}
+                  _placeholder={{ color: mutedText }}
                 />
               </FormControl>
 
               <FormControl>
-                <FormLabel color="gray.300">Description</FormLabel>
+                <FormLabel color={textColor} fontSize="sm" fontWeight="600">Description</FormLabel>
                 <Textarea
                   placeholder="Provide brief lab details, course code, or instructions..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  bg="slate.900"
-                  borderColor="slate.700"
-                  color="white"
+                  bg={surfaceBg}
+                  borderColor={cardBorder}
+                  color={textColor}
+                  _placeholder={{ color: mutedText }}
                   rows={3}
-                  _focus={{ borderColor: 'purple.400' }}
                 />
               </FormControl>
             </VStack>
           </ModalBody>
 
           <ModalFooter gap={3}>
-            <Button variant="ghost" colorScheme="gray" onClick={onClose} isDisabled={isLoading}>
+            <Button variant="ghost" onClick={onClose} isDisabled={isLoading}>
               Cancel
             </Button>
             <Button
               type="submit"
-              colorScheme="purple"
+              colorScheme="brand"
               isLoading={isLoading}
               loadingText="Creating..."
             >

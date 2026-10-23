@@ -143,11 +143,13 @@ const CreateLabAssessment = () => {
   const [totalEligible, setTotalEligible] = useState(0);
   const [availableQuestions, setAvailableQuestions] = useState([]);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
+  const [questionMarksMap, setQuestionMarksMap] = useState({});
   const [previewQuestion, setPreviewQuestion] = useState(null);
 
   // MCQ state
   const [availableMcqs, setAvailableMcqs] = useState([]);
   const [selectedMcqIds, setSelectedMcqIds] = useState([]);
+  const [mcqMarksMap, setMcqMarksMap] = useState({});
   const [previewMcq, setPreviewMcq] = useState(null);
   const [mcqSearch, setMcqSearch] = useState('');
   const [mcqTopicFilter, setMcqTopicFilter] = useState('all');
@@ -215,9 +217,19 @@ const CreateLabAssessment = () => {
       // Selected questions for Mode A
       const preSelected = (labData?.selectedQuestions || []).map((q) => q.lab_question_id);
       setSelectedQuestionIds(preSelected);
+      const qMarksMap = {};
+      (labData?.selectedQuestions || []).forEach((q) => {
+        qMarksMap[q.lab_question_id] = q.marks ?? labData?.marks_per_question ?? 10;
+      });
+      setQuestionMarksMap(qMarksMap);
 
       const preSelectedMcqs = (labData?.selectedMcqs || []).map((m) => m.mcq_id);
       setSelectedMcqIds(preSelectedMcqs);
+      const mMarksMap = {};
+      (labData?.selectedMcqs || []).forEach((m) => {
+        mMarksMap[m.mcq_id] = m.marks ?? labData?.marks_per_mcq ?? 2;
+      });
+      setMcqMarksMap(mMarksMap);
 
       // Existing manual allocations for Mode C
       if (labData?.allocations) {
@@ -317,6 +329,25 @@ const CreateLabAssessment = () => {
         return;
       }
 
+      const selected_questions = editForm.allocation_mode === 'specific'
+        ? qIds.map((id) => ({
+            lab_question_id: id,
+            marks: parseInt(questionMarksMap[id] ?? editForm.marks_per_question ?? 10, 10) || 10,
+          }))
+        : [];
+      const selected_mcqs = editForm.allocation_mode === 'specific'
+        ? selectedMcqIds.map((id) => ({
+            mcq_id: id,
+            marks: parseInt(mcqMarksMap[id] ?? editForm.marks_per_mcq ?? 2, 10) || 2,
+          }))
+        : [];
+
+      const totalCalculatedMarks = editForm.allocation_mode === 'specific'
+        ? selected_questions.reduce((sum, q) => sum + q.marks, 0) +
+          selected_mcqs.reduce((sum, m) => sum + m.marks, 0)
+        : (validCoding * parseInt(editForm.marks_per_question || 10, 10)) +
+          (validMcq * parseInt(editForm.marks_per_mcq || 2, 10));
+
       const payload = {
         ...editForm,
         num_questions: validCoding + validMcq,
@@ -324,10 +355,13 @@ const CreateLabAssessment = () => {
         num_mcq_questions: validMcq,
         marks_per_question: parseInt(editForm.marks_per_question || 10, 10),
         marks_per_mcq: parseInt(editForm.marks_per_mcq || 2, 10),
+        total_marks: totalCalculatedMarks,
         start_time: toUtcIsoString(editForm.start_time),
         end_time: toUtcIsoString(editForm.end_time),
         allocation_mode: editForm.allocation_mode,
+        selected_questions,
         selected_question_ids: editForm.allocation_mode === 'specific' ? qIds : [],
+        selected_mcqs,
         selected_mcq_ids: editForm.allocation_mode === 'specific' ? selectedMcqIds : [],
         manual_allocations: editForm.allocation_mode === 'hybrid' ? manualAllocations : [],
       };
@@ -512,14 +546,16 @@ const CreateLabAssessment = () => {
 
   const isQuestionSufficient = numReq > 0 && isCodingSufficient && isMcqSufficient;
 
-  // Selected questions objects and total marks calculation
-  const selectedQuestionObjects = availableQuestions.filter((q) =>
-    selectedQuestionIds.includes(q.lab_question_id)
-  );
-  const totalSelectedMarks = selectedQuestionObjects.reduce(
-    (acc, q) => acc + (q.marks || DIFFICULTY_MARKS[q.difficulty] || 10),
+  // Selected questions objects and authoritative total marks calculation
+  const totalSelectedCodingMarks = selectedQuestionIds.reduce(
+    (acc, id) => acc + (parseInt(questionMarksMap[id] ?? editForm.marks_per_question ?? 10, 10) || 10),
     0
   );
+  const totalSelectedMcqMarks = selectedMcqIds.reduce(
+    (acc, id) => acc + (parseInt(mcqMarksMap[id] ?? editForm.marks_per_mcq ?? 2, 10) || 2),
+    0
+  );
+  const totalSelectedMarks = totalSelectedCodingMarks + totalSelectedMcqMarks;
 
   if (isLoading) {
     return (
@@ -1065,6 +1101,34 @@ const CreateLabAssessment = () => {
                                         <Text fontSize="xs" color={mutedText} noOfLines={2}>
                                           {q.problem_statement}
                                         </Text>
+                                        {isSelected && (
+                                          <HStack spacing={2} align="center" mt={2} onClick={(e) => e.stopPropagation()}>
+                                            <Text fontSize="xs" fontWeight="700" color={textColor}>
+                                              Assessment Marks:
+                                            </Text>
+                                            <NumberInput
+                                              size="xs"
+                                              maxW="85px"
+                                              min={1}
+                                              max={100}
+                                              value={questionMarksMap[q.lab_question_id] ?? editForm.marks_per_question ?? 10}
+                                              onChange={(_, val) => {
+                                                const num = isNaN(val) ? 10 : val;
+                                                setQuestionMarksMap((prev) => ({ ...prev, [q.lab_question_id]: num }));
+                                              }}
+                                              isDisabled={!isDraft}
+                                            >
+                                              <NumberInputField bg={cardBg} borderColor={cardBorder} />
+                                              <NumberInputStepper>
+                                                <NumberIncrementStepper />
+                                                <NumberDecrementStepper />
+                                              </NumberInputStepper>
+                                            </NumberInput>
+                                            <Text fontSize="10px" color={mutedText}>
+                                              (Overrides question bank marks)
+                                            </Text>
+                                          </HStack>
+                                        )}
                                       </VStack>
                                     </HStack>
 
@@ -1203,6 +1267,34 @@ const CreateLabAssessment = () => {
                                           <Text fontSize="2xs" color={mutedText} fontStyle="italic" pt={1}>
                                             💡 Explanation: {m.explanation}
                                           </Text>
+                                        )}
+                                        {isSelected && (
+                                          <HStack spacing={2} align="center" mt={2} onClick={(e) => e.stopPropagation()}>
+                                            <Text fontSize="xs" fontWeight="700" color={textColor}>
+                                              Assessment Marks:
+                                            </Text>
+                                            <NumberInput
+                                              size="xs"
+                                              maxW="85px"
+                                              min={1}
+                                              max={50}
+                                              value={mcqMarksMap[m.mcq_id] ?? editForm.marks_per_mcq ?? 2}
+                                              onChange={(_, val) => {
+                                                const num = isNaN(val) ? 2 : val;
+                                                setMcqMarksMap((prev) => ({ ...prev, [m.mcq_id]: num }));
+                                              }}
+                                              isDisabled={!isDraft}
+                                            >
+                                              <NumberInputField bg={cardBg} borderColor={cardBorder} />
+                                              <NumberInputStepper>
+                                                <NumberIncrementStepper />
+                                                <NumberDecrementStepper />
+                                              </NumberInputStepper>
+                                            </NumberInput>
+                                            <Text fontSize="10px" color={mutedText}>
+                                              (Authoritative assessment marks)
+                                            </Text>
+                                          </HStack>
                                         )}
                                       </VStack>
                                     </HStack>

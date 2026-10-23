@@ -59,11 +59,11 @@ const QuizResult = ({
   return (
     <VStack spacing={8} align="stretch" w="full" maxW="4xl" mx="auto" pb={8}>
       {/* ── Main Result Summary Card ──────────────────── */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="2xl" overflow="hidden" boxShadow="2xl">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" borderRadius="2xl" overflow="hidden" boxShadow="md">
         {/* Top Banner */}
         <Box
           p={6}
-          bg={isPass ? 'accent.soft' : 'red.900'}
+          bg={isPass ? 'green.600' : 'red.600'}
           borderBottom="1px solid"
           borderColor="border.primary"
         >
@@ -74,19 +74,20 @@ const QuizResult = ({
                   as={isPass ? CheckCircleIcon : WarningIcon}
                   w={6}
                   h={6}
-                  color={isPass ? 'emerald.400' : 'red.400'}
+                  color="white"
                 />
                 <Heading size="md" color="white">
                   Quiz Result
                 </Heading>
               </HStack>
-              <Text color="gray.300" fontSize="sm">
+              <Text color="whiteAlpha.900" fontSize="sm">
                 {quizTitle}
               </Text>
             </VStack>
 
             <Badge
-              colorScheme={isPass ? 'green' : 'red'}
+              bg="white"
+              color={isPass ? 'green.800' : 'red.800'}
               fontSize="sm"
               px={4}
               py={1.5}
@@ -109,10 +110,10 @@ const QuizResult = ({
               align="center"
               gap={6}
               p={6}
-              bg="slate.900"
+              bg="bg.surface"
               borderRadius="xl"
               border="1px solid"
-              borderColor="slate.700"
+              borderColor="border.primary"
             >
               {/* Circular percentage */}
               <VStack spacing={2}>
@@ -120,31 +121,31 @@ const QuizResult = ({
                   value={percentage}
                   size="120px"
                   thickness="10px"
-                  color={isPass ? 'green.400' : 'red.400'}
-                  trackColor="slate.800"
+                  color={isPass ? 'green.500' : 'red.500'}
+                  trackColor="border.primary"
                 >
-                  <CircularProgressLabel color="white" fontWeight="bold" fontSize="xl">
+                  <CircularProgressLabel color="text.primary" fontWeight="bold" fontSize="xl">
                     {Math.round(percentage)}%
                   </CircularProgressLabel>
                 </CircularProgress>
-                <Text color="gray.400" fontSize="xs" fontWeight="medium" textTransform="uppercase">
+                <Text color="text.secondary" fontSize="xs" fontWeight="medium" textTransform="uppercase">
                   Percentage
                 </Text>
               </VStack>
 
               {/* Marks text */}
               <VStack align={{ base: 'center', md: 'start' }} spacing={1}>
-                <Text color="gray.400" fontSize="xs" textTransform="uppercase" letterSpacing="wider">
+                <Text color="text.secondary" fontSize="xs" textTransform="uppercase" letterSpacing="wider">
                   Score
                 </Text>
-                <Heading size="2xl" color={isPass ? 'emerald.300' : 'red.300'}>
-                  {score} <Text as="span" fontSize="lg" color="gray.500">/ {totalMarks}</Text>
+                <Heading size="2xl" color={isPass ? 'green.500' : 'red.500'}>
+                  {score} <Text as="span" fontSize="lg" color="text.muted">/ {totalMarks}</Text>
                 </Heading>
                 <HStack spacing={2} pt={1}>
                   <Badge colorScheme={isPass ? 'green' : 'red'} fontSize="xs" px={2} py={0.5}>
                     {statusLabel}
                   </Badge>
-                  <Text color="gray.400" fontSize="xs">
+                  <Text color="text.secondary" fontSize="xs">
                     {isPass
                       ? 'Great work! You have met the passing threshold.'
                       : 'Review the questions below and try again to improve.'}
@@ -155,39 +156,39 @@ const QuizResult = ({
 
             {/* Detailed Metrics Breakdown */}
             <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
-              <Card bg="slate.900" borderColor="emerald.900" borderWidth="1px" p={2}>
+              <Card bg="bg.surface" borderColor="green.500" borderWidth="1px" p={2}>
                 <CardBody p={3} textAlign="center">
                   <HStack justify="center" spacing={2} mb={1}>
-                    <Icon as={CheckIcon} color="emerald.400" />
-                    <Text color="emerald.400" fontSize="2xl" fontWeight="bold">
+                    <Icon as={CheckIcon} color="green.500" />
+                    <Text color="green.500" fontSize="2xl" fontWeight="bold">
                       {correctAnswers}
                     </Text>
                   </HStack>
-                  <Text color="gray.400" fontSize="xs">Correct Answers</Text>
+                  <Text color="text.secondary" fontSize="xs">Correct Answers</Text>
                 </CardBody>
               </Card>
 
-              <Card bg="slate.900" borderColor="red.900" borderWidth="1px" p={2}>
+              <Card bg="bg.surface" borderColor="red.500" borderWidth="1px" p={2}>
                 <CardBody p={3} textAlign="center">
                   <HStack justify="center" spacing={2} mb={1}>
-                    <Icon as={CloseIcon} color="red.400" w={3} h={3} />
-                    <Text color="red.400" fontSize="2xl" fontWeight="bold">
+                    <Icon as={CloseIcon} color="red.500" w={3} h={3} />
+                    <Text color="red.500" fontSize="2xl" fontWeight="bold">
                       {incorrectAnswers}
                     </Text>
                   </HStack>
-                  <Text color="gray.400" fontSize="xs">Incorrect Answers</Text>
+                  <Text color="text.secondary" fontSize="xs">Incorrect Answers</Text>
                 </CardBody>
               </Card>
 
-              <Card bg="slate.900" borderColor="slate.700" borderWidth="1px" p={2}>
+              <Card bg="bg.surface" borderColor="border.primary" borderWidth="1px" p={2}>
                 <CardBody p={3} textAlign="center">
                   <HStack justify="center" spacing={2} mb={1}>
-                    <Icon as={QuestionOutlineIcon} color="amber.400" />
-                    <Text color="gray.300" fontSize="2xl" fontWeight="bold">
+                    <Icon as={QuestionOutlineIcon} color="amber.500" />
+                    <Text color="text.primary" fontSize="2xl" fontWeight="bold">
                       {unanswered}
                     </Text>
                   </HStack>
-                  <Text color="gray.400" fontSize="xs">Unanswered</Text>
+                  <Text color="text.secondary" fontSize="xs">Unanswered</Text>
                 </CardBody>
               </Card>
             </SimpleGrid>
@@ -198,9 +199,9 @@ const QuizResult = ({
                 <Button
                   leftIcon={<RepeatIcon />}
                   variant="outline"
-                  borderColor="slate.600"
-                  color="white"
-                  _hover={{ bg: 'slate.700' }}
+                  borderColor="border.primary"
+                  color="text.primary"
+                  _hover={{ bg: 'bg.secondary' }}
                   onClick={onRetake}
                 >
                   Retake Quiz
@@ -225,7 +226,7 @@ const QuizResult = ({
       {answers && answers.length > 0 && (
         <VStack spacing={4} align="stretch">
           <Flex justify="space-between" align="center" px={1}>
-            <Heading size="md" color="white">
+            <Heading size="md" color="text.primary">
               Answer Review & Explanations
             </Heading>
             <Tag size="sm" colorScheme="purple">
@@ -241,9 +242,9 @@ const QuizResult = ({
               return (
                 <Card
                   key={item.questionId || index}
-                  bg="slate.800"
+                  bg="bg.card"
                   borderColor={
-                    isCorrect ? 'emerald.600' : hasAnswered ? 'red.600' : 'slate.600'
+                    isCorrect ? 'green.500' : hasAnswered ? 'red.500' : 'border.primary'
                   }
                   borderWidth="1px"
                   borderRadius="xl"
@@ -254,13 +255,13 @@ const QuizResult = ({
                     p={4}
                     bg={
                       isCorrect
-                        ? 'rgba(6, 78, 59, 0.3)'
+                        ? 'rgba(16, 185, 129, 0.1)'
                         : hasAnswered
-                        ? 'rgba(127, 29, 29, 0.3)'
-                        : 'slate.900'
+                        ? 'rgba(239, 68, 68, 0.1)'
+                        : 'bg.surface'
                     }
                     borderBottom="1px solid"
-                    borderColor="slate.700"
+                    borderColor="border.primary"
                   >
                     <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
                       <HStack spacing={3}>
@@ -292,7 +293,7 @@ const QuizResult = ({
                   <CardBody p={5}>
                     <VStack align="stretch" spacing={4}>
                       {/* Question Text */}
-                      <Text color="white" fontSize="md" fontWeight="medium">
+                      <Text color="text.primary" fontSize="md" fontWeight="medium">
                         {item.questionText}
                       </Text>
 
@@ -304,13 +305,13 @@ const QuizResult = ({
                             const isStudentPick = item.selectedOption === optKey;
                             const isCorrectPick = item.correctOption === optKey;
 
-                            let optBg = 'slate.900';
-                            let optBorder = 'slate.700';
+                            let optBg = 'bg.surface';
+                            let optBorder = 'border.primary';
                             let optBadgeScheme = 'gray';
 
                             if (isCorrectPick) {
                               optBg = 'rgba(16, 185, 129, 0.15)';
-                              optBorder = 'emerald.500';
+                              optBorder = 'green.500';
                               optBadgeScheme = 'green';
                             } else if (isStudentPick && !isCorrect) {
                               optBg = 'rgba(239, 68, 68, 0.15)';
@@ -332,7 +333,7 @@ const QuizResult = ({
                                     <Badge colorScheme={optBadgeScheme} px={2} py={0.5} borderRadius="md">
                                       {optKey}
                                     </Badge>
-                                    <Text color={isCorrectPick ? 'emerald.200' : isStudentPick ? 'red.200' : 'gray.300'} fontSize="sm">
+                                    <Text color="text.primary" fontSize="sm" fontWeight={isCorrectPick || isStudentPick ? 'semibold' : 'normal'}>
                                       {optText}
                                     </Text>
                                   </HStack>
@@ -357,17 +358,17 @@ const QuizResult = ({
                       )}
 
                       {/* Summary Footnote for Question */}
-                      <Divider borderColor="slate.700" />
-                      <HStack justify="space-between" fontSize="xs" color="gray.400" wrap="wrap">
+                      <Divider borderColor="border.primary" />
+                      <HStack justify="space-between" fontSize="xs" color="text.secondary" wrap="wrap">
                         <Text>
                           Your Answer:{' '}
-                          <Text as="span" fontWeight="bold" color={isCorrect ? 'emerald.300' : 'red.300'}>
+                          <Text as="span" fontWeight="bold" color={isCorrect ? 'green.500' : 'red.500'}>
                             {item.selectedOption ? item.selectedOption : 'None (Unanswered)'}
                           </Text>
                         </Text>
                         <Text>
                           Correct Answer:{' '}
-                          <Text as="span" fontWeight="bold" color="emerald.300">
+                          <Text as="span" fontWeight="bold" color="green.500">
                             {item.correctOption}
                           </Text>
                         </Text>

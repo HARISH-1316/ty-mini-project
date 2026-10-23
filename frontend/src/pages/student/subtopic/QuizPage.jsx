@@ -147,49 +147,49 @@ const QuizPage = () => {
   return (
     <VStack spacing={6} align="stretch" w="full">
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">
+        <Heading size="lg" color="text.primary">
           {subtopic?.title} — Practice Quiz
         </Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Text color="text.secondary" fontSize="sm">
           Evaluate your understanding of the concepts covered in this subtopic.
         </Text>
       </VStack>
 
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody p={{ base: 6, md: 8 }}>
           <VStack spacing={6} textAlign="center" py={4} maxW="lg" mx="auto">
-            <Box p={4} borderRadius="full" bg="slate.900" display="inline-flex">
-              <Icon as={CheckCircleIcon} w={8} h={8} color="purple.400" />
+            <Box p={4} borderRadius="full" bg="bg.surface" border="1px solid" borderColor="border.primary" display="inline-flex">
+              <Icon as={CheckCircleIcon} w={8} h={8} color="brand.500" />
             </Box>
 
             <VStack spacing={2}>
-              <Heading size="md" color="white">
+              <Heading size="md" color="text.primary">
                 Concept Review Quiz
               </Heading>
-              <Text color="gray.400" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 Complete this multiple-choice quiz to solidify your understanding.
               </Text>
             </VStack>
 
             {/* Metrics */}
             <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} w="full">
-              <Box p={4} bg="slate.900" borderRadius="xl" border="1px solid" borderColor="slate.700">
-                <Text fontSize="2xl" fontWeight="bold" color="purple.300">
+              <Box p={4} bg="bg.surface" borderRadius="xl" border="1px solid" borderColor="border.primary">
+                <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
                   {questionsCount}
                 </Text>
-                <Text fontSize="xs" color="gray.400">Total Questions</Text>
+                <Text fontSize="xs" color="text.secondary">Total Questions</Text>
               </Box>
-              <Box p={4} bg="slate.900" borderRadius="xl" border="1px solid" borderColor="slate.700">
-                <Text fontSize="2xl" fontWeight="bold" color="cyan.300">
+              <Box p={4} bg="bg.surface" borderRadius="xl" border="1px solid" borderColor="border.primary">
+                <Text fontSize="2xl" fontWeight="bold" color="brand.500">
                   {totalMarks}
                 </Text>
-                <Text fontSize="xs" color="gray.400">Total Marks</Text>
+                <Text fontSize="xs" color="text.secondary">Total Marks</Text>
               </Box>
-              <Box p={4} bg="slate.900" borderRadius="xl" border="1px solid" borderColor="slate.700">
-                <Text fontSize="2xl" fontWeight="bold" color="amber.300">
+              <Box p={4} bg="bg.surface" borderRadius="xl" border="1px solid" borderColor="border.primary">
+                <Text fontSize="2xl" fontWeight="bold" color="brand.600">
                   {timeLimit} mins
                 </Text>
-                <Text fontSize="xs" color="gray.400">Time Limit</Text>
+                <Text fontSize="xs" color="text.secondary">Time Limit</Text>
               </Box>
             </SimpleGrid>
 

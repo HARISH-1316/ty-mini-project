@@ -15,25 +15,25 @@ const Forbidden = () => {
       <VStack
         spacing={6}
         maxW="lg"
-        bg="slate.800"
+        bg="bg.card"
         p={8}
         borderRadius="2xl"
         borderWidth="1px"
-        borderColor="slate.700"
-        boxShadow="2xl"
+        borderColor="border.primary"
+        boxShadow="xl"
       >
-        <WarningTwoIcon w={16} h={16} color="red.400" />
+        <WarningTwoIcon w={16} h={16} color="red.500" />
         <Heading size="lg" color="text.primary">403 — Access Denied</Heading>
         <Text color="text.secondary" fontSize="sm">
           You do not have permission to access this section or resource.
         </Text>
 
         {user && (
-          <Box p={4} bg="slate.900" borderRadius="xl" borderWidth="1px" borderColor="slate.700" w="full">
-            <Text color="gray.400" fontSize="xs" mb={1}>Current Session:</Text>
+          <Box p={4} bg="bg.surface" borderRadius="xl" borderWidth="1px" borderColor="border.primary" w="full">
+            <Text color="text.secondary" fontSize="xs" mb={1}>Current Session:</Text>
             <Text color="text.primary" fontWeight="bold" fontSize="sm">{user.name} ({user.email})</Text>
             <HStack justify="center" mt={2}>
-              <Text color="gray.400" fontSize="xs">Assigned Role:</Text>
+              <Text color="text.secondary" fontSize="xs">Assigned Role:</Text>
               <Badge colorScheme={user.role === 'student' ? 'orange' : user.role === 'faculty' ? 'brand' : 'red'} textTransform="uppercase">
                 {user.role}
               </Badge>
@@ -43,13 +43,13 @@ const Forbidden = () => {
 
         <HStack spacing={4} pt={2}>
           {user?.role === 'student' && (
-            <Button as={RouterLink} to="/student/lab-assessments" colorScheme="brand">
-              Go to Student Assessments
+            <Button as={RouterLink} to="/student/rooms" colorScheme="brand">
+              Go to My Rooms
             </Button>
           )}
           {user?.role === 'faculty' && (
-            <Button as={RouterLink} to="/faculty/lab-assessments" colorScheme="brand">
-              Go to Faculty Assessments
+            <Button as={RouterLink} to="/faculty/rooms" colorScheme="brand">
+              Go to My Rooms
             </Button>
           )}
           <Button variant="outline" colorScheme="gray" color="text.secondary" onClick={logout}>

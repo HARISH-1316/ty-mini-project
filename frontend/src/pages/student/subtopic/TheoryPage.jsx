@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,9 +13,27 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
+  Button,
+  HStack,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  FormControl,
+  FormLabel,
+  Textarea,
+  Input,
+  useDisclosure,
+  useToast,
   useColorModeValue,
 } from '@chakra-ui/react';
+import { EditIcon } from '@chakra-ui/icons';
 import { trackSubtopicActivityApi } from '../../../api/progressApi';
+import { upsertSubtopicContentApi } from '../../../api/topicApi';
+import useAuth from '../../../hooks/useAuth';
 
 /**
  * Extracts a YouTube embed URL from various YouTube URL formats.
@@ -288,10 +306,28 @@ const MarkdownRenderer = ({ content }) => {
 
 const TheoryPage = () => {
   const { subtopic, content, subtopicId } = useOutletContext();
+  const { user } = useAuth();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const theory = content?.theory || subtopic?.content?.theory;
-  const videoUrl = content?.video_explanation_url || subtopic?.content?.video_explanation_url;
-  const embedUrl = getYouTubeEmbedUrl(videoUrl);
+  const isPrivileged = user?.role === 'faculty' || user?.role === 'admin';
+
+  const [currentTheory, setCurrentTheory] = useState(content?.theory || subtopic?.content?.theory || '');
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(content?.video_explanation_url || subtopic?.content?.video_explanation_url || '');
+  const [editTheory, setEditTheory] = useState(currentTheory);
+  const [editVideoUrl, setEditVideoUrl] = useState(currentVideoUrl);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const th = content?.theory || subtopic?.content?.theory || '';
+    const vid = content?.video_explanation_url || subtopic?.content?.video_explanation_url || '';
+    setCurrentTheory(th);
+    setCurrentVideoUrl(vid);
+    setEditTheory(th);
+    setEditVideoUrl(vid);
+  }, [content, subtopic]);
+
+  const embedUrl = getYouTubeEmbedUrl(currentVideoUrl);
 
   // Theme tokens
   const cardBg = useColorModeValue('#FFFFFF', '#202321');
@@ -302,21 +338,84 @@ const TheoryPage = () => {
   const alertBg = useColorModeValue('#F5F7F5', '#171918');
   const alertBorderColor = useColorModeValue('#DDE5DD', '#3B423C');
 
+  const sId = subtopicId || subtopic?.subtopic_id;
+
   useEffect(() => {
-    if (subtopicId || subtopic?.subtopic_id) {
-      trackSubtopicActivityApi(subtopicId || subtopic.subtopic_id, {
+    if (sId) {
+      trackSubtopicActivityApi(sId, {
         theory_viewed: true,
         video_viewed: !!embedUrl,
         time_spent: 2,
       }).catch(() => {});
     }
-  }, [subtopicId, subtopic, embedUrl]);
+  }, [sId, embedUrl]);
+
+  const handleOpenEdit = () => {
+    setEditTheory(currentTheory);
+    setEditVideoUrl(currentVideoUrl);
+    onOpen();
+  };
+
+  const handleSaveTheory = async () => {
+    if (!editTheory.trim()) {
+      toast({
+        title: 'Theory content cannot be empty',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await upsertSubtopicContentApi(sId, {
+        aim: subtopic?.content?.aim || subtopic?.title || 'Aim for this subtopic',
+        theory: editTheory.trim(),
+        video_explanation_url: editVideoUrl.trim() || null,
+      });
+
+      setCurrentTheory(editTheory.trim());
+      setCurrentVideoUrl(editVideoUrl.trim());
+      toast({
+        title: 'Theory Content Saved! 📖',
+        description: 'Changes have been updated and are visible immediately.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onClose();
+    } catch (err) {
+      toast({
+        title: 'Failed to update theory content',
+        description: err.response?.data?.message || 'Error persisting changes.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <VStack spacing={6} align="stretch" w="full">
-      <Heading size="lg" color={titleColor}>
-        {subtopic.title}
-      </Heading>
+      <HStack justify="space-between" align="center" wrap="wrap" gap={3}>
+        <Heading size="lg" color={titleColor}>
+          {subtopic.title}
+        </Heading>
+        {isPrivileged && (
+          <Button
+            leftIcon={<EditIcon />}
+            colorScheme="brand"
+            variant="solid"
+            size="sm"
+            onClick={handleOpenEdit}
+          >
+            Edit Theory Content
+          </Button>
+        )}
+      </HStack>
 
       {/* Theory Content — Markdown Rendered */}
       <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px">
@@ -326,8 +425,8 @@ const TheoryPage = () => {
               📖 Theory &amp; Concepts
             </Heading>
 
-            {theory ? (
-              <MarkdownRenderer content={theory} />
+            {currentTheory ? (
+              <MarkdownRenderer content={currentTheory} />
             ) : (
               <Text color={emptyTextColor} fontSize="sm" fontStyle="italic">
                 Theory content for this subtopic has not been published yet. Please check back later.
@@ -374,6 +473,66 @@ const TheoryPage = () => {
           </VStack>
         </CardBody>
       </Card>
+
+      {/* Faculty Edit Theory Modal */}
+      {isPrivileged && (
+        <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
+          <ModalOverlay backdropFilter="blur(4px)" />
+          <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px">
+            <ModalHeader color={titleColor}>
+              Edit Theory — {subtopic.title}
+            </ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <VStack spacing={4} align="stretch">
+                <FormControl isRequired>
+                  <FormLabel fontSize="sm" fontWeight="600" color={titleColor}>
+                    Theory Content (Markdown Supported)
+                  </FormLabel>
+                  <Textarea
+                    rows={14}
+                    fontFamily="mono"
+                    fontSize="sm"
+                    value={editTheory}
+                    onChange={(e) => setEditTheory(e.target.value)}
+                    bg={alertBg}
+                    borderColor={cardBorder}
+                    color={titleColor}
+                    placeholder="Enter comprehensive markdown theory content..."
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel fontSize="sm" fontWeight="600" color={titleColor}>
+                    YouTube Video URL (Optional)
+                  </FormLabel>
+                  <Input
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={editVideoUrl}
+                    onChange={(e) => setEditVideoUrl(e.target.value)}
+                    bg={alertBg}
+                    borderColor={cardBorder}
+                    color={titleColor}
+                  />
+                </FormControl>
+              </VStack>
+            </ModalBody>
+            <ModalFooter gap={3}>
+              <Button variant="ghost" onClick={onClose} isDisabled={isSaving}>
+                Cancel
+              </Button>
+              <Button
+                colorScheme="brand"
+                onClick={handleSaveTheory}
+                isLoading={isSaving}
+                loadingText="Saving..."
+              >
+                Save Changes
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
     </VStack>
   );
 };

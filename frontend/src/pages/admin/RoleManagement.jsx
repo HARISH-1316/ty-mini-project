@@ -130,49 +130,49 @@ const RoleManagement = () => {
   return (
     <VStack spacing={6} align="stretch" w="full">
       <VStack align="start" spacing={1}>
-        <Heading size="lg" color="white">Admin Role Control Panel</Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Heading size="lg" color="text.primary">Admin Role Control Panel</Heading>
+        <Text color="text.secondary" fontSize="sm">
           Assign or update user roles (student ↔ faculty ↔ admin)
         </Text>
       </VStack>
 
       <InputGroup maxW="md">
         <InputLeftElement pointerEvents="none">
-          <SearchIcon color="gray.500" />
+          <SearchIcon color="text.secondary" />
         </InputLeftElement>
         <Input
           placeholder="Search user by name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          bg="slate.800"
-          borderColor="slate.700"
-          color="white"
-          _placeholder={{ color: 'gray.500' }}
-          _focus={{ borderColor: 'purple.400' }}
+          bg="bg.surface"
+          borderColor="border.primary"
+          color="text.primary"
+          _placeholder={{ color: 'text.muted' }}
+          _focus={{ borderColor: 'brand.500' }}
         />
       </InputGroup>
 
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" overflow="hidden">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" overflow="hidden">
         <CardBody p={0}>
           <Box overflowX="auto">
             <Table variant="simple" size="sm">
-              <Thead bg="slate.900">
+              <Thead bg="bg.surface">
                 <Tr>
-                  <Th color="gray.400">User ID</Th>
-                  <Th color="gray.400">Name</Th>
-                  <Th color="gray.400">Email</Th>
-                  <Th color="gray.400">Current Role</Th>
-                  <Th color="gray.400">Change Role To</Th>
+                  <Th color="text.secondary">User ID</Th>
+                  <Th color="text.secondary">Name</Th>
+                  <Th color="text.secondary">Email</Th>
+                  <Th color="text.secondary">Current Role</Th>
+                  <Th color="text.secondary">Change Role To</Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {filteredUsers.map((u) => {
                   const isSelf = parseInt(u.user_id, 10) === parseInt(currentUser?.user_id, 10);
                   return (
-                    <Tr key={u.user_id} _hover={{ bg: 'slate.700' }}>
-                      <Td color="gray.400" fontWeight="bold">#{u.user_id}</Td>
-                      <Td color="white" fontWeight="medium">{u.name}</Td>
-                      <Td color="gray.300">{u.email}</Td>
+                    <Tr key={u.user_id} _hover={{ bg: 'bg.secondary' }}>
+                      <Td color="text.secondary" fontWeight="bold">#{u.user_id}</Td>
+                      <Td color="text.primary" fontWeight="medium">{u.name}</Td>
+                      <Td color="text.secondary">{u.email}</Td>
                       <Td>
                         <Badge colorScheme={roleBadgeColor[u.role] || 'gray'} textTransform="uppercase">
                           {u.role}
@@ -183,8 +183,8 @@ const RoleManagement = () => {
                           size="xs"
                           value={u.role}
                           onChange={(e) => handleSelectRole(u, e.target.value)}
-                          bg="slate.900"
-                          borderColor="slate.600"
+                          bg="bg.surface"
+                          borderColor="border.primary"
                           color="accent.primary"
                           fontWeight="bold"
                           isDisabled={isSelf}

@@ -76,6 +76,8 @@ router.put('/subtopics/:subtopicId', isAuthenticated, isFacultyOrAdmin, updateSu
 router.delete('/subtopics/:subtopicId', isAuthenticated, isFacultyOrAdmin, deleteSubtopic);
 router.get('/subtopics/:subtopicId/content', isAuthenticated, getSubtopicContent);
 router.put('/subtopics/:subtopicId/content', isAuthenticated, isFacultyOrAdmin, upsertSubtopicContent);
+router.patch('/subtopics/:subtopicId/content/publish', isAuthenticated, isFacultyOrAdmin, publishSubtopicContent);
+router.patch('/subtopics/:subtopicId/content/unpublish', isAuthenticated, isFacultyOrAdmin, unpublishSubtopicContent);
 
 // ── Topic Collection Routes ────────────────────
 router.get('/', isAuthenticated, getAllTopics);

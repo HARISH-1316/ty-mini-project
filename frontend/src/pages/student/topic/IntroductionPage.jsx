@@ -72,7 +72,7 @@ const IntroductionPage = () => {
   return (
     <VStack spacing={6} align="stretch" w="full">
       {/* Topic Header */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody>
           <VStack align="start" spacing={4}>
             <Flex
@@ -82,12 +82,12 @@ const IntroductionPage = () => {
               direction={{ base: 'column', sm: 'row' }}
               gap={2}
             >
-              <Heading size="lg" color="white">
+              <Heading size="lg" color="text.primary">
                 {topic.title}
               </Heading>
               {user?.role === 'student' && (
                 <HStack spacing={2}>
-                  <Text color="gray.400" fontSize="xs">Status:</Text>
+                  <Text color="text.secondary" fontSize="xs">Status:</Text>
                   <Badge
                     colorScheme={
                       progressStatus === 'Completed' ? 'green' :
@@ -100,16 +100,16 @@ const IntroductionPage = () => {
               )}
             </Flex>
 
-            <Text color="gray.300" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               {topic.description || 'Comprehensive learning module for engineering laboratory experiments.'}
             </Text>
 
             {/* Progress Actions (Student only) */}
             {user?.role === 'student' && (
               <>
-                <Divider borderColor="slate.700" />
+                <Divider borderColor="border.primary" />
                 <Flex justify="space-between" w="full" align="center">
-                  <Text color="gray.400" fontSize="xs">Mark Learning Progress:</Text>
+                  <Text color="text.secondary" fontSize="xs">Mark Learning Progress:</Text>
                   <HStack spacing={2}>
                     <Button
                       size="xs"
@@ -137,13 +137,13 @@ const IntroductionPage = () => {
       </Card>
 
       {/* Introduction Content */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody>
           <VStack align="start" spacing={4}>
-            <Heading size="md" color="cyan.300">
+            <Heading size="md" color="accent.primary">
               Introduction
             </Heading>
-            <Text color="gray.200" fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
+            <Text color="text.primary" fontSize="sm" whiteSpace="pre-wrap" lineHeight="tall">
               {topic.description || 'This topic provides a structured learning experience covering key concepts, practical experiments, and assessments. Navigate through the sections using the sidebar to explore all available materials.'}
             </Text>
           </VStack>
@@ -151,27 +151,27 @@ const IntroductionPage = () => {
       </Card>
 
       {/* Learning Overview */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody>
           <VStack align="start" spacing={4}>
-            <Heading size="md" color="cyan.300">
+            <Heading size="md" color="accent.primary">
               What You'll Learn
             </Heading>
-            <Box w="full" p={4} bg="slate.900" borderRadius="lg">
+            <Box w="full" p={4} bg="bg.surface" borderRadius="lg" border="1px solid" borderColor="border.primary">
               <VStack align="start" spacing={2}>
-                <Text color="gray.300" fontSize="sm">
+                <Text color="text.secondary" fontSize="sm">
                   📖 Explore theoretical foundations and key concepts
                 </Text>
-                <Text color="gray.300" fontSize="sm">
+                <Text color="text.secondary" fontSize="sm">
                   🎯 Understand the aims and objectives of each experiment
                 </Text>
-                <Text color="gray.300" fontSize="sm">
+                <Text color="text.secondary" fontSize="sm">
                   🧪 Work through structured subtopics and lab materials
                 </Text>
-                <Text color="gray.300" fontSize="sm">
+                <Text color="text.secondary" fontSize="sm">
                   📝 Attempt quizzes and assessments to test your understanding
                 </Text>
-                <Text color="gray.300" fontSize="sm">
+                <Text color="text.secondary" fontSize="sm">
                   🎥 Watch video explanations for enhanced learning
                 </Text>
               </VStack>
@@ -181,17 +181,17 @@ const IntroductionPage = () => {
       </Card>
 
       {/* Topic Stats */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody>
           <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
             <VStack align="start" spacing={1}>
-              <Text color="gray.500" fontSize="xs" textTransform="uppercase">Subtopics</Text>
-              <Text color="purple.300" fontSize="lg" fontWeight="bold">
+              <Text color="text.secondary" fontSize="xs" textTransform="uppercase">Subtopics</Text>
+              <Text color="accent.primary" fontSize="lg" fontWeight="bold">
                 {topic.subtopics?.length || 0}
               </Text>
             </VStack>
             <VStack align="start" spacing={1}>
-              <Text color="gray.500" fontSize="xs" textTransform="uppercase">Status</Text>
+              <Text color="text.secondary" fontSize="xs" textTransform="uppercase">Status</Text>
               <Badge
                 colorScheme={
                   progressStatus === 'Completed' ? 'green' :

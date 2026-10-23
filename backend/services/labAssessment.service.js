@@ -59,6 +59,24 @@ const shuffleArray = (arr) => {
   return arr;
 };
 
+const sanitizeForStudent = (rawCoding = [], rawMcqs = []) => {
+  const safeCoding = rawCoding.map(({ marks, ...rest }) => rest);
+  const safeMcqs = rawMcqs.map(({ marks, ...rest }) => rest);
+  const safeUnified = [
+    ...safeCoding.map((q, idx) => ({
+      ...q,
+      question_type: 'coding',
+      display_number: idx + 1,
+    })),
+    ...safeMcqs.map((m, idx) => ({
+      ...m,
+      question_type: 'mcq',
+      display_number: safeCoding.length + idx + 1,
+    })),
+  ];
+  return { safeCoding, safeMcqs, safeUnified };
+};
+
 const ensureFaculty = async (userId, role) => {
   let faculty = await FacultyModel.findByUserId(userId);
   if (!faculty) {
@@ -116,7 +134,9 @@ const LabAssessmentService = {
       room_id,
       topic_ids,
       selected_question_ids,
+      selected_questions,
       selected_mcq_ids,
+      selected_mcqs,
       manual_allocations,
       ...labData
     } = data;
@@ -150,14 +170,29 @@ const LabAssessmentService = {
       }
     }
 
-    // Link selected coding questions (for specific question mode)
-    if (Array.isArray(selected_question_ids) && selected_question_ids.length > 0) {
-      await LaSelectedQuestionModel.bulkSet(lab.lab_id, selected_question_ids);
+    // Link selected coding questions (authoritative assessment-configured marks)
+    const codingToSet = selected_questions || selected_question_ids;
+    if (Array.isArray(codingToSet) && codingToSet.length > 0) {
+      await LaSelectedQuestionModel.bulkSet(lab.lab_id, codingToSet, null, labData.marks_per_question || 10);
     }
 
-    // Link selected MCQs (for specific question mode)
-    if (Array.isArray(selected_mcq_ids) && selected_mcq_ids.length > 0) {
-      await LaSelectedMcqModel.bulkSet(lab.lab_id, selected_mcq_ids);
+    // Link selected MCQs (authoritative assessment-configured marks)
+    const mcqsToSet = selected_mcqs || selected_mcq_ids;
+    if (Array.isArray(mcqsToSet) && mcqsToSet.length > 0) {
+      await LaSelectedMcqModel.bulkSet(lab.lab_id, mcqsToSet, null, labData.marks_per_mcq || 2);
+    }
+
+    // Recalculate total_marks if Mode A so faculty marks are authoritative
+    if (lab.allocation_mode === 'specific') {
+      const selQ = await LaSelectedQuestionModel.findByLabId(lab.lab_id);
+      const selM = await LaSelectedMcqModel.findByLabId(lab.lab_id);
+      const totalQMarks = selQ.reduce((sum, q) => sum + (parseInt(q.marks, 10) || 10), 0);
+      const totalMMarks = selM.reduce((sum, m) => sum + (parseInt(m.marks, 10) || 2), 0);
+      const authoritativeTotal = totalQMarks + totalMMarks;
+      if (authoritativeTotal > 0) {
+        await query('UPDATE lab_assessment SET total_marks = $1 WHERE lab_id = $2', [authoritativeTotal, lab.lab_id]);
+        lab.total_marks = authoritativeTotal;
+      }
     }
 
     // Set manual allocations for Mode C (hybrid) or Mode B (manual)
@@ -279,7 +314,9 @@ const LabAssessmentService = {
     const {
       topic_ids,
       selected_question_ids,
+      selected_questions,
       selected_mcq_ids,
+      selected_mcqs,
       manual_allocations,
       ...updateData
     } = data;
@@ -291,12 +328,29 @@ const LabAssessmentService = {
         await LaAssessmentTopicModel.create({ lab_id: labId, topic_id: tId });
       }
     }
-    if (Array.isArray(selected_question_ids)) {
-      await LaSelectedQuestionModel.bulkSet(labId, selected_question_ids);
+    const codingToSet = selected_questions || selected_question_ids;
+    if (Array.isArray(codingToSet)) {
+      await LaSelectedQuestionModel.bulkSet(labId, codingToSet, null, updateData.marks_per_question || lab.marks_per_question || 10);
     }
-    if (Array.isArray(selected_mcq_ids)) {
-      await LaSelectedMcqModel.bulkSet(labId, selected_mcq_ids);
+    const mcqsToSet = selected_mcqs || selected_mcq_ids;
+    if (Array.isArray(mcqsToSet)) {
+      await LaSelectedMcqModel.bulkSet(labId, mcqsToSet, null, updateData.marks_per_mcq || lab.marks_per_mcq || 2);
     }
+
+    // Recalculate total_marks if Mode A so faculty marks are authoritative
+    const effectiveAllocMode = updateData.allocation_mode || lab.allocation_mode;
+    if (effectiveAllocMode === 'specific') {
+      const selQ = await LaSelectedQuestionModel.findByLabId(labId);
+      const selM = await LaSelectedMcqModel.findByLabId(labId);
+      const totalQMarks = selQ.reduce((sum, q) => sum + (parseInt(q.marks, 10) || 10), 0);
+      const totalMMarks = selM.reduce((sum, m) => sum + (parseInt(m.marks, 10) || 2), 0);
+      const authoritativeTotal = totalQMarks + totalMMarks;
+      if (authoritativeTotal > 0) {
+        await query('UPDATE lab_assessment SET total_marks = $1 WHERE lab_id = $2', [authoritativeTotal, labId]);
+        if (updated) updated.total_marks = authoritativeTotal;
+      }
+    }
+
     if (Array.isArray(manual_allocations)) {
       const client = await getClient();
       try {
@@ -306,11 +360,19 @@ const LabAssessmentService = {
         for (const ma of manual_allocations) {
           const codingIds = ma.coding_question_ids || ma.question_ids;
           if (Array.isArray(codingIds) && codingIds.length > 0) {
-            const qItems = codingIds.map((qid, idx) => ({ lab_question_id: qid, question_order: idx + 1 }));
+            const qItems = codingIds.map((qid, idx) => ({
+              lab_question_id: typeof qid === 'object' ? qid.lab_question_id : qid,
+              question_order: idx + 1,
+              marks: typeof qid === 'object' && qid.marks ? qid.marks : (updateData.marks_per_question || lab.marks_per_question || 10),
+            }));
             await LaAllocationModel.bulkCreate(client, ma.student_id, labId, qItems, true);
           }
           if (Array.isArray(ma.mcq_ids) && ma.mcq_ids.length > 0) {
-            const mItems = ma.mcq_ids.map((mid, idx) => ({ mcq_id: mid, question_order: idx + 1 }));
+            const mItems = ma.mcq_ids.map((mid, idx) => ({
+              mcq_id: typeof mid === 'object' ? mid.mcq_id : mid,
+              question_order: idx + 1,
+              marks: typeof mid === 'object' && mid.marks ? mid.marks : (updateData.marks_per_mcq || lab.marks_per_mcq || 2),
+            }));
             await LaMcqAllocationModel.bulkCreate(client, ma.student_id, labId, mItems, true);
           }
         }
@@ -901,30 +963,19 @@ const LabAssessmentService = {
       }
       const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
 
-      const unifiedQuestions = [
-        ...codingQuestions.map((q, idx) => ({
-          ...q,
-          question_type: 'coding',
-          display_number: idx + 1,
-        })),
-        ...mcqs.map((m, idx) => ({
-          ...m,
-          question_type: 'mcq',
-          display_number: codingQuestions.length + idx + 1,
-        })),
-      ];
+      const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
 
       if (attempt.status === 'submitted') {
-        return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false, alreadySubmitted: true };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true };
       }
       if (attempt.status === 'timed_out' || attempt.status === 'expired') {
-        return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false, alreadySubmitted: true, isExpired: true };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, isExpired: true };
       }
       if (new Date(attempt.effective_deadline) <= now) {
         await LaAttemptModel.expireTimedOut();
-        return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false, alreadySubmitted: true, isExpired: true };
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false, alreadySubmitted: true, isExpired: true };
       }
-      return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: false };
+      return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false };
     }
 
     if (now < startTime) {
@@ -953,7 +1004,8 @@ const LabAssessmentService = {
         attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
         const codingQuestions = await LaAllocationModel.findByStudentAndLab(student.student_id, labId);
         const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
-        return { attempt, questions: [...codingQuestions, ...mcqs], isNew: false };
+        const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
+        return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: false };
       }
 
       // ── 1. Coding Question Allocation ──
@@ -961,7 +1013,7 @@ const LabAssessmentService = {
       const numCoding = lab.num_coding_questions !== undefined ? lab.num_coding_questions : (lab.num_questions || 0);
 
       const manualCoding = await client.query(
-        `SELECT lcq.lab_question_id, lcq.marks, lcq.difficulty, lcq.title, a.question_order
+        `SELECT lcq.lab_question_id, COALESCE(a.marks, 10) AS marks, lcq.difficulty, lcq.title, a.question_order
          FROM la_student_allocations a
          JOIN lab_coding_questions lcq ON a.lab_question_id = lcq.lab_question_id
          WHERE a.lab_id = $1 AND a.student_id = $2 AND a.is_manual = TRUE
@@ -984,7 +1036,10 @@ const LabAssessmentService = {
           // PER-STUDENT RANDOM SAMPLING WITHOUT REPLACEMENT (FISHER-YATES)
           const poolCopy = [...specificSelected];
           shuffleArray(poolCopy);
-          selectedCoding = poolCopy.slice(0, numCoding);
+          selectedCoding = poolCopy.slice(0, numCoding).map((q) => ({
+            ...q,
+            marks: parseInt(q.marks, 10) || lab.marks_per_question || 10,
+          }));
         } else {
           const pool = await LaAllocationModel.getEligiblePool(labId, client);
           if (pool.length < numCoding) {
@@ -996,7 +1051,10 @@ const LabAssessmentService = {
           }
           const poolCopy = [...pool];
           shuffleArray(poolCopy);
-          selectedCoding = poolCopy.slice(0, numCoding);
+          selectedCoding = poolCopy.slice(0, numCoding).map((q) => ({
+            ...q,
+            marks: lab.marks_per_question || 10,
+          }));
         }
       }
 
@@ -1014,7 +1072,10 @@ const LabAssessmentService = {
       );
 
       if (manualMcqs.rows.length > 0) {
-        selectedMcqs = manualMcqs.rows;
+        selectedMcqs = manualMcqs.rows.map(m => ({
+          ...m,
+          marks: parseInt(m.marks, 10) || lab.marks_per_mcq || 2,
+        }));
       } else if (numMcqs > 0) {
         if (lab.allocation_mode === 'specific') {
           const specificMcqs = await LaSelectedMcqModel.findByLabId(labId, client);
@@ -1028,7 +1089,10 @@ const LabAssessmentService = {
           // PER-STUDENT RANDOM SAMPLING WITHOUT REPLACEMENT (FISHER-YATES)
           const poolCopy = [...specificMcqs];
           shuffleArray(poolCopy);
-          selectedMcqs = poolCopy.slice(0, numMcqs);
+          selectedMcqs = poolCopy.slice(0, numMcqs).map((m) => ({
+            ...m,
+            marks: parseInt(m.marks, 10) || lab.marks_per_mcq || 2,
+          }));
         } else {
           const pool = await LaMcqAllocationModel.getEligiblePool(labId, client);
           if (pool.length < numMcqs) {
@@ -1040,13 +1104,16 @@ const LabAssessmentService = {
           }
           const poolCopy = [...pool];
           shuffleArray(poolCopy);
-          selectedMcqs = poolCopy.slice(0, numMcqs);
+          selectedMcqs = poolCopy.slice(0, numMcqs).map((m) => ({
+            ...m,
+            marks: lab.marks_per_mcq || 2,
+          }));
         }
       }
 
       // Calculate total marks based on assigned coding questions + assigned MCQs
-      const codingMarksTotal = selectedCoding.reduce((sum, q) => sum + (q.marks || lab.marks_per_question || 10), 0);
-      const mcqMarksTotal = selectedMcqs.reduce((sum, m) => sum + (m.marks || lab.marks_per_mcq || 2), 0);
+      const codingMarksTotal = selectedCoding.reduce((sum, q) => sum + (parseInt(q.marks, 10) || lab.marks_per_question || 10), 0);
+      const mcqMarksTotal = selectedMcqs.reduce((sum, m) => sum + (parseInt(m.marks, 10) || lab.marks_per_mcq || 2), 0);
       const calculatedTotalMarks = codingMarksTotal + mcqMarksTotal;
 
       const deadlineFromDuration = new Date(now.getTime() + lab.duration * 60 * 1000);
@@ -1067,8 +1134,13 @@ const LabAssessmentService = {
           client,
           student.student_id,
           labId,
-          selectedCoding.map((q, i) => ({ lab_question_id: q.lab_question_id, question_order: i + 1 })),
-          false
+          selectedCoding.map((q, i) => ({
+            lab_question_id: q.lab_question_id,
+            question_order: i + 1,
+            marks: q.marks || lab.marks_per_question || 10,
+          })),
+          false,
+          lab.marks_per_question || 10
         );
       }
 
@@ -1078,8 +1150,13 @@ const LabAssessmentService = {
           client,
           student.student_id,
           labId,
-          selectedMcqs.map((m, i) => ({ mcq_id: m.mcq_id, question_order: i + 1 })),
-          false
+          selectedMcqs.map((m, i) => ({
+            mcq_id: m.mcq_id,
+            question_order: i + 1,
+            marks: m.marks || lab.marks_per_mcq || 2,
+          })),
+          false,
+          lab.marks_per_mcq || 2
         );
       }
 
@@ -1091,20 +1168,8 @@ const LabAssessmentService = {
       }
       const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
 
-      const unifiedQuestions = [
-        ...codingQuestions.map((q, idx) => ({
-          ...q,
-          question_type: 'coding',
-          display_number: idx + 1,
-        })),
-        ...mcqs.map((m, idx) => ({
-          ...m,
-          question_type: 'mcq',
-          display_number: codingQuestions.length + idx + 1,
-        })),
-      ];
-
-      return { attempt, questions: unifiedQuestions, codingQuestions, mcqs, isNew: true };
+      const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
+      return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs, isNew: true };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -1134,20 +1199,8 @@ const LabAssessmentService = {
     }
     const mcqs = await LaMcqAllocationModel.findByStudentAndLab(student.student_id, labId);
 
-    const unifiedQuestions = [
-      ...codingQuestions.map((q, idx) => ({
-        ...q,
-        question_type: 'coding',
-        display_number: idx + 1,
-      })),
-      ...mcqs.map((m, idx) => ({
-        ...m,
-        question_type: 'mcq',
-        display_number: codingQuestions.length + idx + 1,
-      })),
-    ];
-
-    return { attempt, questions: unifiedQuestions, codingQuestions, mcqs };
+    const { safeCoding, safeMcqs, safeUnified } = sanitizeForStudent(codingQuestions, mcqs);
+    return { attempt, questions: safeUnified, codingQuestions: safeCoding, mcqs: safeMcqs };
   },
 
   /**
@@ -1190,7 +1243,8 @@ const LabAssessmentService = {
 
     const cleanOption = (selected_option || '').toUpperCase();
     const isCorrect = cleanOption === mcq.correct_option.toUpperCase();
-    const marksObtained = isCorrect ? (mcq.marks || 2) : 0;
+    const mcqMarks = allocatedMcq.marks !== undefined && allocatedMcq.marks !== null ? allocatedMcq.marks : (mcq.marks || 2);
+    const marksObtained = isCorrect ? mcqMarks : 0;
 
     const submission = await LaMcqSubmissionModel.upsert({
       attempt_id: attempt.attempt_id,
@@ -1202,8 +1256,8 @@ const LabAssessmentService = {
 
     // Update dynamic attempt total marks obtained
     const codingMarks = await LaQuestionSubmissionModel.getTotalObtainedMarks(attempt.attempt_id);
-    const mcqMarks = await LaMcqSubmissionModel.getTotalMarksForAttempt(attempt.attempt_id);
-    await LaAttemptModel.updateMarks(attempt.attempt_id, codingMarks + mcqMarks);
+    const totalMcqMarks = await LaMcqSubmissionModel.getTotalMarksForAttempt(attempt.attempt_id);
+    await LaAttemptModel.updateMarks(attempt.attempt_id, codingMarks + totalMcqMarks);
 
     // Shield evaluation correctness from active attempt response
     return {
@@ -1302,6 +1356,12 @@ const LabAssessmentService = {
     if (!question) { const e = new Error('Question not found.'); e.statusCode = 404; throw e; }
     const allTestCases = await LabTestCaseModel.findByQuestionId(parseInt(lab_question_id, 10));
 
+    // Authoritative assessment-specific question marks
+    const lab = await LabAssessmentModel.findById(labId);
+    const questionMarks = questionInAllocation.marks !== undefined && questionInAllocation.marks !== null
+      ? questionInAllocation.marks
+      : (lab?.marks_per_question || question.marks || 10);
+
     const workspace = createWorkspace();
     let evalStatus = 'wrong_answer';
     let passedCount = 0;
@@ -1324,7 +1384,6 @@ const LabAssessmentService = {
             ? 'Compilation timed out.'
             : (compileResult.stderr || compileResult.stdout || 'Compilation error.');
           // Save submission
-          const marks = question.marks || lab_question_id * 0; // 0 for compilation error
           await LaQuestionSubmissionModel.upsert({
             attempt_id: attempt.attempt_id,
             lab_question_id: parseInt(lab_question_id, 10),
@@ -1334,14 +1393,16 @@ const LabAssessmentService = {
             passed_test_cases: 0,
             total_test_cases: totalCount,
             marks_obtained: 0,
+            max_marks: questionMarks,
           });
-          // Recalculate total marks
+          // Recalculate total marks (coding + mcq)
           const totalObtained = await LaQuestionSubmissionModel.getTotalObtainedMarks(attempt.attempt_id);
-          await LaAttemptModel.updateMarks(attempt.attempt_id, totalObtained);
+          const totalMcqMarks = await LaMcqSubmissionModel.getTotalMarksForAttempt(attempt.attempt_id);
+          await LaAttemptModel.updateMarks(attempt.attempt_id, totalObtained + totalMcqMarks);
           return {
             status: 'compilation_error',
             score: 0,
-            totalMarks: question.marks || 10,
+            totalMarks: questionMarks,
             passedTestCases: 0,
             totalTestCases: totalCount,
             error: compError,
@@ -1424,7 +1485,6 @@ const LabAssessmentService = {
     }
 
     // Calculate marks
-    const questionMarks = question.marks || lab_question_id * 0 + 10;
     const marksObtained = totalCount > 0
       ? Math.round((passedCount / totalCount) * questionMarks)
       : 0;
@@ -1439,11 +1499,13 @@ const LabAssessmentService = {
       passed_test_cases: passedCount,
       total_test_cases: totalCount,
       marks_obtained: marksObtained,
+      max_marks: questionMarks,
     });
 
-    // Recalculate total obtained marks
+    // Recalculate total obtained marks (coding + mcq)
     const totalObtained = await LaQuestionSubmissionModel.getTotalObtainedMarks(attempt.attempt_id);
-    await LaAttemptModel.updateMarks(attempt.attempt_id, totalObtained);
+    const totalMcqMarks = await LaMcqSubmissionModel.getTotalMarksForAttempt(attempt.attempt_id);
+    await LaAttemptModel.updateMarks(attempt.attempt_id, totalObtained + totalMcqMarks);
 
     return {
       status: evalStatus,
@@ -1529,6 +1591,7 @@ const LabAssessmentService = {
       submission: subMap[q.lab_question_id] || {
         status: 'not_attempted',
         marks_obtained: 0,
+        max_marks: q.marks || 10,
         passed_test_cases: 0,
         total_test_cases: 0,
       },

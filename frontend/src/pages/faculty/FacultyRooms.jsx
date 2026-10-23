@@ -18,6 +18,7 @@ import {
   useDisclosure,
   useToast,
   Flex,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { AddIcon, ArrowForwardIcon, DeleteIcon } from '@chakra-ui/icons';
 import { getMyRoomsApi, deleteRoomApi } from '../../api/roomApi';
@@ -29,6 +30,11 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 const FacultyRooms = () => {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
 
   const [rooms, setRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,12 +97,12 @@ const FacultyRooms = () => {
     <VStack spacing={6} align="stretch" w="full">
       <Flex justify="space-between" align="center" direction={{ base: 'column', sm: 'row' }} gap={4}>
         <VStack align="start" spacing={1}>
-          <Heading size="lg" color="white">Virtual Lab Rooms</Heading>
-          <Text color="gray.400" fontSize="sm">
-            Manage your virtual laboratories and assign topics
+          <Heading size="lg" color={textColor}>Virtual Lab Rooms</Heading>
+          <Text color={mutedText} fontSize="sm">
+            Manage your virtual laboratories, assessments, and curriculum topics
           </Text>
         </VStack>
-        <Button onClick={onOpen} leftIcon={<AddIcon />} colorScheme="purple">
+        <Button onClick={onOpen} leftIcon={<AddIcon />} colorScheme="brand">
           Create New Room
         </Button>
       </Flex>
@@ -111,18 +117,27 @@ const FacultyRooms = () => {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
           {rooms.map((room) => (
-            <Card key={room.room_id} bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+            <Card
+              key={room.room_id}
+              bg={cardBg}
+              borderColor={cardBorder}
+              borderWidth="1px"
+              borderRadius="xl"
+              boxShadow="sm"
+              transition="all 0.2s"
+              _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
+            >
               <CardBody>
                 <VStack align="start" spacing={4}>
                   <Flex justify="space-between" w="full" align="center">
-                    <Badge colorScheme="purple" fontSize="xs" px={2} py={1} borderRadius="md">
+                    <Badge colorScheme="brand" fontSize="xs" px={2} py={1} borderRadius="md">
                       CODE: {room.room_code}
                     </Badge>
                     <Button
                       size="xs"
                       colorScheme="red"
                       variant="ghost"
-                      icon={<DeleteIcon />}
+                      leftIcon={<DeleteIcon />}
                       onClick={() => {
                         setSelectedRoom(room);
                         setIsDeleteOpen(true);
@@ -132,8 +147,8 @@ const FacultyRooms = () => {
                     </Button>
                   </Flex>
 
-                  <Heading size="md" color="white">{room.room_name}</Heading>
-                  <Text color="gray.400" fontSize="xs" noOfLines={2}>
+                  <Heading size="md" color={textColor}>{room.room_name}</Heading>
+                  <Text color={mutedText} fontSize="xs" noOfLines={2}>
                     {room.description || 'No description provided.'}
                   </Text>
 
@@ -142,11 +157,11 @@ const FacultyRooms = () => {
                     to={`/faculty/rooms/${room.room_id}`}
                     w="full"
                     size="sm"
-                    colorScheme="purple"
-                    variant="outline"
+                    colorScheme="brand"
+                    variant="solid"
                     rightIcon={<ArrowForwardIcon />}
                   >
-                    Manage Room Topics
+                    Open Room Dashboard
                   </Button>
                 </VStack>
               </CardBody>
@@ -161,10 +176,10 @@ const FacultyRooms = () => {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDeleteRoom}
-        title="Delete Room"
-        message={`Are you sure you want to delete "${selectedRoom?.room_name}"?`}
-        confirmText="Delete Room"
-        colorScheme="red"
+        title="Delete Virtual Room"
+        message={`Are you sure you want to permanently delete room "${selectedRoom?.room_name}"? All assigned room topics and student links will be disconnected.`}
+        confirmLabel="Delete Room"
+        confirmColorScheme="red"
         isLoading={isDeleting}
       />
     </VStack>

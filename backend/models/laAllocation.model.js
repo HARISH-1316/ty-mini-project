@@ -1,9 +1,8 @@
 // ──────────────────────────────────────────────
 // LA Student Allocations Model — PostgreSQL Data Access Layer
 // ──────────────────────────────────────────────
-// Persists the random question set assigned to
-// each student for a specific lab assessment.
-// Once saved, it is never regenerated.
+// Persists the question set assigned to each student for a specific lab assessment.
+// Stores immutable assessment-level question marks snapshot.
 // ──────────────────────────────────────────────
 
 import { query } from '../config/database.js';
@@ -24,11 +23,7 @@ const LaAllocationModel = {
 
   /**
    * Retrieve the persisted allocation for a student+lab.
-   * Returns question rows ordered by question_order.
-   * IMPORTANT: difficulty and marks are intentionally excluded from this
-   * student-facing query. Students must not see per-question difficulty
-   * labels or individual marks before or during an assessment.
-   * Hidden test case data is NOT included here (fetched separately).
+   * Returns question rows ordered by question_order with assessment marks snapshot.
    */
   findByStudentAndLab: async (studentId, labId) => {
     const result = await query(
@@ -36,6 +31,7 @@ const LaAllocationModel = {
          a.allocation_id,
          a.question_order,
          a.allocated_at,
+         COALESCE(a.marks, 10) AS marks,
          lcq.lab_question_id,
          lcq.title,
          lcq.problem_statement,
@@ -45,7 +41,6 @@ const LaAllocationModel = {
          lcq.sample_input,
          lcq.sample_output,
          lcq.explanation,
-         -- difficulty and marks intentionally omitted: must not be visible to students
          t.topic_id,
          t.title AS topic_title
        FROM la_student_allocations a
@@ -59,20 +54,24 @@ const LaAllocationModel = {
   },
 
   /**
-   * Bulk-insert an allocation set for a student.
-   * Uses INSERT ... ON CONFLICT DO NOTHING to handle concurrent requests safely.
-   * questions: Array<{ lab_question_id, question_order }>
+   * Bulk-insert an allocation set for a student with assessment-specific marks snapshot.
+   * questions: Array<{ lab_question_id, question_order, marks? }>
    */
-  bulkCreate: async (client, studentId, labId, questions, isManual = false) => {
+  bulkCreate: async (client, studentId, labId, questions, isManual = false, defaultMarks = 10) => {
     const inserted = [];
     for (const q of questions) {
+      const qMarks = q.marks !== undefined
+        ? Math.max(1, parseInt(q.marks, 10) || 10)
+        : Math.max(1, parseInt(defaultMarks, 10) || 10);
+
       const result = await client.query(
         `INSERT INTO la_student_allocations
-           (lab_id, student_id, lab_question_id, question_order, is_manual)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (lab_id, student_id, lab_question_id) DO NOTHING
+           (lab_id, student_id, lab_question_id, question_order, is_manual, marks)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (lab_id, student_id, lab_question_id) DO UPDATE
+         SET marks = EXCLUDED.marks, question_order = EXCLUDED.question_order
          RETURNING *`,
-        [labId, studentId, q.lab_question_id, q.question_order, !!isManual]
+        [labId, studentId, q.lab_question_id, q.question_order, !!isManual, qMarks]
       );
       if (result.rows[0]) inserted.push(result.rows[0]);
     }
@@ -84,7 +83,7 @@ const LaAllocationModel = {
    */
   findAllocationsByLab: async (labId) => {
     const result = await query(
-      `SELECT a.*, s.roll_number, u.name AS student_name, lcq.title AS question_title
+      `SELECT a.*, COALESCE(a.marks, 10) AS marks, s.roll_number, u.name AS student_name, lcq.title AS question_title
        FROM la_student_allocations a
        JOIN student s ON a.student_id = s.student_id
        JOIN users u ON s.user_id = u.user_id
@@ -101,7 +100,7 @@ const LaAllocationModel = {
    */
   findManualForStudent: async (studentId, labId) => {
     const result = await query(
-      `SELECT * FROM la_student_allocations
+      `SELECT *, COALESCE(marks, 10) AS marks FROM la_student_allocations
        WHERE lab_id = $1 AND student_id = $2 AND is_manual = TRUE
        ORDER BY question_order`,
       [labId, studentId]

@@ -88,8 +88,24 @@ const FacultyDashboard = () => {
       >
         <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
           <VStack align="start" spacing={2}>
+            <HStack spacing={2} align="center">
+              <Badge
+                variant="subtle"
+                colorScheme="brand"
+                px={3}
+                py={1}
+                borderRadius="md"
+                fontSize="xs"
+                fontWeight="700"
+                textTransform="uppercase"
+                letterSpacing="wider"
+                cursor="default"
+              >
+                Faculty Workspace
+              </Badge>
+            </HStack>
             <Heading size="lg" color="text.primary">
-              Faculty Workspace — Welcome, {user?.name}! 👋
+              Welcome, {user?.name}! 👋
             </Heading>
             <Text color="text.secondary" fontSize="sm">
               Designation: {user?.profile?.designation || 'Faculty Member'} • Department: {user?.profile?.department || 'Engineering'}

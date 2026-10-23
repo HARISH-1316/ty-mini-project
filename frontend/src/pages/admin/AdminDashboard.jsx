@@ -99,42 +99,42 @@ const AdminDashboard = () => {
 
       {/* Metrics Grid */}
       <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={6}>
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Total Users</StatLabel>
-              <StatNumber color="purple.300" fontSize="3xl">{users.length}</StatNumber>
-              <StatHelpText color="gray.500">Registered platform accounts</StatHelpText>
+              <StatLabel color="text.secondary">Total Users</StatLabel>
+              <StatNumber color="accent.primary" fontSize="3xl">{users.length}</StatNumber>
+              <StatHelpText color="text.muted">Registered platform accounts</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Students</StatLabel>
-              <StatNumber color="emerald.400" fontSize="3xl">{studentCount}</StatNumber>
-              <StatHelpText color="gray.500">Active learners</StatHelpText>
+              <StatLabel color="text.secondary">Students</StatLabel>
+              <StatNumber color="green.500" fontSize="3xl">{studentCount}</StatNumber>
+              <StatHelpText color="text.muted">Active learners</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Faculty Members</StatLabel>
-              <StatNumber color="cyan.400" fontSize="3xl">{facultyCount}</StatNumber>
-              <StatHelpText color="gray.500">Lab instructors</StatHelpText>
+              <StatLabel color="text.secondary">Faculty Members</StatLabel>
+              <StatNumber color="brand.500" fontSize="3xl">{facultyCount}</StatNumber>
+              <StatHelpText color="text.muted">Lab instructors</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.400">Administrators</StatLabel>
-              <StatNumber color="pink.400" fontSize="3xl">{adminCount}</StatNumber>
-              <StatHelpText color="gray.500">System admins</StatHelpText>
+              <StatLabel color="text.secondary">Administrators</StatLabel>
+              <StatNumber color="purple.500" fontSize="3xl">{adminCount}</StatNumber>
+              <StatHelpText color="text.muted">System admins</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -142,28 +142,28 @@ const AdminDashboard = () => {
 
       {/* Navigation Quick Links */}
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" p={4}>
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" p={4}>
           <CardBody>
             <VStack align="start" spacing={3}>
-              <Heading size="md" color="white">User Directory</Heading>
-              <Text color="gray.400" fontSize="sm">
+              <Heading size="md" color="text.primary">User Directory</Heading>
+              <Text color="text.secondary" fontSize="sm">
                 View all registered accounts, emails, registration dates, and user profiles.
               </Text>
-              <Button as={RouterLink} to="/admin/users" size="sm" colorScheme="purple" rightIcon={<ArrowForwardIcon />}>
+              <Button as={RouterLink} to="/admin/users" size="sm" colorScheme="brand" rightIcon={<ArrowForwardIcon />}>
                 View All Users
               </Button>
             </VStack>
           </CardBody>
         </Card>
 
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px" p={4}>
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px" p={4}>
           <CardBody>
             <VStack align="start" spacing={3}>
-              <Heading size="md" color="white">Role Management</Heading>
-              <Text color="gray.400" fontSize="sm">
+              <Heading size="md" color="text.primary">Role Management</Heading>
+              <Text color="text.secondary" fontSize="sm">
                 Update user roles (student ↔ faculty ↔ admin) with transactional profile sync.
               </Text>
-              <Button as={RouterLink} to="/admin/roles" size="sm" colorScheme="purple" rightIcon={<ArrowForwardIcon />}>
+              <Button as={RouterLink} to="/admin/roles" size="sm" colorScheme="brand" rightIcon={<ArrowForwardIcon />}>
                 Manage User Roles
               </Button>
             </VStack>

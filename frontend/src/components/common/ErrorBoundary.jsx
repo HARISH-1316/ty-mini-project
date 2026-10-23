@@ -39,13 +39,13 @@ class ErrorBoundary extends React.Component {
           <VStack
             spacing={6}
             maxW="lg"
-            bg="slate.800"
+            bg="bg.card"
             p={8}
             borderRadius="xl"
             borderWidth="1px"
-            borderColor="slate.700"
+            borderColor="border.primary"
             textAlign="center"
-            boxShadow="2xl"
+            boxShadow="xl"
           >
             <WarningTwoIcon w={16} h={16} color="red.400" />
             <Heading size="lg" color="text.primary">

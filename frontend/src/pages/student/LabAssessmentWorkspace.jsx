@@ -55,6 +55,8 @@ import {
   CheckIcon,
   ArrowForwardIcon,
   RepeatIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from '@chakra-ui/icons';
 import {
   startOrResumeLabApi,
@@ -66,6 +68,7 @@ import {
   submitLabMcqApi,
 } from '../../api/labApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { parseCompilerErrors } from '../../utils/compilerDiagnostics';
 
 const STARTER_TEMPLATES = {
   cpp: `#include <iostream>
@@ -170,6 +173,8 @@ const LabAssessmentWorkspace = () => {
 
   // Per-question state: codeMap[questionId][language]
   const [codeStore, setCodeStore] = useState({});
+  const [langStore, setLangStore] = useState({});
+  const [inputStore, setInputStore] = useState({});
   const [language, setLanguage] = useState('cpp');
   const [customInput, setCustomInput] = useState('');
 
@@ -181,7 +186,108 @@ const LabAssessmentWorkspace = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [runResult, setRunResult] = useState(null);
   const [evalResult, setEvalResult] = useState(null);
+  const [runResultStore, setRunResultStore] = useState({});
+  const [evalResultStore, setEvalResultStore] = useState({});
   const [activeOutputTab, setActiveOutputTab] = useState(0); // 0 = Run, 1 = Eval
+
+  // Fullscreen & Editor Refs
+  const workspaceRef = useRef(null);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Draggable Split Pane (Sliding Window)
+  const defaultSplitPct = 42;
+  const [splitPct, setSplitPct] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wce_lab_split_ratio');
+      const parsed = saved ? parseFloat(saved) : defaultSplitPct;
+      return isNaN(parsed) || parsed < 20 || parsed > 80 ? defaultSplitPct : parsed;
+    } catch {
+      return defaultSplitPct;
+    }
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isConsoleMinimized, setIsConsoleMinimized] = useState(false);
+  const splitContainerRef = useRef(null);
+
+  const triggerEditorLayout = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.layout();
+    }
+  }, []);
+
+  // Split-pane dragging handlers
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handlePointerMove = (e) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+      if (typeof clientX !== 'number') return;
+      const offsetX = clientX - rect.left;
+      const totalWidth = rect.width;
+      if (totalWidth <= 0) return;
+
+      let newPct = (offsetX / totalWidth) * 100;
+      if (newPct < 20) newPct = 20;
+      if (newPct > 80) newPct = 80;
+
+      setSplitPct(newPct);
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+      try {
+        localStorage.setItem('wce_lab_split_ratio', splitPct.toString());
+      } catch {}
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.layout();
+        }
+      }, 60);
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('touchend', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+    };
+  }, [isDragging, splitPct]);
+
+  // Window resize listener to keep Monaco perfectly sized
+  useEffect(() => {
+    const handleResize = () => {
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleSplitterMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleSplitterDoubleClick = () => {
+    setSplitPct(defaultSplitPct);
+    try {
+      localStorage.setItem('wce_lab_split_ratio', defaultSplitPct.toString());
+    } catch {}
+    setTimeout(triggerEditorLayout, 60);
+  };
 
   // Timer
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -190,6 +296,43 @@ const LabAssessmentWorkspace = () => {
   // Submit assessment modal
   const { isOpen: isFinishOpen, onOpen: onFinishOpen, onClose: onFinishClose } = useDisclosure();
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false);
+
+  // Fullscreen change handler
+  useEffect(() => {
+    const handleFsChange = () => {
+      const fs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      setIsFullscreen(fs);
+      setTimeout(() => {
+        editorRef.current?.layout();
+      }, 100);
+    };
+
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const elem = workspaceRef.current;
+    if (!elem) return;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  };
 
   // Anti-cheat clipboard prevention
   const notifyCopyPasteDisabled = () => {
@@ -207,6 +350,9 @@ const LabAssessmentWorkspace = () => {
   };
 
   const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
     // Intercept keyboard shortcuts: Ctrl+C, Ctrl+V, Ctrl+X, Cmd+C, Cmd+V, Cmd+X, Shift+Insert
     editor.onKeyDown((e) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -423,24 +569,39 @@ const LabAssessmentWorkspace = () => {
     }
   };
 
-  // Track previous question ID so we ONLY reset custom input and results when switching to a different question
+  // Track previous question ID so we restore per-question code, inputs, and previous test results
   const prevQIdRef = useRef(null);
 
   useEffect(() => {
     if (currentQId && currentQId !== prevQIdRef.current) {
       prevQIdRef.current = currentQId;
-      if (isCoding && currentQuestion?.sample_input) {
+
+      // Restore custom input for this question
+      if (inputStore[currentQId] !== undefined) {
+        setCustomInput(inputStore[currentQId]);
+      } else if (isCoding && currentQuestion?.sample_input) {
         setCustomInput(currentQuestion.sample_input);
       } else {
         setCustomInput('');
       }
-      setRunResult(null);
-      setEvalResult(null);
-      if (submissionMap[currentQId]?.language) {
-        setLanguage(submissionMap[currentQId].language);
+
+      // Restore past execution results for this question
+      setRunResult(runResultStore[currentQId] || null);
+      setEvalResult(evalResultStore[currentQId] || null);
+
+      // Restore selected language for this question
+      const savedLang = langStore[currentQId] || submissionMap[currentQId]?.language || 'cpp';
+      setLanguage(savedLang);
+
+      // Clear editor diagnostic markers on switch
+      if (monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          monacoRef.current.editor.setModelMarkers(model, 'compiler', []);
+        }
       }
     }
-  }, [currentQId, isCoding, currentQuestion?.sample_input, submissionMap]);
+  }, [currentQId, isCoding, currentQuestion?.sample_input, submissionMap, langStore, inputStore, runResultStore, evalResultStore]);
 
   // Current editor code
   const currentCode =
@@ -450,13 +611,40 @@ const LabAssessmentWorkspace = () => {
 
   const handleCodeChange = (val) => {
     if (!currentQId) return;
+    const newCode = val ?? '';
     setCodeStore((prev) => ({
       ...prev,
       [currentQId]: {
         ...(prev[currentQId] || {}),
-        [language]: val ?? '',
+        [language]: newCode,
       },
     }));
+
+    try {
+      localStorage.setItem(`wce_la_${labId}_code_${currentQId}_${language}`, newCode);
+    } catch {}
+
+    // Clear stale compiler markers as student writes new code
+    if (monacoRef.current && editorRef.current) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        monacoRef.current.editor.setModelMarkers(model, 'compiler', []);
+      }
+    }
+  };
+
+  const handleLanguageChange = (newLang) => {
+    setLanguage(newLang);
+    if (currentQId) {
+      setLangStore((prev) => ({ ...prev, [currentQId]: newLang }));
+    }
+  };
+
+  const handleCustomInputChange = (val) => {
+    setCustomInput(val);
+    if (currentQId) {
+      setInputStore((prev) => ({ ...prev, [currentQId]: val }));
+    }
   };
 
   const handleResetCode = () => {
@@ -477,6 +665,15 @@ const LabAssessmentWorkspace = () => {
     });
   };
 
+  // ── Previous & Next Question Navigation ───────
+  const handlePrevQuestion = () => {
+    setSelectedIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextQuestion = () => {
+    setSelectedIndex((prev) => Math.min(allQuestions.length - 1, prev + 1));
+  };
+
   // ── Run Code (Dry Run) ────────────────────────
   const handleRunCode = async () => {
     if (!currentQId) return;
@@ -491,10 +688,22 @@ const LabAssessmentWorkspace = () => {
         input: customInput,
       });
 
-      setRunResult(res.data?.data || {});
+      const runData = res.data?.data || {};
+      setRunResult(runData);
+      setRunResultStore((prev) => ({ ...prev, [currentQId]: runData }));
+
+      // Set Monaco error markers if there is a compilation error or runtime error
+      if (!runData.success && runData.error && monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          const markers = parseCompilerErrors(runData.error, monacoRef.current);
+          monacoRef.current.editor.setModelMarkers(model, 'compiler', markers);
+        }
+      }
+
       toast({
         title: 'Run Complete',
-        status: res.data?.data?.success ? 'success' : 'warning',
+        status: runData.success ? 'success' : 'warning',
         duration: 2000,
         isClosable: true,
       });
@@ -526,6 +735,16 @@ const LabAssessmentWorkspace = () => {
 
       const evaluation = res.data?.data || {};
       setEvalResult(evaluation);
+      setEvalResultStore((prev) => ({ ...prev, [currentQId]: evaluation }));
+
+      // If compilation error or runtime error during test cases, highlight in editor
+      if (evaluation.error && monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          const markers = parseCompilerErrors(evaluation.error, monacoRef.current);
+          monacoRef.current.editor.setModelMarkers(model, 'compiler', markers);
+        }
+      }
 
       // Update local submissionMap
       setSubmissionMap((prev) => ({
@@ -607,14 +826,38 @@ const LabAssessmentWorkspace = () => {
   const attemptedCount = codingAttemptedCount + mcqAnsweredCount;
 
   return (
-    <VStack spacing={4} align="stretch" w="full" minH="calc(100vh - 100px)">
+    <Flex
+      ref={workspaceRef}
+      direction="column"
+      w="full"
+      h={isFullscreen ? '100vh' : { base: 'auto', lg: 'calc(100vh - 84px)' }}
+      maxH={isFullscreen ? '100vh' : 'none'}
+      minH={isFullscreen ? '100vh' : { base: 'auto', lg: '650px' }}
+      bg={isFullscreen ? surfaceBg : 'transparent'}
+      p={isFullscreen ? 2 : 0}
+      overflow={isFullscreen ? 'hidden' : { base: 'visible', lg: 'hidden' }}
+      boxSizing="border-box"
+      gap={2.5}
+      position="relative"
+    >
+      {/* Global dragging overlay shield to ensure smooth slider operation over Monaco */}
+      {isDragging && (
+        <Box
+          position="fixed"
+          inset={0}
+          zIndex={99999}
+          cursor="col-resize"
+          userSelect="none"
+        />
+      )}
+
       {/* Top Bar: Assessment Title, Timer, Question Navigation, Finish Button */}
-      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" p={4} borderRadius="xl" boxShadow="sm">
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" px={4} py={2} borderRadius="xl" boxShadow="sm" flexShrink={0}>
         <Flex
           justify="space-between"
           align="center"
           direction={{ base: 'column', md: 'row' }}
-          gap={4}
+          gap={3}
         >
           {/* Title & Attempt Info */}
           <VStack align="start" spacing={0}>
@@ -631,8 +874,24 @@ const LabAssessmentWorkspace = () => {
             </Text>
           </VStack>
 
-          {/* Question Navigator Buttons */}
+          {/* Question Navigator with Previous & Next Buttons */}
           <HStack spacing={2} wrap="wrap" justify="center">
+            <Button
+              size="sm"
+              variant="outline"
+              leftIcon={<ChevronLeftIcon />}
+              isDisabled={selectedIndex === 0}
+              onClick={handlePrevQuestion}
+              borderRadius="lg"
+              px={3}
+              fontSize="xs"
+              color={textColor}
+              borderColor={cardBorder}
+              _hover={{ bg: surfaceBg }}
+            >
+              Prev
+            </Button>
+
             {allQuestions.map((q, idx) => {
               const isCurrent = idx === selectedIndex;
               if (q.itemType === 'coding') {
@@ -689,6 +948,22 @@ const LabAssessmentWorkspace = () => {
                 );
               }
             })}
+
+            <Button
+              size="sm"
+              variant="outline"
+              rightIcon={<ChevronRightIcon />}
+              isDisabled={selectedIndex === allQuestions.length - 1}
+              onClick={handleNextQuestion}
+              borderRadius="lg"
+              px={3}
+              fontSize="xs"
+              color={textColor}
+              borderColor={cardBorder}
+              _hover={{ bg: surfaceBg }}
+            >
+              Next
+            </Button>
           </HStack>
 
           {/* Timer and Finish Button */}
@@ -730,23 +1005,43 @@ const LabAssessmentWorkspace = () => {
         </Flex>
       </Card>
 
-      {/* Main Workspace: 2 Columns for Coding, or Single Focused Card for MCQ */}
+      {/* Main Workspace: 2 Sliding Columns for Coding, or Single Focused Card for MCQ */}
       {isCoding ? (
-        <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={4} flex={1}>
-          {/* Left Column: Problem Statement & Test Cases (5 Cols) */}
-          <Box gridColumn={{ lg: 'span 5' }}>
+        <Flex
+          ref={splitContainerRef}
+          flex="1"
+          w="full"
+          minH="0"
+          direction={{ base: 'column', lg: 'row' }}
+          overflow="hidden"
+          position="relative"
+          gap={0}
+        >
+          {/* Left Panel: Problem Statement & Test Cases */}
+          <Box
+            w={{ base: '100%', lg: `${splitPct}%` }}
+            h="100%"
+            minH="0"
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            pr={{ base: 0, lg: 1 }}
+          >
             <Card
               bg={cardBg}
               borderColor={cardBorder}
               borderWidth="1px"
-              h="calc(100vh - 210px)"
-              overflowY="auto"
+              h="100%"
+              display="flex"
+              flexDirection="column"
               borderRadius="xl"
-              p={5}
+              overflow="hidden"
               boxShadow="sm"
             >
-              {currentQuestion ? (
-                <VStack align="stretch" spacing={5}>
+              {/* Scrollable Question Content */}
+              <Box flex="1" minH="0" overflowY="auto" p={4}>
+                {currentQuestion ? (
+                  <VStack align="stretch" spacing={5}>
                   {/* Question Header */}
                   <VStack align="start" spacing={1}>
                     <HStack justify="space-between" w="full">
@@ -888,131 +1183,318 @@ const LabAssessmentWorkspace = () => {
                     </VStack>
                   </Box>
                 )}
-              </VStack>
-            ) : (
-              <Text color={mutedText}>Select a question to view problem description.</Text>
-            )}
-          </Card>
+                  </VStack>
+                ) : (
+                  <Text color={mutedText}>Select a question to view problem description.</Text>
+                )}
+              </Box>
+
+              {/* Fixed Bottom Question Navigation Bar (Docked Below Question Component) */}
+              <Flex
+                justify="space-between"
+                align="center"
+                px={4}
+                py={2.5}
+                bg={surfaceBg}
+                borderTop="1px solid"
+                borderColor={cardBorder}
+                flexShrink={0}
+              >
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<ChevronLeftIcon />}
+                  isDisabled={selectedIndex === 0}
+                  onClick={handlePrevQuestion}
+                  borderRadius="lg"
+                  fontSize="xs"
+                  color={textColor}
+                  borderColor={cardBorder}
+                  _hover={{ bg: cardBg }}
+                >
+                  Previous Question
+                </Button>
+                <Text fontSize="xs" fontWeight="bold" color={mutedText}>
+                  Question {selectedIndex + 1} of {allQuestions.length}
+                </Text>
+                {selectedIndex === allQuestions.length - 1 ? (
+                  <Button
+                    size="sm"
+                    colorScheme="green"
+                    variant="solid"
+                    px={4}
+                    py={1.5}
+                    fontWeight="semibold"
+                    fontSize="xs"
+                    borderRadius="lg"
+                    rightIcon={<CheckCircleIcon boxSize={3.5} />}
+                    onClick={onFinishOpen}
+                  >
+                    Finish Assessment
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    colorScheme="brand"
+                    rightIcon={<ChevronRightIcon />}
+                    onClick={handleNextQuestion}
+                    borderRadius="lg"
+                    fontSize="xs"
+                  >
+                    Next Question
+                  </Button>
+                )}
+              </Flex>
+            </Card>
         </Box>
 
-        {/* Right Column: Code Editor & Output (7 Cols) */}
-        <Box gridColumn={{ lg: 'span 7' }}>
-          <VStack spacing={4} align="stretch" h="full">
-            {/* Editor Container Card */}
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" overflow="hidden" boxShadow="sm">
-              {/* Editor Header Bar */}
-              <Flex justify="space-between" align="center" bg={surfaceBg} px={4} py={2} borderBottom="1px solid" borderColor={cardBorder}>
-                <HStack spacing={3}>
-                  <Text fontSize="xs" color={textColor} fontWeight="bold">
-                    Language:
-                  </Text>
-                  <Select
-                    size="xs"
-                    w="130px"
-                    bg={cardBg}
-                    borderColor={cardBorder}
-                    color={textColor}
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                  >
-                    <option value="cpp">C++ (g++)</option>
-                    <option value="c">C (gcc)</option>
-                    <option value="java">Java (openjdk)</option>
-                    <option value="python">Python 3</option>
-                  </Select>
-                </HStack>
+        {/* Draggable Vertical Divider (Sliding Window Handle) */}
+        <Box
+          display={{ base: 'none', lg: 'flex' }}
+          w="14px"
+          mx="-3px"
+          h="100%"
+          alignItems="center"
+          justifyContent="center"
+          cursor="col-resize"
+          userSelect="none"
+          zIndex={10}
+          role="separator"
+          aria-label="Drag left or right to resize coding window"
+          aria-valuenow={Math.round(splitPct)}
+          onMouseDown={handleSplitterMouseDown}
+          onTouchStart={handleSplitterMouseDown}
+          onDoubleClick={handleSplitterDoubleClick}
+          title="Drag left/right to resize • Double click to reset (42%)"
+        >
+          <Box
+            w={isDragging ? '4px' : '3px'}
+            h="100%"
+            borderRadius="full"
+            bg={isDragging ? accentColor : 'transparent'}
+            _hover={{ bg: accentColor, w: '4px' }}
+            transition="background 0.15s, width 0.15s"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Box
+              w="7px"
+              h="38px"
+              borderRadius="full"
+              bg={isDragging ? accentColor : cardBorder}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="space-evenly"
+              py={1}
+              boxShadow={isDragging ? '0 0 10px rgba(47, 141, 70, 0.7)' : 'none'}
+            >
+              <Box w="2px" h="2px" borderRadius="full" bg={textColor} opacity={0.7} />
+              <Box w="2px" h="2px" borderRadius="full" bg={textColor} opacity={0.7} />
+              <Box w="2px" h="2px" borderRadius="full" bg={textColor} opacity={0.7} />
+            </Box>
+          </Box>
+        </Box>
 
-                <HStack spacing={2}>
-                  <Tooltip label="Reset starter code" fontSize="xs">
-                    <Button size="xs" variant="ghost" colorScheme="gray" onClick={handleResetCode} leftIcon={<RepeatIcon />}>
-                      Reset
-                    </Button>
-                  </Tooltip>
+        {/* Right Panel: Code Editor (top flex) + Console Output (bottom docked) */}
+        <Box
+          w={{ base: '100%', lg: `${100 - splitPct}%` }}
+          h="100%"
+          minH="0"
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
+          gap={3}
+          pl={{ base: 0, lg: 1 }}
+        >
+          {/* Editor Container Card */}
+          <Card
+            bg={cardBg}
+            borderColor={cardBorder}
+            borderWidth="1px"
+            borderRadius="xl"
+            overflow="hidden"
+            boxShadow="sm"
+            flex="1"
+            minH="220px"
+            display="flex"
+            flexDirection="column"
+          >
+            {/* Editor Header Bar */}
+            <Flex justify="space-between" align="center" bg={surfaceBg} px={4} py={2} borderBottom="1px solid" borderColor={cardBorder} wrap="wrap" gap={2} flexShrink={0}>
+              <HStack spacing={3}>
+                <Text fontSize="xs" color={textColor} fontWeight="bold">
+                  Language:
+                </Text>
+                <Select
+                  size="xs"
+                  w="130px"
+                  bg={cardBg}
+                  borderColor={cardBorder}
+                  color={textColor}
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                >
+                  <option value="cpp">C++ (g++)</option>
+                  <option value="c">C (gcc)</option>
+                  <option value="java">Java (openjdk)</option>
+                  <option value="python">Python 3</option>
+                </Select>
+              </HStack>
+
+              <HStack spacing={2}>
+                <Tooltip label={isFullscreen ? 'Exit Full Screen (Esc)' : 'Enter Full Screen'} fontSize="xs">
                   <Button
                     size="xs"
-                    colorScheme="green"
-                    variant="outline"
-                    onClick={handleRunCode}
-                    isLoading={isRunning}
-                    loadingText="Running..."
+                    variant={isFullscreen ? 'solid' : 'ghost'}
+                    colorScheme={isFullscreen ? 'green' : 'gray'}
+                    onClick={toggleFullscreen}
+                    aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
                   >
-                    Run Code
+                    {isFullscreen ? 'Exit Fullscreen' : '⛶ Fullscreen'}
                   </Button>
-                  <Button
-                    size="xs"
-                    colorScheme="green"
-                    onClick={handleSubmitQuestion}
-                    isLoading={isSubmitting}
-                    loadingText="Evaluating..."
-                  >
-                    Submit Answer
+                </Tooltip>
+                <Tooltip label="Reset starter code" fontSize="xs">
+                  <Button size="xs" variant="ghost" colorScheme="gray" onClick={handleResetCode} leftIcon={<RepeatIcon />}>
+                    Reset
                   </Button>
-                </HStack>
-              </Flex>
+                </Tooltip>
+                <Button
+                  size="xs"
+                  colorScheme="green"
+                  variant="outline"
+                  onClick={handleRunCode}
+                  isLoading={isRunning}
+                  loadingText="Running..."
+                >
+                  Run Code
+                </Button>
+                <Button
+                  size="xs"
+                  colorScheme="green"
+                  onClick={handleSubmitQuestion}
+                  isLoading={isSubmitting}
+                  loadingText="Evaluating..."
+                >
+                  Submit Answer
+                </Button>
+              </HStack>
+            </Flex>
 
-              {/* Monaco Editor with Anti-Cheat Copy-Paste Prevention */}
-              <Box
-                h="360px"
-                w="full"
-                onPaste={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  notifyCopyPasteDisabled();
+            {/* Monaco Editor with Anti-Cheat Copy-Paste Prevention */}
+            <Box
+              flex="1"
+              h="100%"
+              minH="0"
+              w="full"
+              position="relative"
+              overflow="hidden"
+              onPaste={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notifyCopyPasteDisabled();
+              }}
+              onCopy={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notifyCopyPasteDisabled();
+              }}
+              onCut={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notifyCopyPasteDisabled();
+              }}
+            >
+              <Editor
+                height="100%"
+                width="100%"
+                language={MONACO_LANG_MAP[language] || 'cpp'}
+                theme={monacoTheme}
+                value={currentCode}
+                onChange={handleCodeChange}
+                onMount={handleEditorDidMount}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  fontFamily: "'Fira Code', 'Courier New', monospace",
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  lineNumbers: 'on',
+                  tabSize: 4,
+                  contextmenu: false, // Disables right-click menu (no copy/paste via context menu)
+                  copyWithSyntaxHighlighting: false,
                 }}
-                onCopy={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  notifyCopyPasteDisabled();
-                }}
-                onCut={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  notifyCopyPasteDisabled();
-                }}
-              >
-                <Editor
-                  height="100%"
-                  language={MONACO_LANG_MAP[language] || 'cpp'}
-                  theme={monacoTheme}
-                  value={currentCode}
-                  onChange={handleCodeChange}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 13,
-                    fontFamily: "'Fira Code', 'Courier New', monospace",
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                    lineNumbers: 'on',
-                    tabSize: 4,
-                    contextmenu: false, // Disables right-click menu (no copy/paste via context menu)
-                    copyWithSyntaxHighlighting: false,
-                  }}
-                />
-              </Box>
-            </Card>
+              />
+            </Box>
+          </Card>
 
-            {/* Bottom Panel: Custom Input & Outputs */}
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" p={4} minH="220px" boxShadow="sm">
+            {/* Bottom Panel: Custom Input & Outputs with collapse/expand */}
+            <Card
+              bg={cardBg}
+              borderColor={cardBorder}
+              borderWidth="1px"
+              borderRadius="xl"
+              p={3}
+              h={isConsoleMinimized ? '44px' : { base: '240px', lg: '250px' }}
+              minH={isConsoleMinimized ? '44px' : '180px'}
+              maxH={isConsoleMinimized ? '44px' : '360px'}
+              flexShrink={0}
+              boxShadow="sm"
+              display="flex"
+              flexDirection="column"
+              overflow="hidden"
+              transition="height 0.2s ease"
+            >
               <Tabs
                 variant="line"
                 colorScheme="green"
                 index={activeOutputTab}
-                onChange={(idx) => setActiveOutputTab(idx)}
+                onChange={(idx) => {
+                  setActiveOutputTab(idx);
+                  if (isConsoleMinimized) {
+                    setIsConsoleMinimized(false);
+                    setTimeout(triggerEditorLayout, 220);
+                  }
+                }}
+                display="flex"
+                flexDirection="column"
+                h="100%"
+                minH="0"
               >
-                <TabList borderColor={cardBorder}>
-                  <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs">
-                    Console Output {runResult && (runResult.success ? '✅' : '⚠️')}
-                  </Tab>
-                  <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs">
-                    Evaluation Results {evalResult && `(${evalResult.passedTestCases}/${evalResult.totalTestCases})`}
-                  </Tab>
-                  <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs">
-                    Custom Input
-                  </Tab>
-                </TabList>
+                <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor={cardBorder} pb={1} flexShrink={0}>
+                  <TabList borderBottom="none" mb="-1px">
+                    <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs" py={1} px={3}>
+                      Console Output {runResult && (runResult.success ? '✅' : '⚠️')}
+                    </Tab>
+                    <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs" py={1} px={3}>
+                      Evaluation Results {evalResult && `(${evalResult.passedTestCases}/${evalResult.totalTestCases})`}
+                    </Tab>
+                    <Tab color={mutedText} _selected={{ color: accentColor, borderColor: accentColor, fontWeight: 'bold' }} fontSize="xs" py={1} px={3}>
+                      Custom Input
+                    </Tab>
+                  </TabList>
 
-                <TabPanels>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color={mutedText}
+                    _hover={{ color: textColor }}
+                    onClick={() => {
+                      setIsConsoleMinimized((prev) => !prev);
+                      setTimeout(triggerEditorLayout, 220);
+                    }}
+                    title={isConsoleMinimized ? 'Expand Console' : 'Minimize Console'}
+                    px={2}
+                    h="24px"
+                    fontSize="2xs"
+                  >
+                    {isConsoleMinimized ? '▲ Expand' : '▼ Minimize'}
+                  </Button>
+                </Flex>
+
+                {!isConsoleMinimized && (
+                  <TabPanels flex="1" minH="0" overflowY="auto" pt={1}>
                   {/* Tab 0: Run Console Output */}
                   <TabPanel px={0} py={3}>
                     {isRunning ? (
@@ -1038,12 +1520,27 @@ const LabAssessmentWorkspace = () => {
                         )}
 
                         {runResult.error && (
-                          <Box>
-                            <Text color="red.500" mb={1}>Error / Stderr:</Text>
-                            <Code p={3} borderRadius="md" w="full" colorScheme="red" display="block" whiteSpace="pre-wrap">
+                          <Alert
+                            status="error"
+                            variant="subtle"
+                            borderRadius="lg"
+                            p={3}
+                            flexDirection="column"
+                            alignItems="start"
+                          >
+                            <HStack mb={1}>
+                              <AlertIcon />
+                              <AlertDescription fontWeight="bold" fontSize="xs">
+                                {runResult.errorType ? runResult.errorType.replace(/_/g, ' ') : 'Compilation / Runtime Error'}
+                              </AlertDescription>
+                            </HStack>
+                            <Text fontSize="2xs" color={mutedText} mb={2}>
+                              Compiler diagnostics and line numbers are highlighted directly in the editor above.
+                            </Text>
+                            <Code p={3} borderRadius="md" w="full" bg={surfaceBg} color="red.500" borderColor="red.400" borderWidth="1px" display="block" whiteSpace="pre-wrap" fontSize="xs">
                               {runResult.error}
                             </Code>
-                          </Box>
+                          </Alert>
                         )}
                       </VStack>
                     ) : (
@@ -1089,19 +1586,30 @@ const LabAssessmentWorkspace = () => {
 
                         {/* Compilation Error Notice if any */}
                         {evalResult.error && (
-                          <Code p={3} borderRadius="md" w="full" colorScheme="red" display="block" whiteSpace="pre-wrap">
-                            {evalResult.error}
-                          </Code>
+                          <Alert status="error" variant="subtle" borderRadius="lg" p={3} flexDirection="column" alignItems="start">
+                            <HStack mb={1}>
+                              <AlertIcon />
+                              <AlertDescription fontWeight="bold" fontSize="xs">
+                                Compilation / Evaluation Error
+                              </AlertDescription>
+                            </HStack>
+                            <Text fontSize="2xs" color={mutedText} mb={2}>
+                              Diagnostics with line numbers are marked in your code editor.
+                            </Text>
+                            <Code p={3} borderRadius="md" w="full" bg={surfaceBg} color="red.500" borderColor="red.400" borderWidth="1px" display="block" whiteSpace="pre-wrap" fontSize="xs">
+                              {evalResult.error}
+                            </Code>
+                          </Alert>
                         )}
 
                         {/* Test Case Cards */}
                         {evalResult.testCaseResults && evalResult.testCaseResults.length > 0 && (
-                          <VStack spacing={2} align="stretch" maxH="180px" overflowY="auto">
+                          <VStack spacing={2} align="stretch" maxH="240px" overflowY="auto">
                             {evalResult.testCaseResults.map((tc, idx) => (
                               <Box
                                 key={tc.testCaseId || idx}
-                                p={2.5}
-                                borderRadius="md"
+                                p={3}
+                                borderRadius="lg"
                                 bg={surfaceBg}
                                 border="1px solid"
                                 borderColor={tc.passed ? 'green.400' : 'red.400'}
@@ -1111,9 +1619,9 @@ const LabAssessmentWorkspace = () => {
                                     <Icon
                                       as={tc.passed ? CheckCircleIcon : CloseIcon}
                                       color={tc.passed ? 'green.500' : 'red.500'}
-                                      boxSize={3}
+                                      boxSize={3.5}
                                     />
-                                    <Text color={textColor} fontWeight="semibold">
+                                    <Text color={textColor} fontWeight="bold">
                                       {tc.isHidden ? `Hidden Test Case #${idx + 1}` : `Visible Test Case #${idx + 1}`}
                                     </Text>
                                     <Badge size="xs" colorScheme={tc.passed ? 'green' : 'red'}>
@@ -1126,11 +1634,34 @@ const LabAssessmentWorkspace = () => {
                                 </HStack>
 
                                 {/* Only show input/expected output for visible test cases */}
-                                {!tc.isHidden && (
-                                  <Box mt={1} pt={1} borderTop="1px solid" borderColor={cardBorder} color={textColor} fontSize="2xs">
-                                    <Text>Input: <code>{tc.input}</code></Text>
-                                    <Text>Expected: <code>{tc.expectedOutput}</code></Text>
-                                    <Text>Output: <code>{tc.actualOutput}</code></Text>
+                                {!tc.isHidden ? (
+                                  <Box mt={2} pt={2} borderTop="1px solid" borderColor={cardBorder} color={textColor} fontSize="xs">
+                                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
+                                      <Box>
+                                        <Text color={mutedText} fontSize="2xs" fontWeight="bold">INPUT:</Text>
+                                        <Code p={1.5} borderRadius="sm" w="full" bg={cardBg} color={textColor} fontSize="2xs" whiteSpace="pre-wrap">
+                                          {tc.input || '(empty)'}
+                                        </Code>
+                                      </Box>
+                                      <Box>
+                                        <Text color={mutedText} fontSize="2xs" fontWeight="bold">EXPECTED OUTPUT:</Text>
+                                        <Code p={1.5} borderRadius="sm" w="full" bg={cardBg} color="green.500" fontSize="2xs" whiteSpace="pre-wrap">
+                                          {tc.expectedOutput}
+                                        </Code>
+                                      </Box>
+                                      <Box>
+                                        <Text color={mutedText} fontSize="2xs" fontWeight="bold">YOUR OUTPUT:</Text>
+                                        <Code p={1.5} borderRadius="sm" w="full" bg={cardBg} color={tc.passed ? 'green.500' : 'red.500'} fontSize="2xs" whiteSpace="pre-wrap">
+                                          {tc.actualOutput !== undefined && tc.actualOutput !== null && tc.actualOutput !== '' ? tc.actualOutput : '(no output)'}
+                                        </Code>
+                                      </Box>
+                                    </SimpleGrid>
+                                  </Box>
+                                ) : (
+                                  <Box mt={1.5} pt={1.5} borderTop="1px solid" borderColor={cardBorder}>
+                                    <Text color={mutedText} fontSize="2xs" fontStyle="italic">
+                                      🔒 Hidden test case (input and expected output obscured for assessment integrity)
+                                    </Text>
                                   </Box>
                                 )}
                               </Box>
@@ -1174,24 +1705,48 @@ const LabAssessmentWorkspace = () => {
                     />
                   </TabPanel>
                 </TabPanels>
-              </Tabs>
-            </Card>
-          </VStack>
+              )}
+            </Tabs>
+          </Card>
         </Box>
-      </SimpleGrid>
+      </Flex>
       ) : (
-        /* MCQ View */
-        <Box w="full" maxW="4xl" mx="auto" py={4}>
-          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="2xl" p={8} boxShadow="sm">
+        /* MCQ View: Centered in the middle with polished card design */
+        <Flex
+          flex="1"
+          minH="0"
+          w="full"
+          overflowY="auto"
+          alignItems="center"
+          justifyContent="center"
+          py={{ base: 4, md: 8 }}
+          px={{ base: 3, md: 6 }}
+        >
+          <Card
+            bg={cardBg}
+            borderColor={cardBorder}
+            borderWidth="1px"
+            borderRadius="2xl"
+            p={{ base: 6, md: 8 }}
+            boxShadow="xl"
+            w="full"
+            maxW="880px"
+          >
             <VStack align="stretch" spacing={6}>
+              {/* Question Header Badges */}
               <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
                 <HStack spacing={2}>
-                  <Badge colorScheme="purple" px={3} py={1} borderRadius="md" fontSize="xs">
+                  <Badge colorScheme="purple" px={3} py={1} borderRadius="md" fontSize="xs" fontWeight="bold">
                     MCQ — Question {selectedIndex + 1} of {allQuestions.length}
                   </Badge>
                   {currentQuestion?.topic_title && (
                     <Badge colorScheme="cyan" variant="subtle" px={2.5} py={0.5} borderRadius="md" fontSize="xs">
                       {currentQuestion.topic_title}
+                    </Badge>
+                  )}
+                  {currentQuestion?.marks && (
+                    <Badge colorScheme="green" variant="subtle" px={2.5} py={0.5} borderRadius="md" fontSize="xs">
+                      {currentQuestion.marks} Marks
                     </Badge>
                   )}
                 </HStack>
@@ -1206,20 +1761,23 @@ const LabAssessmentWorkspace = () => {
                 )}
               </Flex>
 
-              <Text fontSize="lg" fontWeight="semibold" color={textColor} lineHeight="tall">
+              {/* Question Statement */}
+              <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="700" color={textColor} lineHeight="tall">
                 {currentQuestion?.question_text}
               </Text>
 
               <Divider borderColor={cardBorder} />
 
+              {/* Options List */}
               <RadioGroup
                 value={mcqAnswers[currentQuestion?.mcq_id] || ''}
                 onChange={(val) => handleSaveMcqAnswer(currentQuestion?.mcq_id, val)}
               >
-                <VStack spacing={3} align="stretch">
+                <VStack spacing={3.5} align="stretch">
                   {['A', 'B', 'C', 'D'].map((optKey) => {
                     const isSelected = mcqAnswers[currentQuestion?.mcq_id] === optKey;
                     const optText = currentQuestion?.[`option_${optKey.toLowerCase()}`];
+                    if (!optText) return null;
                     return (
                       <Box
                         key={optKey}
@@ -1230,16 +1788,27 @@ const LabAssessmentWorkspace = () => {
                         bg={isSelected ? surfaceBg : 'transparent'}
                         cursor="pointer"
                         onClick={() => handleSaveMcqAnswer(currentQuestion?.mcq_id, optKey)}
-                        transition="all 0.2s"
-                        _hover={{ borderColor: accentColor }}
+                        transition="all 0.18s ease"
+                        _hover={{
+                          borderColor: isSelected ? accentColor : textColor,
+                          bg: surfaceBg,
+                          transform: 'translateY(-1px)',
+                        }}
                       >
                         <HStack spacing={4} align="center">
-                          <Radio value={optKey} colorScheme="green" size="lg">
-                            <Badge colorScheme={isSelected ? 'green' : 'gray'} fontSize="sm" px={2} py={0.5} borderRadius="md">
-                              Option {optKey}
+                          <Radio value={optKey} colorScheme="green" size="lg" isChecked={isSelected}>
+                            <Badge
+                              colorScheme={isSelected ? 'green' : 'gray'}
+                              fontSize="xs"
+                              fontWeight="bold"
+                              px={2.5}
+                              py={0.5}
+                              borderRadius="md"
+                            >
+                              OPTION {optKey}
                             </Badge>
                           </Radio>
-                          <Text fontSize="md" color={textColor} fontWeight={isSelected ? 'bold' : 'normal'}>
+                          <Text fontSize={{ base: 'sm', md: 'md' }} color={textColor} fontWeight={isSelected ? '600' : 'normal'}>
                             {optText}
                           </Text>
                         </HStack>
@@ -1249,27 +1818,56 @@ const LabAssessmentWorkspace = () => {
                 </VStack>
               </RadioGroup>
 
-              <Flex justify="space-between" pt={4} borderTop="1px solid" borderColor={cardBorder}>
+              {/* Bottom Navigation */}
+              <Flex justify="space-between" align="center" pt={4} borderTop="1px solid" borderColor={cardBorder}>
                 <Button
                   size="sm"
                   variant="outline"
+                  leftIcon={<ChevronLeftIcon />}
                   isDisabled={selectedIndex === 0}
-                  onClick={() => setSelectedIndex((prev) => Math.max(0, prev - 1))}
+                  onClick={handlePrevQuestion}
+                  borderRadius="lg"
+                  fontSize="xs"
+                  color={textColor}
+                  borderColor={cardBorder}
+                  _hover={{ bg: surfaceBg }}
                 >
                   Previous Question
                 </Button>
-                <Button
-                  size="sm"
-                  colorScheme="brand"
-                  isDisabled={selectedIndex === allQuestions.length - 1}
-                  onClick={() => setSelectedIndex((prev) => Math.min(allQuestions.length - 1, prev + 1))}
-                >
-                  Next Question
-                </Button>
+                <Text fontSize="xs" fontWeight="bold" color={mutedText}>
+                  Question {selectedIndex + 1} of {allQuestions.length}
+                </Text>
+                {selectedIndex === allQuestions.length - 1 ? (
+                  <Button
+                    size="sm"
+                    colorScheme="green"
+                    variant="solid"
+                    px={4}
+                    py={1.5}
+                    fontWeight="semibold"
+                    fontSize="xs"
+                    borderRadius="lg"
+                    rightIcon={<CheckCircleIcon boxSize={3.5} />}
+                    onClick={onFinishOpen}
+                  >
+                    Finish Assessment
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    colorScheme="brand"
+                    rightIcon={<ChevronRightIcon />}
+                    onClick={handleNextQuestion}
+                    borderRadius="lg"
+                    fontSize="xs"
+                  >
+                    Next Question
+                  </Button>
+                )}
               </Flex>
             </VStack>
           </Card>
-        </Box>
+        </Flex>
       )}
 
       {/* Finish Assessment Confirmation Modal */}
@@ -1342,7 +1940,7 @@ const LabAssessmentWorkspace = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </VStack>
+    </Flex>
   );
 };
 

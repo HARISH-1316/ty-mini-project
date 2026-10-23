@@ -63,44 +63,44 @@ const PrerequisitesPage = () => {
 
   return (
     <VStack spacing={6} align="stretch" w="full">
-      <Heading size="lg" color="white">
+      <Heading size="lg" color="text.primary">
         Prerequisites
       </Heading>
 
-      <Text color="gray.400" fontSize="sm">
+      <Text color="text.secondary" fontSize="sm">
         {topic.title}
       </Text>
 
       {prerequisites.length === 0 ? (
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <Box p={4} textAlign="center">
-              <Text color="gray.400" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 No specific prerequisites have been defined for this topic yet.
               </Text>
-              <Text color="gray.500" fontSize="xs" mt={2}>
+              <Text color="text.muted" fontSize="xs" mt={2}>
                 Prerequisites will appear here once configured by the faculty.
               </Text>
             </Box>
           </CardBody>
         </Card>
       ) : (
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <VStack align="start" spacing={4}>
-              <Text color="gray.300" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 Before starting this topic, students should understand:
               </Text>
 
               <OrderedList spacing={3} pl={4}>
                 {prerequisites.map((prereq) => (
-                  <ListItem key={prereq.prereq_id} color="gray.200" fontSize="sm">
+                  <ListItem key={prereq.prereq_id} color="text.primary" fontSize="sm">
                     <Box>
-                      <Text fontWeight="semibold" color="white">
+                      <Text fontWeight="semibold" color="text.primary">
                         {prereq.description}
                       </Text>
                       {prereq.content && (
-                        <Text color="gray.400" fontSize="xs" mt={1} whiteSpace="pre-wrap">
+                        <Text color="text.secondary" fontSize="xs" mt={1} whiteSpace="pre-wrap">
                           {prereq.content}
                         </Text>
                       )}

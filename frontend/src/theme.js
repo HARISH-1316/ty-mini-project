@@ -61,6 +61,19 @@ const theme = extendTheme({
       800: '#174723',
       900: '#0F2F17',
     },
+    // Standard high-contrast slate-gray palette
+    gray: {
+      50: '#F8FAFC',
+      100: '#F1F5F9',
+      200: '#E2E8F0',
+      300: '#CBD5E1',
+      400: '#94A3B8',
+      500: '#64748B',
+      600: '#475569',
+      700: '#334155',
+      800: '#1E293B',
+      900: '#0F172A',
+    },
     // Literal white accessible constant
     pureWhite: '#FFFFFF',
   },
@@ -78,17 +91,17 @@ const theme = extendTheme({
       'accent.soft': { default: '#E8F5E9', _dark: '#303B22' },
       'accent.contrastText': { default: '#FFFFFF', _dark: '#171918' },
 
-      'text.primary': { default: '#202124', _dark: '#F5F7F5' },
-      'text.secondary': { default: '#505750', _dark: '#B8C0B9' },
+      'text.primary': { default: '#0F172A', _dark: '#F8FAFC' },
+      'text.secondary': { default: '#475569', _dark: '#CBD5E1' },
 
       'border.primary': { default: '#DDE5DD', _dark: '#3B423C' },
       'border.subtle': { default: '#E8EFE8', _dark: '#2F3530' },
 
       'input.bg': { default: '#FFFFFF', _dark: '#202321' },
-      'input.border': { default: '#DDE5DD', _dark: '#3B423C' },
+      'input.border': { default: '#CBD5E1', _dark: '#3B423C' },
       'focus.ring': { default: '#2F8D46', _dark: '#A3E635' },
-      'disabled.bg': { default: '#F1EFED', _dark: '#292D2A' },
-      'disabled.text': { default: '#859086', _dark: '#606860' },
+      'disabled.bg': { default: '#F1F5F9', _dark: '#292D2A' },
+      'disabled.text': { default: '#64748B', _dark: '#94A3B8' },
 
       // Legacy token compatibility mapped to new palette
       'dark.bg': { default: '#F2F6F3', _dark: '#171918' },
@@ -104,24 +117,24 @@ const theme = extendTheme({
       'slate.800': { default: '#FFFFFF', _dark: '#202321' },
       'slate.700': { default: '#E8F5E9', _dark: '#292D2A' },
       'slate.600': { default: '#DDE5DD', _dark: '#3B423C' },
-      'slate.500': { default: '#505750', _dark: '#A0AEC0' },
-      'slate.400': { default: '#404640', _dark: '#CBD5E0' },
-      'slate.300': { default: '#2B302C', _dark: '#E2E8F0' },
+      'slate.500': { default: '#475569', _dark: '#CBD5E1' },
+      'slate.400': { default: '#475569', _dark: '#CBD5E1' },
+      'slate.300': { default: '#334155', _dark: '#E2E8F0' },
       'slate.200': { default: '#DDE5DD', _dark: '#292D2A' },
       'slate.100': { default: '#F5F7F5', _dark: '#202321' },
       'slate.50': { default: '#FFFFFF', _dark: '#171918' },
 
       // Grays: In light mode text is dark; in dark mode text is light
-      'gray.900': { default: '#171918', _dark: '#FFFFFF' },
-      'gray.800': { default: '#202124', _dark: '#F5F7F5' },
-      'gray.700': { default: '#2D3748', _dark: '#E2E8F0' },
-      'gray.600': { default: '#3B423C', _dark: '#CBD5E0' },
-      'gray.500': { default: '#505750', _dark: '#A0AEC0' },
-      'gray.400': { default: '#404640', _dark: '#CBD5E0' },
-      'gray.300': { default: '#2B302C', _dark: '#E2E8F0' },
+      'gray.900': { default: '#0F172A', _dark: '#FFFFFF' },
+      'gray.800': { default: '#1E293B', _dark: '#F8FAFC' },
+      'gray.700': { default: '#334155', _dark: '#E2E8F0' },
+      'gray.600': { default: '#475569', _dark: '#CBD5E1' },
+      'gray.500': { default: '#475569', _dark: '#CBD5E1' },
+      'gray.400': { default: '#475569', _dark: '#CBD5E1' },
+      'gray.300': { default: '#334155', _dark: '#E2E8F0' },
       'gray.200': { default: '#DDE5DD', _dark: '#343B35' },
       'gray.100': { default: '#F2F6F3', _dark: '#292D2A' },
-      'gray.50': { default: '#F9FAF9', _dark: '#202321' },
+      'gray.50': { default: '#F8FAFC', _dark: '#202321' },
 
       // Brand / Purple / Cyan / Orange aliases mapped to theme
       'brand.50': { default: '#E8F5E9', _dark: '#303B22' },
@@ -155,10 +168,10 @@ const theme = extendTheme({
 
       // Chakra system tokens
       'chakra-body-bg': { default: '#FFFFFF', _dark: '#171918' },
-      'chakra-body-text': { default: '#202124', _dark: '#F5F7F5' },
+      'chakra-body-text': { default: '#0F172A', _dark: '#F8FAFC' },
       'chakra-border-color': { default: '#DDE5DD', _dark: '#3B423C' },
       'chakra-subtle-bg': { default: '#F5F7F5', _dark: '#292D2A' },
-      'chakra-placeholder-color': { default: '#859086', _dark: '#859086' },
+      'chakra-placeholder-color': { default: '#64748B', _dark: '#94A3B8' },
     },
   },
   fonts: {
@@ -427,8 +440,8 @@ const theme = extendTheme({
           }
           if (props.colorScheme === 'gray') {
             return {
-              bg: props.colorMode === 'dark' ? '#292D2A' : '#F2F6F3',
-              color: props.colorMode === 'dark' ? '#CBD5E0' : '#374151',
+              bg: props.colorMode === 'dark' ? '#292D2A' : '#E2E8F0',
+              color: props.colorMode === 'dark' ? '#E2E8F0' : '#1E293B',
             };
           }
           return {};

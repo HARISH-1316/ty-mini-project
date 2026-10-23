@@ -39,8 +39,11 @@ import {
   TimeIcon,
   CopyIcon,
   CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from '@chakra-ui/icons';
 import { executeCodeApi, submitCodeApi } from '../../api/editorApi';
+import { parseCompilerErrors } from '../../utils/compilerDiagnostics';
 
 const DEFAULT_TEMPLATES = {
   cpp: `#include <iostream>
@@ -124,6 +127,105 @@ const CodingWorkspace = ({
   const [submitResult, setSubmitResult] = useState(null);
   const [copied, setCopied] = useState(false);
 
+  // Fullscreen & Editor Refs
+  const workspaceRef = useRef(null);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Draggable Split Pane (Sliding Window)
+  const defaultSplitPct = 42;
+  const [splitPct, setSplitPct] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wce_coding_split_ratio');
+      const parsed = saved ? parseFloat(saved) : defaultSplitPct;
+      return isNaN(parsed) || parsed < 20 || parsed > 80 ? defaultSplitPct : parsed;
+    } catch {
+      return defaultSplitPct;
+    }
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isConsoleMinimized, setIsConsoleMinimized] = useState(false);
+  const splitContainerRef = useRef(null);
+
+  const triggerEditorLayout = () => {
+    if (editorRef.current) {
+      editorRef.current.layout();
+    }
+  };
+
+  // Split-pane dragging handlers
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handlePointerMove = (e) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+      if (typeof clientX !== 'number') return;
+      const offsetX = clientX - rect.left;
+      const totalWidth = rect.width;
+      if (totalWidth <= 0) return;
+
+      let newPct = (offsetX / totalWidth) * 100;
+      if (newPct < 20) newPct = 20;
+      if (newPct > 80) newPct = 80;
+
+      setSplitPct(newPct);
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+      try {
+        localStorage.setItem('wce_coding_split_ratio', splitPct.toString());
+      } catch {}
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.layout();
+        }
+      }, 60);
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('touchend', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+    };
+  }, [isDragging, splitPct]);
+
+  // Window resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleSplitterMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleSplitterDoubleClick = () => {
+    setSplitPct(defaultSplitPct);
+    try {
+      localStorage.setItem('wce_coding_split_ratio', defaultSplitPct.toString());
+    } catch {}
+    setTimeout(triggerEditorLayout, 60);
+  };
+
   const cardBg = useColorModeValue('#FFFFFF', '#202321');
   const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
   const surfaceBg = useColorModeValue('#F2F6F3', '#171918');
@@ -141,6 +243,43 @@ const CodingWorkspace = ({
 
   const prevQIdRef = useRef(null);
 
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      const fs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      setIsFullscreen(fs);
+      setTimeout(() => {
+        editorRef.current?.layout();
+      }, 100);
+    };
+
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const elem = workspaceRef.current;
+    if (!elem) return;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  };
+
   // Initialize sample input into custom input when question changes
   useEffect(() => {
     if (currentQId && currentQId !== prevQIdRef.current) {
@@ -152,6 +291,14 @@ const CodingWorkspace = ({
       }
       setRunResult(null);
       setSubmitResult(null);
+
+      // Clear Monaco error markers on question switch
+      if (monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          monacoRef.current.editor.setModelMarkers(model, 'compiler', []);
+        }
+      }
     }
   }, [currentQId, currentQuestion]);
 
@@ -165,6 +312,14 @@ const CodingWorkspace = ({
       ...prev,
       [language]: newCode ?? '',
     }));
+
+    // Clear stale compiler markers when typing
+    if (monacoRef.current && editorRef.current) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        monacoRef.current.editor.setModelMarkers(model, 'compiler', []);
+      }
+    }
   };
 
   const handleResetCode = () => {
@@ -179,6 +334,15 @@ const CodingWorkspace = ({
       duration: 2000,
       isClosable: true,
     });
+  };
+
+  // Question navigation handlers
+  const handlePrevQuestion = () => {
+    setSelectedQuestionIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextQuestion = () => {
+    setSelectedQuestionIndex((prev) => Math.min(questions.length - 1, prev + 1));
   };
 
   const notifyCopyPasteDisabled = () => {
@@ -196,6 +360,9 @@ const CodingWorkspace = ({
   };
 
   const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
     // Intercept keyboard shortcuts: Ctrl+C, Ctrl+V, Ctrl+X, Cmd+C, Cmd+V, Cmd+X, Shift+Insert
     editor.onKeyDown((e) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -249,6 +416,16 @@ const CodingWorkspace = ({
       });
 
       setRunResult(res.data);
+
+      // Highlight compiler or runtime diagnostics in editor
+      if (!res.data?.success && res.data?.error && monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          const markers = parseCompilerErrors(res.data.error, monacoRef.current);
+          monacoRef.current.editor.setModelMarkers(model, 'compiler', markers);
+        }
+      }
+
       if (res.data?.success) {
         toast({
           title: 'Code Executed',
@@ -313,6 +490,15 @@ const CodingWorkspace = ({
 
       setSubmitResult(res.data);
 
+      // Highlight compiler or runtime diagnostics in editor
+      if (res.data?.error && monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          const markers = parseCompilerErrors(res.data.error, monacoRef.current);
+          monacoRef.current.editor.setModelMarkers(model, 'compiler', markers);
+        }
+      }
+
       const passed = res.data?.passedTestCases;
       const total = res.data?.totalTestCases;
 
@@ -367,10 +553,34 @@ const CodingWorkspace = ({
   }
 
   return (
-    <VStack spacing={4} align="stretch" w="full">
+    <Flex
+      ref={workspaceRef}
+      direction="column"
+      w="full"
+      h={isFullscreen ? '100vh' : { base: 'auto', lg: 'calc(100vh - 84px)' }}
+      maxH={isFullscreen ? '100vh' : 'none'}
+      minH={isFullscreen ? '100vh' : { base: 'auto', lg: '650px' }}
+      bg={isFullscreen ? surfaceBg : 'transparent'}
+      p={isFullscreen ? 3 : 0}
+      overflow={isFullscreen ? 'hidden' : { base: 'visible', lg: 'hidden' }}
+      boxSizing="border-box"
+      gap={3}
+      position="relative"
+    >
+      {/* Global dragging overlay shield */}
+      {isDragging && (
+        <Box
+          position="fixed"
+          inset={0}
+          zIndex={99999}
+          cursor="col-resize"
+          userSelect="none"
+        />
+      )}
+
       {/* ── Top Bar: Title & Question Selector ────────── */}
-      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
-        <CardBody p={4}>
+      <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm" flexShrink={0}>
+        <CardBody py={2.5} px={4}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
             <HStack spacing={3}>
               <Heading size="md" color={textColor}>
@@ -383,8 +593,17 @@ const CodingWorkspace = ({
 
             {/* Question Selector tabs if multiple */}
             {questions.length > 1 && (
-              <HStack spacing={2}>
-                <Text fontSize="xs" color={mutedText} fontWeight="bold">Question:</Text>
+              <HStack spacing={2} wrap="wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<ChevronLeftIcon />}
+                  isDisabled={selectedQuestionIndex === 0}
+                  onClick={handlePrevQuestion}
+                  borderColor={cardBorder}
+                >
+                  Prev
+                </Button>
                 {questions.map((q, idx) => (
                   <Button
                     key={q.tca_question_id || q.scca_id || idx}
@@ -397,6 +616,16 @@ const CodingWorkspace = ({
                     Q{idx + 1}
                   </Button>
                 ))}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  rightIcon={<ChevronRightIcon />}
+                  isDisabled={selectedQuestionIndex === questions.length - 1}
+                  onClick={handleNextQuestion}
+                  borderColor={cardBorder}
+                >
+                  Next
+                </Button>
               </HStack>
             )}
           </Flex>
@@ -404,207 +633,397 @@ const CodingWorkspace = ({
       </Card>
 
       {/* ── Main Split View ────────────────────────────── */}
-      <SimpleGrid columns={{ base: 1, lg: 12 }} spacing={4} alignItems="start">
-        {/* LEFT COLUMN: Problem Description (5 cols) */}
-        <Box gridColumn={{ base: 'span 12', lg: 'span 5' }}>
-          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm" h="full">
-            <CardBody p={5}>
-              <VStack align="stretch" spacing={5}>
-                {/* Problem Header */}
-                <Box>
-                  <Flex justify="space-between" align="center" mb={1}>
-                    <Tag size="sm" colorScheme="green">
-                      Question {selectedQuestionIndex + 1} of {questions.length}
-                    </Tag>
-                    <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
-                      {currentQuestion?.marks || 10} Marks
-                    </Badge>
-                  </Flex>
-                  <Heading size="md" color={textColor} mt={2}>
-                    {currentQuestion?.title || `Problem ${selectedQuestionIndex + 1}`}
-                  </Heading>
-                </Box>
+      <Flex
+        ref={splitContainerRef}
+        flex="1"
+        w="full"
+        minH="0"
+        direction={{ base: 'column', lg: 'row' }}
+        overflow="hidden"
+        position="relative"
+        gap={0}
+      >
+        {/* LEFT COLUMN: Problem Description */}
+        <Box
+          w={{ base: '100%', lg: `${splitPct}%` }}
+          h="100%"
+          minH="0"
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
+          pr={{ base: 0, lg: 1 }}
+        >
+          <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm" h="100%" display="flex" flexDirection="column" overflow="hidden">
+            <Box flex="1" minH="0" overflowY="auto">
+              <CardBody p={5}>
+                <VStack align="stretch" spacing={5}>
+                  {/* Problem Header */}
+                  <Box>
+                    <Flex justify="space-between" align="center" mb={1}>
+                      <Tag size="sm" colorScheme="green">
+                        Question {selectedQuestionIndex + 1} of {questions.length}
+                      </Tag>
+                      <Badge colorScheme="green" fontSize="xs" px={2} py={0.5}>
+                        {currentQuestion?.marks || 10} Marks
+                      </Badge>
+                    </Flex>
+                    <Heading size="md" color={textColor} mt={2}>
+                      {currentQuestion?.title || `Problem ${selectedQuestionIndex + 1}`}
+                    </Heading>
+                  </Box>
 
-                <Divider borderColor={cardBorder} />
+                  <Divider borderColor={cardBorder} />
 
-                {/* Problem Statement */}
-                <Box>
-                  <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={2}>
-                    Problem Statement
-                  </Text>
-                  <Text color={textColor} fontSize="sm" lineHeight="tall" whiteSpace="pre-line" fontWeight="400">
-                    {currentQuestion?.problem_statement}
-                  </Text>
-                </Box>
-
-                {/* Constraints */}
-                {currentQuestion?.constraints && (
+                  {/* Problem Statement */}
                   <Box>
                     <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={2}>
-                      Constraints
+                      Problem Statement
                     </Text>
-                    <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
-                      <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre-line">
-                        {currentQuestion.constraints}
-                      </Code>
-                    </Box>
+                    <Text color={textColor} fontSize="sm" lineHeight="tall" whiteSpace="pre-line" fontWeight="400">
+                      {currentQuestion?.problem_statement}
+                    </Text>
                   </Box>
-                )}
 
-                {/* Sample Input / Output */}
-                {currentQuestion?.sample_input && (
-                  <Box>
-                    <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={1.5}>
-                      Sample Input
-                    </Text>
-                    <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
-                      <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre">
-                        {currentQuestion.sample_input}
-                      </Code>
+                  {/* Constraints */}
+                  {currentQuestion?.constraints && (
+                    <Box>
+                      <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={2}>
+                        Constraints
+                      </Text>
+                      <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
+                        <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre-line">
+                          {currentQuestion.constraints}
+                        </Code>
+                      </Box>
                     </Box>
-                  </Box>
-                )}
+                  )}
 
-                {currentQuestion?.sample_output && (
-                  <Box>
-                    <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={1.5}>
-                      Sample Output
-                    </Text>
-                    <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
-                      <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre">
-                        {currentQuestion.sample_output}
-                      </Code>
+                  {/* Sample Input / Output */}
+                  {currentQuestion?.sample_input && (
+                    <Box>
+                      <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={1.5}>
+                        Sample Input
+                      </Text>
+                      <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
+                        <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre">
+                          {currentQuestion.sample_input}
+                        </Code>
+                      </Box>
                     </Box>
-                  </Box>
-                )}
-              </VStack>
-            </CardBody>
+                  )}
+
+                  {currentQuestion?.sample_output && (
+                    <Box>
+                      <Text fontSize="xs" fontWeight="bold" color={accentColor} textTransform="uppercase" letterSpacing="wider" mb={1.5}>
+                        Sample Output
+                      </Text>
+                      <Box p={3} bg={codeBoxBg} borderRadius="lg" border="1px solid" borderColor={codeBoxBorder}>
+                        <Code bg="transparent" color={textColor} fontSize="xs" whiteSpace="pre">
+                          {currentQuestion.sample_output}
+                        </Code>
+                      </Box>
+                    </Box>
+                  )}
+                </VStack>
+              </CardBody>
+            </Box>
+
+            {/* Problem Bottom Navigation docked below question component */}
+            {questions.length > 1 && (
+              <Flex
+                justify="space-between"
+                align="center"
+                px={4}
+                py={2.5}
+                bg={surfaceBg}
+                borderTop="1px solid"
+                borderColor={cardBorder}
+                flexShrink={0}
+              >
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<ChevronLeftIcon />}
+                  isDisabled={selectedQuestionIndex === 0}
+                  onClick={handlePrevQuestion}
+                  borderRadius="lg"
+                  color={textColor}
+                  borderColor={cardBorder}
+                  _hover={{ bg: cardBg }}
+                >
+                  Previous Question
+                </Button>
+                <Text fontSize="xs" fontWeight="bold" color={mutedText}>
+                  Question {selectedQuestionIndex + 1} of {questions.length}
+                </Text>
+                <Button
+                  size="sm"
+                  colorScheme="brand"
+                  rightIcon={<ChevronRightIcon />}
+                  isDisabled={selectedQuestionIndex === questions.length - 1}
+                  onClick={handleNextQuestion}
+                  borderRadius="lg"
+                >
+                  Next Question
+                </Button>
+              </Flex>
+            )}
           </Card>
         </Box>
 
-        {/* RIGHT COLUMN: Code Editor & Execution Console (7 cols) */}
-        <Box gridColumn={{ base: 'span 12', lg: 'span 7' }}>
-          <VStack spacing={4} align="stretch">
+        {/* Draggable Vertical Divider (Sliding Window Handle) */}
+        <Box
+          display={{ base: 'none', lg: 'flex' }}
+          w="14px"
+          mx="-3px"
+          h="100%"
+          alignItems="center"
+          justifyContent="center"
+          cursor="col-resize"
+          userSelect="none"
+          zIndex={10}
+          role="separator"
+          aria-label="Drag left or right to resize coding window"
+          aria-valuenow={Math.round(splitPct)}
+          onMouseDown={handleSplitterMouseDown}
+          onTouchStart={handleSplitterMouseDown}
+          onDoubleClick={handleSplitterDoubleClick}
+          title="Drag left/right to resize • Double click to reset (42%)"
+        >
+          <Box
+            w={isDragging ? '4px' : '3px'}
+            h="100%"
+            borderRadius="full"
+            bg={isDragging ? accentColor : 'transparent'}
+            _hover={{ bg: accentColor, w: '4px' }}
+            transition="background 0.15s, width 0.15s"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Box
+              w="7px"
+              h="38px"
+              borderRadius="full"
+              bg={isDragging ? accentColor : cardBorder}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="space-evenly"
+              py={1}
+              boxShadow={isDragging ? '0 0 10px rgba(47, 141, 70, 0.7)' : 'none'}
+            >
+              <Box w="2px" h="2px" borderRadius="full" bg={textColor} opacity={0.7} />
+              <Box w="2px" h="2px" borderRadius="full" bg={textColor} opacity={0.7} />
+              <Box w="2px" h="2px" borderRadius="full" bg={textColor} opacity={0.7} />
+            </Box>
+          </Box>
+        </Box>
+
+        {/* RIGHT COLUMN: Code Editor & Execution Console */}
+        <Box
+          w={{ base: '100%', lg: `${100 - splitPct}%` }}
+          h="100%"
+          minH="0"
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
+          gap={3}
+          pl={{ base: 0, lg: 1 }}
+        >
+          {/* Editor Container Card */}
+          <Card
+            bg={cardBg}
+            borderColor={cardBorder}
+            borderWidth="1px"
+            overflow="hidden"
+            borderRadius="xl"
+            boxShadow="sm"
+            flex="1"
+            minH="220px"
+            display="flex"
+            flexDirection="column"
+          >
             {/* Editor Toolbar */}
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
-              <CardBody p={3}>
-                <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-                  <HStack spacing={2}>
-                    <Text fontSize="xs" color={textColor} fontWeight="bold">Language:</Text>
-                    <Select
-                      size="sm"
-                      w="130px"
-                      bg={cardBg}
-                      borderColor={cardBorder}
-                      color={textColor}
-                      value={language}
-                      onChange={handleLanguageChange}
-                    >
-                      <option value="cpp">C++ (gcc 14)</option>
-                      <option value="c">C (gcc 14)</option>
-                      <option value="java">Java 21</option>
-                      <option value="python">Python 3.12</option>
-                    </Select>
-                  </HStack>
+            <Flex justify="space-between" align="center" wrap="wrap" gap={2} bg={surfaceBg} px={3} py={1.5} borderBottom="1px solid" borderColor={cardBorder} flexShrink={0}>
+              <HStack spacing={2}>
+                <Text fontSize="xs" color={textColor} fontWeight="bold">Language:</Text>
+                <Select
+                  size="sm"
+                  w="130px"
+                  bg={cardBg}
+                  borderColor={cardBorder}
+                  color={textColor}
+                  value={language}
+                  onChange={handleLanguageChange}
+                >
+                  <option value="cpp">C++ (gcc 14)</option>
+                  <option value="c">C (gcc 14)</option>
+                  <option value="java">Java 21</option>
+                  <option value="python">Python 3.12</option>
+                </Select>
+              </HStack>
 
-                  <HStack spacing={2}>
-                    <Tooltip label="Reset starter code" placement="top">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="gray"
-                        leftIcon={<RepeatIcon />}
-                        onClick={handleResetCode}
-                      >
-                        Reset
-                      </Button>
-                    </Tooltip>
+              <HStack spacing={2}>
+                <Tooltip label={isFullscreen ? 'Exit Full Screen (Esc)' : 'Enter Full Screen'} placement="top">
+                  <Button
+                    size="sm"
+                    variant={isFullscreen ? 'solid' : 'ghost'}
+                    colorScheme={isFullscreen ? 'green' : 'gray'}
+                    onClick={toggleFullscreen}
+                    aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+                  >
+                    {isFullscreen ? 'Exit Fullscreen' : '⛶ Fullscreen'}
+                  </Button>
+                </Tooltip>
+                <Tooltip label="Reset starter code" placement="top">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="gray"
+                    leftIcon={<RepeatIcon />}
+                    onClick={handleResetCode}
+                  >
+                    Reset
+                  </Button>
+                </Tooltip>
 
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      variant="outline"
-                      onClick={handleRunCode}
-                      isLoading={isRunning}
-                      loadingText="Running..."
-                    >
-                      ▶ Run Code
-                    </Button>
+                <Button
+                  size="sm"
+                  colorScheme="green"
+                  variant="outline"
+                  onClick={handleRunCode}
+                  isLoading={isRunning}
+                  loadingText="Running..."
+                >
+                  ▶ Run Code
+                </Button>
 
-                    <Button
-                      size="sm"
-                      colorScheme="brand"
-                      onClick={handleSubmitCode}
-                      isLoading={isSubmitting}
-                      loadingText="Testing..."
-                    >
-                      Submit
-                    </Button>
-                  </HStack>
-                </Flex>
-              </CardBody>
-            </Card>
+                <Button
+                  size="sm"
+                  colorScheme="brand"
+                  onClick={handleSubmitCode}
+                  isLoading={isSubmitting}
+                  loadingText="Testing..."
+                >
+                  Submit
+                </Button>
+              </HStack>
+            </Flex>
 
             {/* Monaco Editor Container with strict Anti-Cheat / No Copy-Paste */}
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" overflow="hidden" borderRadius="xl" boxShadow="sm">
-              <Box
-                h="380px"
-                w="full"
-                onPaste={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  notifyCopyPasteDisabled();
+            <Box
+              flex="1"
+              h="100%"
+              minH="0"
+              w="full"
+              position="relative"
+              overflow="hidden"
+              onPaste={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notifyCopyPasteDisabled();
+              }}
+              onCopy={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notifyCopyPasteDisabled();
+              }}
+              onCut={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notifyCopyPasteDisabled();
+              }}
+            >
+              <Editor
+                height="100%"
+                width="100%"
+                language={language === 'c' || language === 'cpp' ? 'cpp' : language}
+                value={codeMap[language]}
+                theme={monacoTheme}
+                onChange={handleCodeChange}
+                onMount={handleEditorDidMount}
+                options={{
+                  fontSize: 14,
+                  fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 4,
+                  padding: { top: 12, bottom: 12 },
+                  contextmenu: false, // Disables right-click menu (prevent paste & copy options)
+                  copyWithSyntaxHighlighting: false,
                 }}
-                onCopy={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  notifyCopyPasteDisabled();
-                }}
-                onCut={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  notifyCopyPasteDisabled();
-                }}
-              >
-                <Editor
-                  height="100%"
-                  language={language === 'c' || language === 'cpp' ? 'cpp' : language}
-                  value={codeMap[language]}
-                  theme={monacoTheme}
-                  onChange={handleCodeChange}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    fontSize: 14,
-                    fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                    tabSize: 4,
-                    padding: { top: 12, bottom: 12 },
-                    contextmenu: false, // Disables right-click menu (prevent paste & copy options)
-                    copyWithSyntaxHighlighting: false,
+              />
+            </Box>
+          </Card>
+
+          {/* Execution / Results Panel */}
+          <Card
+            bg={cardBg}
+            borderColor={cardBorder}
+            borderWidth="1px"
+            borderRadius="xl"
+            boxShadow="sm"
+            p={3}
+            h={isConsoleMinimized ? '44px' : { base: '240px', lg: '250px' }}
+            minH={isConsoleMinimized ? '44px' : '180px'}
+            maxH={isConsoleMinimized ? '44px' : '360px'}
+            flexShrink={0}
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            transition="height 0.2s ease"
+          >
+            <Tabs
+              index={activeTab}
+              onChange={(idx) => {
+                setActiveTab(idx);
+                if (isConsoleMinimized) {
+                  setIsConsoleMinimized(false);
+                  setTimeout(triggerEditorLayout, 220);
+                }
+              }}
+              colorScheme="green"
+              variant="enclosed"
+              display="flex"
+              flexDirection="column"
+              h="100%"
+              minH="0"
+            >
+              <Flex justify="space-between" align="center" borderBottom="1px solid" borderColor={cardBorder} pb={1} flexShrink={0}>
+                <TabList borderColor="transparent" mb="-1px">
+                  <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs" py={1} px={3}>
+                    Console Output {runResult && (runResult.success ? '✓' : '✗')}
+                  </Tab>
+                  <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs" py={1} px={3}>
+                    Test Case Results {submitResult && (submitResult.isCompleted ? '✓' : '○')}
+                  </Tab>
+                  <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs" py={1} px={3}>
+                    Custom Stdin
+                  </Tab>
+                </TabList>
+
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color={mutedText}
+                  _hover={{ color: textColor }}
+                  onClick={() => {
+                    setIsConsoleMinimized((prev) => !prev);
+                    setTimeout(triggerEditorLayout, 220);
                   }}
-                />
-              </Box>
-            </Card>
+                  title={isConsoleMinimized ? 'Expand Console' : 'Minimize Console'}
+                  px={2}
+                  h="24px"
+                  fontSize="2xs"
+                >
+                  {isConsoleMinimized ? '▲ Expand' : '▼ Minimize'}
+                </Button>
+              </Flex>
 
-            {/* Execution / Results Panel */}
-            <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
-              <CardBody p={4}>
-                <Tabs index={activeTab} onChange={(idx) => setActiveTab(idx)} colorScheme="green" variant="enclosed">
-                  <TabList borderColor={cardBorder}>
-                    <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs">
-                      Console Output {runResult && (runResult.success ? '✓' : '✗')}
-                    </Tab>
-                    <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs">
-                      Test Case Results {submitResult && (submitResult.isCompleted ? '✓' : '○')}
-                    </Tab>
-                    <Tab color={mutedText} _selected={{ color: accentColor, bg: surfaceBg, borderColor: cardBorder, fontWeight: 'bold' }} fontSize="xs">
-                      Custom Stdin
-                    </Tab>
-                  </TabList>
-
-                  <TabPanels>
+              {!isConsoleMinimized && (
+                <TabPanels flex="1" minH="0" overflowY="auto" pt={1}>
                     {/* TAB 1: Console Run Output */}
                     <TabPanel p={3}>
                       {isRunning ? (
@@ -777,14 +1196,13 @@ const CodingWorkspace = ({
                       </VStack>
                     </TabPanel>
                   </TabPanels>
-                </Tabs>
-              </CardBody>
+                )}
+              </Tabs>
             </Card>
-          </VStack>
-        </Box>
-      </SimpleGrid>
-    </VStack>
-  );
+          </Box>
+        </Flex>
+      </Flex>
+    );
 };
 
 export default CodingWorkspace;

@@ -28,11 +28,11 @@ const ConfirmModal = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
       <ModalOverlay backdropFilter="blur(4px)" />
-      <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white">
+      <ModalContent bg="bg.card" borderColor="border.primary" borderWidth="1px" color="text.primary">
         <ModalHeader fontWeight="bold">{title}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Text color="gray.300">{message}</Text>
+          <Text color="text.secondary">{message}</Text>
         </ModalBody>
         <ModalFooter gap={3}>
           <Button variant="ghost" colorScheme="gray" onClick={onClose} isDisabled={isLoading}>

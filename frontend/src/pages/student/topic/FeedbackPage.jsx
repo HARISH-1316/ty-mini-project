@@ -148,39 +148,39 @@ const FeedbackPage = () => {
 
   return (
     <VStack spacing={6} align="stretch" w="full">
-      <Heading size="lg" color="white">
+      <Heading size="lg" color="text.primary">
         Topic Feedback & Ratings
       </Heading>
 
-      <Text color="gray.400" fontSize="sm">
+      <Text color="text.secondary" fontSize="sm">
         {topic.title}
       </Text>
 
       {/* Student Feedback Form */}
       {user?.role === 'student' && (
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody>
             <form onSubmit={handleFeedbackSubmit}>
               <VStack spacing={4} align="stretch">
-                <Heading size="xs" color="purple.300" textTransform="uppercase">
+                <Heading size="xs" color="brand.500" textTransform="uppercase">
                   {userFeedback ? 'Your Feedback' : 'Give Feedback for this Topic'}
                 </Heading>
 
                 {/* Star Rating */}
                 <FormControl isRequired>
-                  <FormLabel color="gray.300" fontSize="xs">Rating (1 to 5 Stars)</FormLabel>
+                  <FormLabel color="text.secondary" fontSize="xs">Rating (1 to 5 Stars)</FormLabel>
                   <HStack spacing={2}>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <IconButton
                         key={star}
                         aria-label={`Rate ${star} stars`}
-                        icon={<StarIcon color={star <= rating ? 'yellow.400' : 'gray.600'} w={5} h={5} />}
+                        icon={<StarIcon color={star <= rating ? 'yellow.400' : 'gray.400'} w={5} h={5} />}
                         variant="ghost"
                         onClick={() => setRating(star)}
                         size="sm"
                       />
                     ))}
-                    <Text color="yellow.400" fontWeight="bold" fontSize="sm" ml={2}>
+                    <Text color="yellow.500" fontWeight="bold" fontSize="sm" ml={2}>
                       {rating} / 5
                     </Text>
                   </HStack>
@@ -188,14 +188,14 @@ const FeedbackPage = () => {
 
                 {/* Comment */}
                 <FormControl>
-                  <FormLabel color="gray.300" fontSize="xs">Comment (Optional)</FormLabel>
+                  <FormLabel color="text.secondary" fontSize="xs">Comment (Optional)</FormLabel>
                   <Textarea
                     placeholder="Share your thoughts on the clarity, experiments, and learning materials of this topic..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    bg="slate.900"
-                    borderColor="slate.700"
-                    color="white"
+                    bg="bg.surface"
+                    borderColor="border.primary"
+                    color="text.primary"
                     fontSize="sm"
                     rows={3}
                   />
@@ -205,7 +205,7 @@ const FeedbackPage = () => {
                   <Button
                     type="submit"
                     size="sm"
-                    colorScheme="purple"
+                    colorScheme="brand"
                     isLoading={isSubmittingFeedback}
                     loadingText="Saving..."
                   >
@@ -232,27 +232,27 @@ const FeedbackPage = () => {
       {/* All Reviews */}
       {feedbackList.length > 0 ? (
         <VStack align="stretch" spacing={3}>
-          <Text color="gray.400" fontSize="xs" fontWeight="bold" textTransform="uppercase">
+          <Text color="text.secondary" fontSize="xs" fontWeight="bold" textTransform="uppercase">
             All Reviews ({feedbackList.length})
           </Text>
           {feedbackList.map((fb) => (
-            <Box key={fb.feedback_id} p={4} bg="slate.800" borderRadius="xl" border="1px solid" borderColor="slate.700">
+            <Box key={fb.feedback_id} p={4} bg="bg.card" borderRadius="xl" border="1px solid" borderColor="border.primary">
               <Flex justify="space-between" align="center" mb={1}>
-                <Text color="white" fontWeight="bold" fontSize="sm">{fb.student_name || 'Student'}</Text>
+                <Text color="text.primary" fontWeight="bold" fontSize="sm">{fb.student_name || 'Student'}</Text>
                 <HStack spacing={1}>
                   {[...Array(5)].map((_, i) => (
-                    <StarIcon key={i} w={3} h={3} color={i < fb.rating ? 'yellow.400' : 'gray.600'} />
+                    <StarIcon key={i} w={3} h={3} color={i < fb.rating ? 'yellow.400' : 'gray.400'} />
                   ))}
                 </HStack>
               </Flex>
-              {fb.comment && <Text color="gray.300" fontSize="xs" mt={1}>{fb.comment}</Text>}
+              {fb.comment && <Text color="text.secondary" fontSize="xs" mt={1}>{fb.comment}</Text>}
             </Box>
           ))}
         </VStack>
       ) : (
-        <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+        <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
           <CardBody textAlign="center">
-            <Text color="gray.400" fontSize="sm">
+            <Text color="text.secondary" fontSize="sm">
               No feedback has been submitted for this topic yet.
             </Text>
           </CardBody>

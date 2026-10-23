@@ -33,8 +33,36 @@ export const createLabAssessmentValidation = Joi.object({
   marks_per_mcq: Joi.number().integer().min(1).max(50).default(2),
   topic_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
   allocation_mode: Joi.string().valid('specific', 'random', 'hybrid').default('random'),
-  selected_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
-  selected_mcq_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  selected_question_ids: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.object({
+        lab_question_id: Joi.number().integer().positive().required(),
+        marks: Joi.number().integer().min(1).max(100).optional(),
+      })
+    )
+  ).optional(),
+  selected_questions: Joi.array().items(
+    Joi.object({
+      lab_question_id: Joi.number().integer().positive().required(),
+      marks: Joi.number().integer().min(1).max(100).optional(),
+    })
+  ).optional(),
+  selected_mcq_ids: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.object({
+        mcq_id: Joi.number().integer().positive().required(),
+        marks: Joi.number().integer().min(1).max(50).optional(),
+      })
+    )
+  ).optional(),
+  selected_mcqs: Joi.array().items(
+    Joi.object({
+      mcq_id: Joi.number().integer().positive().required(),
+      marks: Joi.number().integer().min(1).max(50).optional(),
+    })
+  ).optional(),
   manual_allocations: Joi.array().items(
     Joi.object({
       student_id: Joi.number().integer().positive().required(),
@@ -58,8 +86,36 @@ export const updateLabAssessmentValidation = Joi.object({
   marks_per_mcq: Joi.number().integer().min(1).max(50).optional(),
   topic_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
   allocation_mode: Joi.string().valid('specific', 'random', 'hybrid').optional(),
-  selected_question_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
-  selected_mcq_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
+  selected_question_ids: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.object({
+        lab_question_id: Joi.number().integer().positive().required(),
+        marks: Joi.number().integer().min(1).max(100).optional(),
+      })
+    )
+  ).optional(),
+  selected_questions: Joi.array().items(
+    Joi.object({
+      lab_question_id: Joi.number().integer().positive().required(),
+      marks: Joi.number().integer().min(1).max(100).optional(),
+    })
+  ).optional(),
+  selected_mcq_ids: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.object({
+        mcq_id: Joi.number().integer().positive().required(),
+        marks: Joi.number().integer().min(1).max(50).optional(),
+      })
+    )
+  ).optional(),
+  selected_mcqs: Joi.array().items(
+    Joi.object({
+      mcq_id: Joi.number().integer().positive().required(),
+      marks: Joi.number().integer().min(1).max(50).optional(),
+    })
+  ).optional(),
   manual_allocations: Joi.array().items(
     Joi.object({
       student_id: Joi.number().integer().positive().required(),

@@ -10,16 +10,16 @@ const Footer = () => {
       as="footer"
       py={4}
       px={8}
-      bg="slate.900"
+      bg="bg.surface"
       borderTop="1px solid"
-      borderColor="slate.800"
+      borderColor="border.primary"
       mt="auto"
     >
       <Flex justify="space-between" align="center" direction={{ base: 'column', sm: 'row' }} gap={2}>
-        <Text color="gray.500" fontSize="xs">
+        <Text color="text.secondary" fontSize="xs">
           © {new Date().getFullYear()} Walchand College of Engineering — Virtual Lab Platform
         </Text>
-        <Text color="gray.500" fontSize="xs">
+        <Text color="text.secondary" fontSize="xs">
           Smart Assessment & Learning System
         </Text>
       </Flex>

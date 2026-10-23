@@ -41,6 +41,7 @@ import {
   Badge,
   Divider,
   SimpleGrid,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, AddIcon, DeleteIcon, EditIcon, CheckCircleIcon } from '@chakra-ui/icons';
 import {
@@ -78,6 +79,12 @@ const initialQuestionForm = {
 const QuizManagement = () => {
   const { topicId } = useParams();
   const toast = useToast();
+
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const surfaceBg = useColorModeValue('#F2F6F3', '#292D2A');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+  const mutedText = useColorModeValue('#505750', '#B8C0B9');
 
   const [topic, setTopic] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -310,10 +317,10 @@ const QuizManagement = () => {
               Back to Topics
             </Button>
           </HStack>
-          <Heading size="lg" color="white">
+          <Heading size="lg" color="text.primary">
             Quiz Management
           </Heading>
-          <Text color="gray.400" fontSize="sm">
+          <Text color="text.secondary" fontSize="sm">
             Topic: {topic?.title || 'Topic'}
           </Text>
         </VStack>
@@ -321,8 +328,8 @@ const QuizManagement = () => {
 
       {/* Tabs for Quiz Categories */}
       <Tabs variant="soft-rounded" colorScheme="purple" index={activeTab} onChange={setActiveTab}>
-        <TabList bg="slate.800" p={1.5} borderRadius="xl" border="1px solid" borderColor="slate.700">
-          <Tab color="text.secondary" _selected={{ color: 'pureWhite', bg: 'purple.600' }}>
+        <TabList bg={surfaceBg} p={1.5} borderRadius="xl" border="1px solid" borderColor={cardBorder}>
+          <Tab color={mutedText} _selected={{ color: 'pureWhite', bg: 'purple.600' }}>
             1. Prerequisite Quiz ({prereqQuizData?.questions?.length || 0})
           </Tab>
           <Tab color="text.secondary" _selected={{ color: 'pureWhite', bg: 'purple.600' }}>
@@ -339,11 +346,11 @@ const QuizManagement = () => {
              ========================================================= */}
           <TabPanel px={0}>
             <VStack spacing={6} align="stretch">
-              <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+              <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" boxShadow="sm">
                 <CardBody p={5}>
                   <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
                     <VStack align="start" spacing={1}>
-                      <Heading size="md" color="white">
+                      <Heading size="md" color={textColor}>
                         {prereqQuizData?.quiz?.title || 'Prerequisite Quiz'}
                       </Heading>
                       <HStack spacing={2}>
@@ -385,20 +392,20 @@ const QuizManagement = () => {
              ========================================================= */}
           <TabPanel px={0}>
             <VStack spacing={6} align="stretch">
-              <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+              <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" boxShadow="sm">
                 <CardBody p={5}>
                   <VStack align="stretch" spacing={4}>
                     <Flex justify="space-between" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={4}>
                       <VStack align="start" spacing={1} flex={1}>
-                        <Text fontSize="xs" fontWeight="bold" color="purple.300" textTransform="uppercase">
+                        <Text fontSize="xs" fontWeight="bold" color="purple.500" textTransform="uppercase">
                           Select Subtopic to Manage
                         </Text>
                         <Select
                           value={selectedSubtopicId}
                           onChange={(e) => setSelectedSubtopicId(e.target.value)}
-                          bg="slate.900"
-                          borderColor="slate.700"
-                          color="text.primary"
+                          bg={surfaceBg}
+                          borderColor={cardBorder}
+                          color={textColor}
                           maxW="md"
                         >
                           {subtopics.map((st) => (
@@ -420,7 +427,7 @@ const QuizManagement = () => {
                     </Flex>
 
                     {subtopicQuizData && (
-                      <HStack spacing={2} pt={2} borderTop="1px solid" borderColor="slate.700">
+                      <HStack spacing={2} pt={2} borderTop="1px solid" borderColor={cardBorder}>
                         <Badge colorScheme="purple">
                           {subtopicQuizData.questions?.length || 0} Questions
                         </Badge>
@@ -451,11 +458,11 @@ const QuizManagement = () => {
              ========================================================= */}
           <TabPanel px={0}>
             <VStack spacing={6} align="stretch">
-              <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+              <Card bg={cardBg} borderColor={cardBorder} borderWidth="1px" boxShadow="sm">
                 <CardBody p={5}>
                   <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
                     <VStack align="start" spacing={1}>
-                      <Heading size="md" color="white">
+                      <Heading size="md" color={textColor}>
                         {finalQuizData?.quiz?.title || 'Final Module Quiz'}
                       </Heading>
                       <HStack spacing={2}>
@@ -497,8 +504,8 @@ const QuizManagement = () => {
       {/* Add / Edit Question Modal */}
       <Modal isOpen={isQModalOpen} onClose={onCloseQModal} size="xl">
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white" as="form" onSubmit={handleSaveQuestion}>
-          <ModalHeader>
+        <ModalContent bg={cardBg} borderColor={cardBorder} borderWidth="1px" color={textColor} as="form" onSubmit={handleSaveQuestion}>
+          <ModalHeader color={textColor}>
             {modalType === 'add' ? 'Add New Question' : 'Edit Question'}
           </ModalHeader>
           <ModalCloseButton />
@@ -506,68 +513,73 @@ const QuizManagement = () => {
           <ModalBody>
             <VStack spacing={4} align="stretch">
               <FormControl isRequired>
-                <FormLabel fontSize="sm" color="gray.300">Question Statement</FormLabel>
+                <FormLabel fontSize="sm" color={textColor}>Question Statement</FormLabel>
                 <Textarea
                   placeholder="e.g. What is the time complexity of binary search?"
                   value={questionForm.question_text}
                   onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })}
-                  bg="slate.900"
-                  borderColor="slate.700"
+                  bg={surfaceBg}
+                  borderColor={cardBorder}
+                  color={textColor}
                   rows={3}
                 />
               </FormControl>
 
               <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel fontSize="sm" color="gray.300">Option A</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Option A</FormLabel>
                   <Input
                     value={questionForm.option_a}
                     onChange={(e) => setQuestionForm({ ...questionForm, option_a: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel fontSize="sm" color="gray.300">Option B</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Option B</FormLabel>
                   <Input
                     value={questionForm.option_b}
                     onChange={(e) => setQuestionForm({ ...questionForm, option_b: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel fontSize="sm" color="gray.300">Option C</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Option C</FormLabel>
                   <Input
                     value={questionForm.option_c}
                     onChange={(e) => setQuestionForm({ ...questionForm, option_c: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel fontSize="sm" color="gray.300">Option D</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Option D</FormLabel>
                   <Input
                     value={questionForm.option_d}
                     onChange={(e) => setQuestionForm({ ...questionForm, option_d: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                   />
                 </FormControl>
               </SimpleGrid>
 
               <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} pt={2}>
                 <FormControl isRequired>
-                  <FormLabel fontSize="sm" color="gray.300">Correct Answer</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Correct Answer</FormLabel>
                   <Select
                     value={questionForm.correct_option}
                     onChange={(e) => setQuestionForm({ ...questionForm, correct_option: e.target.value })}
-                    bg="slate.900"
-                    borderColor="slate.700"
-                    color="accent.primary"
+                    bg={surfaceBg}
+                    borderColor={cardBorder}
+                    color={textColor}
                     fontWeight="bold"
                   >
                     <option value="A">Option A</option>
@@ -578,25 +590,25 @@ const QuizManagement = () => {
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel fontSize="sm" color="gray.300">Marks</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Marks</FormLabel>
                   <NumberInput
                     min={1}
                     max={10}
                     value={questionForm.marks}
                     onChange={(valStr, valNum) => setQuestionForm({ ...questionForm, marks: valNum || 1 })}
                   >
-                    <NumberInputField bg="slate.900" borderColor="slate.700" />
+                    <NumberInputField bg={surfaceBg} borderColor={cardBorder} color={textColor} />
                   </NumberInput>
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel fontSize="sm" color="gray.300">Order Index</FormLabel>
+                  <FormLabel fontSize="sm" color={textColor}>Order Index</FormLabel>
                   <NumberInput
                     min={1}
                     value={questionForm.order_index}
                     onChange={(valStr, valNum) => setQuestionForm({ ...questionForm, order_index: valNum || 1 })}
                   >
-                    <NumberInputField bg="slate.900" borderColor="slate.700" />
+                    <NumberInputField bg={surfaceBg} borderColor={cardBorder} color={textColor} />
                   </NumberInput>
                 </FormControl>
               </SimpleGrid>
@@ -635,6 +647,10 @@ const QuizManagement = () => {
 
 // Reusable Questions List Component for Management View
 const QuestionsList = ({ questions = [], idKey, onEdit, onDelete }) => {
+  const cardBg = useColorModeValue('#FFFFFF', '#202321');
+  const cardBorder = useColorModeValue('#DDE5DD', '#3B423C');
+  const textColor = useColorModeValue('#1A2024', '#F5F7F5');
+
   if (questions.length === 0) {
     return (
       <EmptyState
@@ -649,7 +665,7 @@ const QuestionsList = ({ questions = [], idKey, onEdit, onDelete }) => {
       {questions.map((q, idx) => {
         const qId = q[idKey] || idx;
         return (
-          <Card key={qId} bg="slate.800" borderColor="slate.700" borderWidth="1px" borderRadius="xl">
+          <Card key={qId} bg={cardBg} borderColor={cardBorder} borderWidth="1px" borderRadius="xl" boxShadow="sm">
             <CardBody p={5}>
               <VStack align="stretch" spacing={3}>
                 <Flex justify="space-between" align="start" gap={3}>
@@ -657,7 +673,7 @@ const QuestionsList = ({ questions = [], idKey, onEdit, onDelete }) => {
                     <Badge colorScheme="purple" fontSize="xs" mt={0.5}>
                       #{idx + 1}
                     </Badge>
-                    <Text color="white" fontWeight="medium" fontSize="md">
+                    <Text color={textColor} fontWeight="medium" fontSize="md">
                       {q.question_text}
                     </Text>
                   </HStack>
@@ -697,18 +713,18 @@ const QuestionsList = ({ questions = [], idKey, onEdit, onDelete }) => {
                         key={opt.key}
                         p={2.5}
                         borderRadius="md"
-                        bg={isCorrect ? 'rgba(34, 197, 94, 0.15)' : 'slate.900'}
+                        bg={isCorrect ? 'rgba(34, 197, 94, 0.15)' : surfaceBg}
                         border="1px solid"
-                        borderColor={isCorrect ? 'emerald.500' : 'slate.700'}
+                        borderColor={isCorrect ? 'green.500' : cardBorder}
                       >
                         <HStack spacing={2}>
                           <Badge colorScheme={isCorrect ? 'green' : 'gray'} fontSize="xs">
                             {opt.key}
                           </Badge>
-                          <Text color={isCorrect ? 'emerald.300' : 'gray.300'} fontSize="xs" fontWeight={isCorrect ? 'bold' : 'normal'}>
+                          <Text color={isCorrect ? 'green.500' : textColor} fontSize="xs" fontWeight={isCorrect ? 'bold' : 'normal'}>
                             {opt.text}
                           </Text>
-                          {isCorrect && <CheckCircleIcon color="emerald.400" w={3.5} h={3.5} ml="auto" />}
+                          {isCorrect && <CheckCircleIcon color="green.400" w={3.5} h={3.5} ml="auto" />}
                         </HStack>
                       </Box>
                     );

@@ -93,8 +93,8 @@ const QuizAttempt = ({
 
   if (!currentQuestion || questions.length === 0) {
     return (
-      <Box p={8} textAlign="center" bg="slate.800" borderRadius="xl">
-        <Text color="gray.400">No questions available in this quiz.</Text>
+      <Box p={8} textAlign="center" bg="bg.card" border="1px solid" borderColor="border.primary" borderRadius="xl">
+        <Text color="text.secondary">No questions available in this quiz.</Text>
       </Box>
     );
   }
@@ -104,18 +104,18 @@ const QuizAttempt = ({
   return (
     <VStack spacing={6} align="stretch" w="full">
       {/* Header bar */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody p={4}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
             <VStack align="start" spacing={1}>
-              <Heading size="md" color="white">
+              <Heading size="md" color="text.primary">
                 {quizTitle}
               </Heading>
               <HStack spacing={2}>
-                <Badge colorScheme="purple" fontSize="xs" px={2} py={0.5} borderRadius="md">
+                <Badge colorScheme="brand" fontSize="xs" px={2} py={0.5} borderRadius="md">
                   Question {currentIndex + 1} of {totalQuestions}
                 </Badge>
-                <Badge colorScheme="cyan" fontSize="xs" px={2} py={0.5} borderRadius="md">
+                <Badge colorScheme="purple" fontSize="xs" px={2} py={0.5} borderRadius="md">
                   Marks: {currentQuestion.marks || 1}
                 </Badge>
               </HStack>
@@ -126,16 +126,16 @@ const QuizAttempt = ({
               <HStack
                 px={4}
                 py={2}
-                bg="slate.900"
+                bg="bg.surface"
                 borderRadius="lg"
                 border="1px solid"
-                borderColor={timeLeft < 60 ? 'red.500' : timeLeft < 300 ? 'amber.400' : 'purple.500'}
+                borderColor={timeLeft < 60 ? 'red.500' : timeLeft < 300 ? 'amber.400' : 'brand.500'}
               >
-                <Icon as={TimeIcon} color={timeLeft < 60 ? 'red.400' : timeLeft < 300 ? 'amber.300' : 'purple.300'} />
+                <Icon as={TimeIcon} color={timeLeft < 60 ? 'red.400' : timeLeft < 300 ? 'amber.500' : 'brand.500'} />
                 <Text
                   fontWeight="bold"
                   fontSize="md"
-                  color={timeLeft < 60 ? 'red.400' : timeLeft < 300 ? 'amber.300' : 'purple.300'}
+                  color={timeLeft < 60 ? 'red.400' : timeLeft < 300 ? 'amber.500' : 'brand.500'}
                   letterSpacing="wider"
                 >
                   {formatTimer(timeLeft)}
@@ -224,9 +224,9 @@ const QuizAttempt = ({
           <Button
             leftIcon={<ArrowBackIcon />}
             variant="outline"
-            borderColor="slate.700"
-            color="white"
-            _hover={{ bg: 'slate.800' }}
+            borderColor="border.primary"
+            color="text.primary"
+            _hover={{ bg: 'bg.secondary' }}
             onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
             isDisabled={currentIndex === 0}
           >
@@ -235,9 +235,9 @@ const QuizAttempt = ({
           <Button
             rightIcon={<ArrowForwardIcon />}
             variant="outline"
-            borderColor="slate.700"
-            color="white"
-            _hover={{ bg: 'slate.800' }}
+            borderColor="border.primary"
+            color="text.primary"
+            _hover={{ bg: 'bg.secondary' }}
             onClick={() => setCurrentIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
             isDisabled={currentIndex === totalQuestions - 1}
           >
@@ -257,21 +257,21 @@ const QuizAttempt = ({
       </Flex>
 
       {/* Question Palette Grid */}
-      <Card bg="slate.800" borderColor="slate.700" borderWidth="1px">
+      <Card bg="bg.card" borderColor="border.primary" borderWidth="1px">
         <CardBody p={4}>
           <VStack align="stretch" spacing={3}>
             <Flex justify="space-between" align="center">
-              <Text fontSize="xs" fontWeight="bold" color="gray.400" textTransform="uppercase" letterSpacing="wider">
+              <Text fontSize="xs" fontWeight="bold" color="text.secondary" textTransform="uppercase" letterSpacing="wider">
                 Question Navigator
               </Text>
               <HStack spacing={3} fontSize="xs">
                 <HStack spacing={1}>
-                  <Box w={3} h={3} borderRadius="full" bg="purple.500" />
-                  <Text color="gray.400">Answered ({answeredCount})</Text>
+                  <Box w={3} h={3} borderRadius="full" bg="brand.500" />
+                  <Text color="text.secondary">Answered ({answeredCount})</Text>
                 </HStack>
                 <HStack spacing={1}>
-                  <Box w={3} h={3} borderRadius="full" bg="slate.700" />
-                  <Text color="gray.400">Unanswered ({unansweredCount})</Text>
+                  <Box w={3} h={3} borderRadius="full" bg="border.primary" />
+                  <Text color="text.secondary">Unanswered ({unansweredCount})</Text>
                 </HStack>
               </HStack>
             </Flex>
@@ -287,12 +287,12 @@ const QuizAttempt = ({
                     key={qId || idx}
                     size="sm"
                     variant={isAnswered ? 'solid' : 'outline'}
-                    colorScheme={isAnswered ? 'purple' : 'gray'}
-                    bg={isAnswered ? 'purple.600' : 'slate.900'}
-                    borderColor={isCurrent ? 'purple.300' : 'slate.700'}
+                    colorScheme={isAnswered ? 'brand' : 'gray'}
+                    bg={isAnswered ? 'brand.500' : 'bg.surface'}
+                    borderColor={isCurrent ? 'accent.primary' : 'border.primary'}
                     borderWidth={isCurrent ? '2px' : '1px'}
-                    color="white"
-                    _hover={{ bg: isAnswered ? 'purple.500' : 'slate.800' }}
+                    color={isAnswered ? 'white' : 'text.primary'}
+                    _hover={{ bg: isAnswered ? 'brand.600' : 'bg.secondary' }}
                     onClick={() => setCurrentIndex(idx)}
                   >
                     {idx + 1}
@@ -307,31 +307,31 @@ const QuizAttempt = ({
       {/* Submit Confirmation Dialog */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent bg="slate.800" borderColor="slate.700" borderWidth="1px" color="white">
+        <ModalContent bg="bg.card" borderColor="border.primary" borderWidth="1px" color="text.primary">
           <ModalHeader>Submit Quiz?</ModalHeader>
           <ModalBody>
             <VStack spacing={4} align="stretch">
-              <Text color="gray.300" fontSize="sm">
+              <Text color="text.secondary" fontSize="sm">
                 Are you sure you want to finish and submit your quiz attempt?
               </Text>
-              <Box p={4} bg="slate.900" borderRadius="lg" border="1px solid" borderColor="slate.700">
+              <Box p={4} bg="bg.surface" borderRadius="lg" border="1px solid" borderColor="border.primary">
                 <SimpleGrid columns={2} spacing={3} textAlign="center">
                   <Box>
-                    <Text fontSize="2xl" fontWeight="bold" color="purple.300">
+                    <Text fontSize="2xl" fontWeight="bold" color="accent.primary">
                       {answeredCount}
                     </Text>
-                    <Text fontSize="xs" color="gray.400">Answered Questions</Text>
+                    <Text fontSize="xs" color="text.secondary">Answered Questions</Text>
                   </Box>
                   <Box>
-                    <Text fontSize="2xl" fontWeight="bold" color={unansweredCount > 0 ? 'amber.400' : 'gray.400'}>
+                    <Text fontSize="2xl" fontWeight="bold" color={unansweredCount > 0 ? 'amber.500' : 'text.secondary'}>
                       {unansweredCount}
                     </Text>
-                    <Text fontSize="xs" color="gray.400">Unanswered Questions</Text>
+                    <Text fontSize="xs" color="text.secondary">Unanswered Questions</Text>
                   </Box>
                 </SimpleGrid>
               </Box>
               {unansweredCount > 0 && (
-                <HStack color="amber.300" fontSize="xs">
+                <HStack color="amber.500" fontSize="xs">
                   <Icon as={WarningTwoIcon} />
                   <Text>You have {unansweredCount} unanswered questions.</Text>
                 </HStack>
