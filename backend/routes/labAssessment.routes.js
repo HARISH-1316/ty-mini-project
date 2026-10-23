@@ -28,6 +28,8 @@ import {
   submitLabAssessment,
   getLabResult,
   studentSubmitMcq,
+  logStudentViolation,
+  getLabViolations,
 } from '../controllers/labAssessment.controller.js';
 
 import {
@@ -75,10 +77,13 @@ router.post('/student/:labId/submit-mcq', isAuthenticated, isStudent, validate(l
 router.get('/student/:labId/submission-status', isAuthenticated, isStudent, getSubmissionStatus);
 router.post('/student/:labId/submit', isAuthenticated, isStudent, submitLabAssessment);
 router.get('/student/:labId/result', isAuthenticated, isStudent, getLabResult);
+router.post('/student/:labId/log-violation', isAuthenticated, isStudent, logStudentViolation);
 
 // =========================================================
 // FACULTY / ADMIN ROUTES — /api/lab-assessments/*
 // =========================================================
+
+router.get('/:labId/violations', isAuthenticated, isFacultyOrAdmin, getLabViolations);
 
 // Assessment collection
 router.post('/', isAuthenticated, isFacultyOrAdmin, validate(createLabAssessmentValidation), createLabAssessment);

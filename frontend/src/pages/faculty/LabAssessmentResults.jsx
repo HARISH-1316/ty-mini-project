@@ -118,7 +118,15 @@ const LabAssessmentResults = () => {
 
   useEffect(() => {
     loadResults();
-  }, [loadResults]);
+    const timer = setInterval(() => {
+      getLabResultsApi(labId)
+        .then((res) => {
+          if (res.data?.data) setData(res.data.data);
+        })
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [loadResults, labId]);
 
   if (isLoading) {
     return (
@@ -275,6 +283,7 @@ const LabAssessmentResults = () => {
                 </Th>
                 <Th color={mutedText}>Started</Th>
                 <Th color={mutedText}>Submitted</Th>
+                <Th color={mutedText}>Proctoring</Th>
                 <Th color={mutedText}>Q Statuses</Th>
                 <Th color={mutedText} textAlign="center">
                   Action
@@ -348,6 +357,26 @@ const LabAssessmentResults = () => {
                       </Text>
                     </Td>
                     <Td>
+                      {(attempt.violationsCount || attempt.violations?.length) > 0 ? (
+                        <Badge
+                          colorScheme="red"
+                          variant="solid"
+                          px={2}
+                          py={0.5}
+                          borderRadius="md"
+                          fontSize="2xs"
+                          cursor="pointer"
+                          onClick={() => handleInspectStudent(attempt)}
+                        >
+                          ⚠️ {attempt.violationsCount || attempt.violations?.length} Alert(s)
+                        </Badge>
+                      ) : (
+                        <Badge colorScheme="green" variant="subtle" px={2} py={0.5} borderRadius="md" fontSize="2xs">
+                          ✓ Clean
+                        </Badge>
+                      )}
+                    </Td>
+                    <Td>
                       <HStack spacing={1} wrap="wrap">
                         {(attempt.questionSubmissions || []).slice(0, 5).map((qs, i) => (
                           <Tooltip
@@ -416,6 +445,24 @@ const LabAssessmentResults = () => {
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody py={6} overflowY="auto">
+            {selectedStudentAttempt?.violations && selectedStudentAttempt.violations.length > 0 && (
+              <Box p={3.5} borderRadius="xl" bg="red.50" _dark={{ bg: 'rgba(239, 68, 68, 0.15)' }} border="1px solid" borderColor="red.400" mb={4}>
+                <Heading size="xs" color="red.700" _dark={{ color: 'red.300' }} mb={2}>
+                  🚨 Proctoring & Tab Switch Violations ({selectedStudentAttempt.violations.length})
+                </Heading>
+                <VStack align="stretch" spacing={2}>
+                  {selectedStudentAttempt.violations.map((v, idx) => (
+                    <HStack key={idx} justify="space-between" fontSize="xs" bg="white" _dark={{ bg: 'rgba(0,0,0,0.2)' }} p={2} borderRadius="md">
+                      <Text fontWeight="600" color="red.700" _dark={{ color: 'red.200' }}>
+                        • {v.violation_type?.replace(/_/g, ' ').toUpperCase()}: {v.details}
+                      </Text>
+                      <Text color={mutedText} fontSize="2xs">{formatDT(v.created_at)}</Text>
+                    </HStack>
+                  ))}
+                </VStack>
+              </Box>
+            )}
+
             {(!selectedStudentAttempt?.questionSubmissions ||
               selectedStudentAttempt.questionSubmissions.length === 0) ? (
               <Box p={6} textAlign="center" bg={surfaceBg} borderRadius="lg" border="1px solid" borderColor={cardBorder}>

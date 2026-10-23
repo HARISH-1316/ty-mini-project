@@ -152,3 +152,16 @@ export const getLabResult = asyncHandler(async (req, res) => {
   const result = await LabAssessmentService.getResult(req.user.user_id, parseInt(labId, 10));
   return successResponse(res, 200, 'Result retrieved.', result);
 });
+
+export const logStudentViolation = asyncHandler(async (req, res) => {
+  const { labId } = req.params;
+  const result = await LabAssessmentService.logProctoringViolation(req.user.user_id, parseInt(labId, 10), req.body);
+  return successResponse(res, 200, 'Violation recorded.', result);
+});
+
+export const getLabViolations = asyncHandler(async (req, res) => {
+  const { labId } = req.params;
+  const result = await LabAssessmentService.getLabViolations(req.user.user_id, parseInt(labId, 10), req.user.role);
+  return successResponse(res, 200, 'Violations retrieved.', result);
+});
+

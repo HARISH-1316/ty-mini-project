@@ -26,6 +26,7 @@ import LaSelectedMcqModel from '../models/laSelectedMcq.model.js';
 import LaMcqAllocationModel from '../models/laMcqAllocation.model.js';
 import LaMcqSubmissionModel from '../models/laMcqSubmission.model.js';
 import RoomModel from '../models/room.model.js';
+import LaProctoringViolationModel from '../models/laProctoringViolation.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -539,6 +540,7 @@ const LabAssessmentService = {
 
     const attempts = await LaAttemptModel.findByLabId(labId);
     const questionSubmissions = await LaQuestionSubmissionModel.findByLabId(labId);
+    const allViolations = await LaProctoringViolationModel.findByLabId(labId);
 
     // Group question submissions by student_id
     const subsByStudent = {};
@@ -547,15 +549,25 @@ const LabAssessmentService = {
       subsByStudent[sub.student_id].push(sub);
     }
 
-    // Attach MCQ submissions for each attempt
+    // Group violations by student_id
+    const violationsByStudent = {};
+    for (const v of allViolations) {
+      if (!violationsByStudent[v.student_id]) violationsByStudent[v.student_id] = [];
+      violationsByStudent[v.student_id].push(v);
+    }
+
+    // Attach MCQ submissions and violations for each attempt
     for (const att of attempts) {
       att.questionSubmissions = subsByStudent[att.student_id] || [];
       att.mcqSubmissions = await LaMcqSubmissionModel.findByAttemptId(att.attempt_id);
+      att.violations = violationsByStudent[att.student_id] || [];
+      att.violationsCount = (violationsByStudent[att.student_id] || []).length;
     }
 
     return {
       lab,
       attempts,
+      allViolations,
     };
   },
 
@@ -1609,6 +1621,48 @@ const LabAssessmentService = {
         ? parseFloat(((attempt.obtained_marks / attempt.total_marks) * 100).toFixed(2))
         : 0,
     };
+  },
+
+  logProctoringViolation: async (userId, labId, { violation_type, details }) => {
+    const student = await StudentModel.findByUserId(userId);
+    if (!student) {
+      const e = new Error('Student profile not found.');
+      e.statusCode = 404;
+      throw e;
+    }
+    const attempt = await LaAttemptModel.findByStudentAndLab(student.student_id, labId);
+    const violation = await LaProctoringViolationModel.create({
+      lab_id: labId,
+      student_id: student.student_id,
+      attempt_id: attempt?.attempt_id || null,
+      violation_type: violation_type || 'tab_switch',
+      details: details || 'Tab switch or fullscreen exit detected during live assessment',
+    });
+    const count = await LaProctoringViolationModel.countByLabAndStudent(labId, student.student_id);
+    return {
+      logged: true,
+      violation_count: count,
+      violation,
+    };
+  },
+
+  getLabViolations: async (userId, labId, role = 'faculty') => {
+    const lab = await LabAssessmentModel.findById(labId);
+    if (!lab) {
+      const e = new Error('Lab assessment not found.');
+      e.statusCode = 404;
+      throw e;
+    }
+    if (role !== 'admin') {
+      const faculty = await FacultyModel.findByUserId(userId);
+      if (!faculty || lab.faculty_id !== faculty.faculty_id) {
+        const e = new Error('Access denied.');
+        e.statusCode = 403;
+        throw e;
+      }
+    }
+    const violations = await LaProctoringViolationModel.findByLabId(labId);
+    return { violations };
   },
 };
 

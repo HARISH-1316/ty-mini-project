@@ -122,6 +122,12 @@ export const getLabResultApi = (labId) =>
 export const submitLabMcqApi = (labId, data) =>
   api.post(`/lab-assessments/student/${labId}/submit-mcq`, data);
 
+export const logStudentViolationApi = (labId, data) =>
+  api.post(`/lab-assessments/student/${labId}/log-violation`, data);
+
+export const getLabViolationsApi = (labId) =>
+  api.get(`/lab-assessments/${labId}/violations`);
+
 export const getRoomLabAssessmentsApi = (roomId) =>
   api.get(`/rooms/${roomId}/lab-assessments`);
 

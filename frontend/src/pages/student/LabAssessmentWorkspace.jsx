@@ -45,6 +45,8 @@ import {
   Radio,
   RadioGroup,
   useColorModeValue,
+  useColorMode,
+  IconButton,
 } from '@chakra-ui/react';
 import {
   TimeIcon,
@@ -57,6 +59,8 @@ import {
   RepeatIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  MoonIcon,
+  SunIcon,
 } from '@chakra-ui/icons';
 import {
   startOrResumeLabApi,
@@ -66,6 +70,7 @@ import {
   getLabSubmissionStatusApi,
   submitLabAssessmentApi,
   submitLabMcqApi,
+  logStudentViolationApi,
 } from '../../api/labApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { parseCompilerErrors } from '../../utils/compilerDiagnostics';
@@ -195,6 +200,12 @@ const LabAssessmentWorkspace = () => {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { colorMode, toggleColorMode } = useColorMode();
+
+  // Proctoring & Anti-Cheat State
+  const [violationCount, setViolationCount] = useState(0);
+  const lastViolationTimeRef = useRef(0);
+  const assessmentActiveRef = useRef(false);
 
   // Draggable Split Pane (Sliding Window)
   const defaultSplitPct = 42;
@@ -297,42 +308,111 @@ const LabAssessmentWorkspace = () => {
   const { isOpen: isFinishOpen, onOpen: onFinishOpen, onClose: onFinishClose } = useDisclosure();
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false);
 
-  // Fullscreen change handler
-  useEffect(() => {
-    const handleFsChange = () => {
-      const fs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-      setIsFullscreen(fs);
-      setTimeout(() => {
-        editorRef.current?.layout();
-      }, 100);
-    };
-
-    document.addEventListener('fullscreenchange', handleFsChange);
-    document.addEventListener('webkitfullscreenchange', handleFsChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFsChange);
-      document.removeEventListener('webkitfullscreenchange', handleFsChange);
-    };
-  }, []);
-
-  const toggleFullscreen = () => {
+  // Fullscreen enter helper
+  const enterFullscreen = useCallback(() => {
     const elem = workspaceRef.current;
     if (!elem) return;
-
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       if (elem.requestFullscreen) {
         elem.requestFullscreen().catch(() => {});
       } else if (elem.webkitRequestFullscreen) {
         elem.webkitRequestFullscreen();
       }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      }
     }
-  };
+  }, []);
+
+  // Update assessment active ref
+  useEffect(() => {
+    assessmentActiveRef.current = !isLoading && !isFinalSubmitting && Boolean(labInfo);
+  }, [isLoading, isFinalSubmitting, labInfo]);
+
+  // Report proctoring violation to backend and faculty
+  const reportViolation = useCallback(
+    (type, reason) => {
+      const now = Date.now();
+      // Debounce rapid duplicate events within 2.5s
+      if (now - lastViolationTimeRef.current < 2500) return;
+      lastViolationTimeRef.current = now;
+
+      setViolationCount((c) => c + 1);
+
+      if (!toast.isActive('proctor-violation-toast')) {
+        toast({
+          id: 'proctor-violation-toast',
+          title: '⚠️ Proctoring Alert Reported to Faculty!',
+          description: `${reason} Incident reported to your faculty.`,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+          position: 'top',
+        });
+      }
+
+      if (labId) {
+        logStudentViolationApi(labId, {
+          violation_type: type,
+          details: reason,
+        }).catch(() => {});
+      }
+    },
+    [labId, toast]
+  );
+
+  // Auto-enter fullscreen when questions / assessment loads
+  useEffect(() => {
+    if (!isLoading && allQuestions.length > 0) {
+      enterFullscreen();
+    }
+  }, [isLoading, allQuestions.length, enterFullscreen]);
+
+  // Proctoring listeners: Fullscreen exit, Tab switch, Window blur
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && assessmentActiveRef.current) {
+        reportViolation(
+          'tab_switch',
+          'Tab switch or browser minimization detected!'
+        );
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (assessmentActiveRef.current && !document.hidden) {
+        reportViolation(
+          'window_blur',
+          'Assessment window lost focus! Switching applications or windows is prohibited.'
+        );
+      }
+    };
+
+    const handleFsChange = () => {
+      const fs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      setIsFullscreen(fs);
+      setTimeout(() => {
+        editorRef.current?.layout();
+      }, 100);
+
+      // Violation if student exits fullscreen during active assessment
+      if (!fs && assessmentActiveRef.current) {
+        reportViolation(
+          'fullscreen_exit',
+          'Fullscreen mode was exited! Fullscreen is strictly mandatory.'
+        );
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, [reportViolation]);
 
   // Anti-cheat clipboard prevention
   const notifyCopyPasteDisabled = () => {
@@ -846,6 +926,58 @@ const LabAssessmentWorkspace = () => {
       gap={2.5}
       position="relative"
     >
+      {/* Fullscreen Proctoring Mandatory Enforcement Overlay */}
+      {!isFullscreen && !isLoading && !isFinalSubmitting && allQuestions.length > 0 && (
+        <Box
+          position="fixed"
+          inset={0}
+          bg="rgba(10, 15, 20, 0.94)"
+          zIndex={99999}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={6}
+          backdropFilter="blur(10px)"
+        >
+          <Card
+            bg={cardBg}
+            borderColor="red.500"
+            borderWidth="2px"
+            p={8}
+            borderRadius="2xl"
+            maxW="540px"
+            textAlign="center"
+            boxShadow="2xl"
+          >
+            <VStack spacing={4}>
+              <Icon as={WarningIcon} color="red.500" boxSize={12} />
+              <Heading size="md" color={textColor} fontWeight="800">
+                Fullscreen Proctoring Active
+              </Heading>
+              <Text fontSize="sm" color={mutedText} lineHeight="tall">
+                This lab assessment runs in mandatory fullscreen proctored mode. Exiting fullscreen or switching browser tabs is strictly prohibited, recorded, and sent directly to your room faculty.
+              </Text>
+              {violationCount > 0 && (
+                <Badge colorScheme="red" px={3} py={1.5} borderRadius="md" fontSize="xs" fontWeight="bold">
+                  ⚠️ {violationCount} Proctoring Violation{violationCount > 1 ? 's' : ''} Reported to Faculty
+                </Badge>
+              )}
+              <Button
+                colorScheme="green"
+                size="md"
+                w="full"
+                onClick={enterFullscreen}
+                leftIcon={<Icon as={CheckCircleIcon} />}
+                mt={2}
+                fontWeight="bold"
+              >
+                {violationCount > 0 ? 'Re-enter Fullscreen to Resume' : 'Enter Fullscreen & Begin Assessment'}
+              </Button>
+            </VStack>
+          </Card>
+        </Box>
+      )}
+
       {/* Global dragging overlay shield to ensure smooth slider operation over Monaco */}
       {isDragging && (
         <Box
@@ -972,15 +1104,15 @@ const LabAssessmentWorkspace = () => {
             </Button>
           </HStack>
 
-          {/* Timer and Finish Button */}
-          <HStack spacing={4}>
+          {/* Timer, Theme Toggle, Violation Badge, and Finish Button */}
+          <HStack spacing={3}>
             {/* Live Timer */}
             <HStack
               bg={isTimerCritical ? timerCriticalBg : isTimerWarning ? timerWarningBg : timerNormalBg}
               border="1px solid"
               borderColor={isTimerCritical ? timerCriticalBorder : isTimerWarning ? timerWarningBorder : timerNormalBorder}
-              px={4}
-              py={2}
+              px={3.5}
+              py={1.5}
               borderRadius="xl"
               boxShadow="sm"
             >
@@ -998,6 +1130,31 @@ const LabAssessmentWorkspace = () => {
                 {formatTimeRemaining(remainingSeconds)}
               </Text>
             </HStack>
+
+            {/* In-Assessment Theme Toggle */}
+            <Tooltip label={`Switch to ${colorMode === 'light' ? 'Dark' : 'Light'} Mode`} fontSize="xs">
+              <IconButton
+                size="sm"
+                variant="outline"
+                colorScheme="gray"
+                onClick={toggleColorMode}
+                icon={colorMode === 'light' ? <MoonIcon boxSize={3.5} /> : <SunIcon boxSize={3.5} />}
+                aria-label="Toggle Theme Mode"
+                borderColor={cardBorder}
+                borderRadius="lg"
+                color={textColor}
+                _hover={{ bg: surfaceBg }}
+              />
+            </Tooltip>
+
+            {/* Violation Alert Badge */}
+            {violationCount > 0 && (
+              <Tooltip label={`${violationCount} proctoring alert(s) sent to faculty`} fontSize="xs">
+                <Badge colorScheme="red" px={2.5} py={1} borderRadius="md" fontSize="xs" fontWeight="bold">
+                  ⚠️ {violationCount} Violation{violationCount > 1 ? 's' : ''}
+                </Badge>
+              </Tooltip>
+            )}
 
             <Button
               colorScheme="brand"
@@ -1350,17 +1507,6 @@ const LabAssessmentWorkspace = () => {
               </HStack>
 
               <HStack spacing={2}>
-                <Tooltip label={isFullscreen ? 'Exit Full Screen (Esc)' : 'Enter Full Screen'} fontSize="xs">
-                  <Button
-                    size="xs"
-                    variant={isFullscreen ? 'solid' : 'ghost'}
-                    colorScheme={isFullscreen ? 'green' : 'gray'}
-                    onClick={toggleFullscreen}
-                    aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
-                  >
-                    {isFullscreen ? 'Exit Fullscreen' : '⛶ Fullscreen'}
-                  </Button>
-                </Tooltip>
                 <Tooltip label="Reset starter code" fontSize="xs">
                   <Button size="xs" variant="ghost" colorScheme="gray" onClick={handleResetCode} leftIcon={<RepeatIcon />}>
                     Reset
@@ -1766,17 +1912,6 @@ const LabAssessmentWorkspace = () => {
                       Not Answered Yet
                     </Badge>
                   )}
-                  <Tooltip label={isFullscreen ? 'Exit Full Screen (Esc)' : 'Enter Full Screen'} fontSize="xs">
-                    <Button
-                      size="xs"
-                      variant={isFullscreen ? 'solid' : 'outline'}
-                      colorScheme={isFullscreen ? 'green' : 'gray'}
-                      onClick={toggleFullscreen}
-                      aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
-                    >
-                      {isFullscreen ? 'Exit Fullscreen' : '⛶ Fullscreen'}
-                    </Button>
-                  </Tooltip>
                 </HStack>
               </Flex>
 
