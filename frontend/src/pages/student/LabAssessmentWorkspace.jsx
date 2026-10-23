@@ -323,8 +323,8 @@ const LabAssessmentWorkspace = () => {
 
   // Update assessment active ref
   useEffect(() => {
-    assessmentActiveRef.current = !isLoading && !isFinalSubmitting && Boolean(labInfo);
-  }, [isLoading, isFinalSubmitting, labInfo]);
+    assessmentActiveRef.current = !isLoading && !isFinalSubmitting && Boolean(lab);
+  }, [isLoading, isFinalSubmitting, lab]);
 
   // Report proctoring violation to backend and faculty
   const reportViolation = useCallback(
